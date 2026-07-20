@@ -329,6 +329,16 @@ pub mod ballast {
             ctx.accounts.stock_vault.to_account_info(),
         ];
         for ai in ctx.remaining_accounts.iter() {
+            // Defense in depth: the venue accounts must be the venue's own. Reject any
+            // vault-owned token account here, so a hostile allowlisted venue can't be handed a
+            // SECOND vault account (e.g. another stock vault) to drain under the vault
+            // authority's signature. Only funding_vault + stock_vault (named above) are ever
+            // vault-owned in this CPI, and both are bounded by the net-effect guard.
+            if *ai.owner == anchor_spl::token::ID || *ai.owner == spl_token_2022::ID {
+                if let Ok(ta) = InterfaceAccount::<TokenAccount>::try_from(ai) {
+                    require_keys_neq!(ta.owner, vault_key, BallastError::BadVaultOwner);
+                }
+            }
             metas.push(AccountMeta {
                 pubkey: ai.key(),
                 is_signer: ai.is_signer,
