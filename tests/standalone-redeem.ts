@@ -104,12 +104,11 @@ async function main() {
   const swapped = honest(); swapped[0] = m(stockB, false);
   await expectRevert("stock mismatch rejected", "StockMismatch", () => redeem(REDEEM, swapped));
   await expectRevert("zero amount rejected", "ZeroAmount", () => redeem(0, honest()));
+  // The floor must always be redeemable — a compromised admin must NOT be able to freeze it.
+  // Pause the vault, then redeem anyway: it must succeed.
   await program.methods.setPause(true).accounts({ config: configPda, admin: payer.publicKey }).rpc();
-  await expectRevert("paused redeem rejected", "Paused", () => redeem(REDEEM, honest()));
-  await program.methods.setPause(false).accounts({ config: configPda, admin: payer.publicKey }).rpc();
-
-  // HONEST redeem
   await redeem(REDEEM, honest());
+  check("redeem works even while the vault is paused", Number((await getAccount(conn, userCoin, undefined, COIN)).amount) === SUPPLY - REDEEM);
   const gotA = Number((await getAccount(conn, userStockA, undefined, STK)).amount);
   const gotB = Number((await getAccount(conn, userStockB, undefined, STK)).amount);
   const leftCoin = Number((await getAccount(conn, userCoin, undefined, COIN)).amount);

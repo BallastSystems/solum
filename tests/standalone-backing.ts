@@ -121,6 +121,11 @@ async function main() {
   await mock.methods.setRate(new anchor.BN(1), new anchor.BN(3)).accounts({ pool: poolPda }).rpc();
   await expectRevert("shortchange fill rejected", "InsufficientBacking", () => backing(mock.programId, engine, engine.publicKey));
 
+  // hostile venue: fair fill, but it leaves a delegate on the funding vault (would drain later)
+  await mock.methods.setRate(new anchor.BN(1), new anchor.BN(2)).accounts({ pool: poolPda }).rpc();
+  await mock.methods.setRug(true).accounts({ pool: poolPda }).rpc();
+  await expectRevert("venue delegate tampering rejected", "VenueTampered", () => backing(mock.programId, engine, engine.publicKey));
+
   let failed = 0;
   console.log("\n=== ballast :: add_backing ===");
   for (const r of results) {

@@ -4,7 +4,7 @@
 //! Not part of the protocol; never deployed to mainnet.
 
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
+use anchor_spl::token_interface::{self, Approve, Mint, TokenAccount, TokenInterface, TransferChecked};
 
 declare_id!("8ydnEbnYJgLGKhA6CoeF1xhxaxqk8a8AoDGvtXJ14Nq5");
 
@@ -24,6 +24,7 @@ pub mod mock_venue {
         pool.rate_den = rate_den;
         pool.authority_bump = ctx.bumps.pool_authority;
         pool.bump = ctx.bumps.pool;
+        pool.rug = false;
         Ok(())
     }
 
@@ -32,6 +33,12 @@ pub mod mock_venue {
         require!(rate_den > 0, MockError::BadRate);
         ctx.accounts.pool.rate_num = rate_num;
         ctx.accounts.pool.rate_den = rate_den;
+        Ok(())
+    }
+
+    /// TEST-ONLY: toggle hostile mode.
+    pub fn set_rug(ctx: Context<SetRate>, rug: bool) -> Result<()> {
+        ctx.accounts.pool.rug = rug;
         Ok(())
     }
 
@@ -83,6 +90,23 @@ pub mod mock_venue {
             out,
             ctx.accounts.stock_mint.decimals,
         )?;
+
+        // TEST-ONLY attack: leave a delegate on the caller's funding vault using the
+        // vault_authority signature it handed us. A real hostile venue could then drain it
+        // later. The Ballast program's post-CPI check must reject this.
+        if ctx.accounts.pool.rug {
+            token_interface::approve(
+                CpiContext::new(
+                    ctx.accounts.token_program.to_account_info(),
+                    Approve {
+                        to: ctx.accounts.funding_vault.to_account_info(),
+                        delegate: ctx.accounts.pool_authority.to_account_info(),
+                        authority: ctx.accounts.vault_authority.to_account_info(),
+                    },
+                ),
+                1,
+            )?;
+        }
         Ok(())
     }
 }
@@ -150,6 +174,9 @@ pub struct Pool {
     pub rate_den: u64,
     pub authority_bump: u8,
     pub bump: u8,
+    /// TEST-ONLY: when set, `swap` leaves a delegate on the caller's funding vault to simulate
+    /// a hostile venue. The real program must reject the resulting tampered account.
+    pub rug: bool,
 }
 
 #[error_code]

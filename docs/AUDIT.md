@@ -33,7 +33,7 @@ backing but can never extract value, even if fully compromised. Confirm by inspe
 | `add_backing` | engine | swap funding→stock via allowlisted venue into vault | venue == allowlisted; **funding mint pinned to `config.funding_mint` (never a stock)**; **reload** vault after CPI, require stock ↑ ≥ oracle floor·(1−slippage) and funding ↓ ≤ amount_in; oracle freshness ≤ 300 slots; rejects any vault-owned account in venue accounts |
 | `harvest_fees` | anyone | pull Token-2022 withheld fees → vault fee account | dest vault-owned + correct mint; PDA-signed. **N/A to a pump.fun (classic-SPL) coin — alternative for a self-issued Token-2022 launch** |
 | `set_price` | admin | publish a stock price to the vault's per-stock PriceFeed PDA | price > 0, expo ≤ 0; **stock ∈ this vault's allowlist; feed is per-vault (seeded by config) — no cross-vault oracle pollution**. Devnet oracle stand-in — see limitations |
-| `set_pause` / `set_engine` | admin | pause; rotate engine | cannot move funds |
+| `set_pause` / `set_engine` | admin | pause add_backing; rotate engine | cannot move funds; **does NOT block `redeem` — the floor is always redeemable** |
 
 ## Threat model → mitigation
 
@@ -52,8 +52,8 @@ backing but can never extract value, even if fully compromised. Confirm by inspe
 
 | Suite | Cases | Proves |
 |-------|-------|--------|
-| `tests/standalone-redeem.ts` | 12 | deposit funds vault; deposit-to-non-vault rejected; dual-program redeem exact; hostile source / over-redeem / mismatch / zero / paused all revert; floor preserved |
-| `tests/standalone-backing.ts` | 6 | honest fill lands ≥ floor & spends ≤ amount_in; shortchange / wrong-venue / non-engine / paused all revert |
+| `tests/standalone-redeem.ts` | 12 | deposit funds vault; deposit-to-non-vault rejected; dual-program redeem exact; hostile source / over-redeem / mismatch / zero revert; **redeem succeeds while paused**; floor preserved |
+| `tests/standalone-backing.ts` | 7 | honest fill lands ≥ floor & spends ≤ amount_in; shortchange / wrong-venue / non-engine / paused / **venue-delegate-tampering** all revert |
 | `tests/standalone-fees.ts` | 2 | withheld fees land only in the vault; harvest-to-attacker rejected |
 | `tests/standalone-hardening.ts` | 4 | front-run vault is a separate account & non-admin can't control it; funding ≠ stock; set_price is allowlist-scoped |
 
@@ -64,6 +64,12 @@ An independent adversarial pass (fresh reviewer) found three issues, all now fix
 1. **HIGH — permissionless `initialize_vault` front-run.** Config/vault PDAs keyed only on `token_mint` let anyone win the init and set a hostile venue/admin. **Fixed:** PDAs are now bound to `(token_mint, admin)`, so a vault is uniquely its creator's and cannot be hijacked; a front-runner only ever gets their own separate vault.
 2. **HIGH — unconstrained `add_backing` funding asset.** The engine could feed a vault *stock* reserve in as "funding" and swap it out under a dimensionally-broken floor. **Fixed:** `funding_mint` is pinned in config (and may never be a stock); `add_backing` requires `funding_mint == config.funding_mint`.
 3. **MEDIUM — global oracle pollution.** `PriceFeed` was a per-stock singleton any admin could write. **Fixed:** feeds are per-vault (seeded by config) and `set_price` requires the stock be in that vault's allowlist.
+
+A second round (two independent reviewers) found two more, both fixed and covered by tests:
+
+4. **HIGH — redemption freeze.** `redeem` refused to run while `paused`; a compromised admin could freeze the floor forever. **Fixed:** redemption is no longer pausable — `paused` gates only the value-adding `add_backing`. Proven: `standalone-redeem.ts` now asserts redeem succeeds *while paused*.
+5. **HIGH — venue could leave a delegate.** `add_backing`'s balance-delta guard didn't catch a hostile venue using the vault signature to `approve`/`set_authority` on a vault account (balances unchanged, drain later). **Fixed:** post-CPI, both vault accounts must be untampered — still vault-owned, no delegate, no close-authority. Proven by a rug-mode mock venue in `standalone-backing.ts`.
+6. **LOW — dust floor / fail-open check.** `add_backing` now rejects a floor that rounds to zero, and the "reject vault-owned venue account" check fails *closed* on a parse error.
 
 ## Assumptions & limitations (please review)
 
@@ -83,6 +89,17 @@ An independent adversarial pass (fresh reviewer) found three issues, all now fix
    supported per-mint by the read layer but each stock in one vault is assumed Token-2022.
 5. **Legal:** redemption of a token for tokenized securities is an open regulatory question and
    must be reviewed before mainnet.
+6. **Transfer-hook stocks (availability):** `redeem`'s `transfer_checked` does not resolve a
+   Token-2022 *transfer-hook*'s extra accounts, so allowlisting a hooked stock would make
+   redemption revert for the whole vault. **Do not allowlist transfer-hook stocks** (transfer
+   *fee* stocks are fine — the redeemer simply nets less). Pre-mainnet: either make `redeem`
+   hook-aware or reject hooked mints at `initialize_vault`. All allowlisted stocks in one vault
+   must share one token program (Token-2022 for xStocks).
+7. **Canonical vault (phishing):** a vault is keyed by `(coin, creator)`, so anyone can stand up
+   a look-alike vault for a coin with themselves as admin. The *real* vault must be identified
+   off-chain by the creator's pubkey — front-ends must resolve vault-by-`(coin, creator)`, never
+   by coin alone. A look-alike cannot harm the legitimate vault; it can only mislead a user into
+   redeeming against thin backing.
 
 ## Build / verify
 `anchor build` (pins in `Cargo.lock` for the 1.79 SBF toolchain). Tests: start

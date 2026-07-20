@@ -131,7 +131,8 @@ pub mod ballast {
         amount: u64,
     ) -> Result<()> {
         let cfg = &ctx.accounts.config;
-        require!(!cfg.paused, BallastError::Paused);
+        // Redemption is deliberately NOT pausable: the floor must always be reachable, even by
+        // a compromised admin. `paused` gates only the value-ADDING paths (add_backing).
         require!(amount > 0, BallastError::ZeroAmount);
 
         // Denominator captured BEFORE the burn. Burning first would shrink supply and
@@ -285,9 +286,11 @@ pub mod ballast {
     /// accounts. After the CPI the program reloads both and enforces, in the vault's favor:
     ///   * funding did not fall by more than `amount_in` (no overspend), and
     ///   * stock rose by at least `oracle_fair_out * (1 - max_slippage)` (fair fill).
-    /// Whatever the venue did internally, the vault ends up richer by a fair margin or the
-    /// transaction reverts. A compromised engine can waste a transaction; it cannot extract
-    /// or under-fill the vault.
+    /// Whatever the venue did internally, the vault ends up richer or the transaction reverts,
+    /// and the venue cannot leave a delegate/authority behind on a vault account. A compromised
+    /// engine can waste a transaction but cannot extract. (It CAN, against a cooperating
+    /// allowlisted venue, under-fill by up to `max_slippage_bps` — so the venue must be a
+    /// reviewed adapter and the slippage cap set conservatively.)
     pub fn add_backing<'info>(
         ctx: Context<'_, '_, 'info, 'info, AddBacking<'info>>,
         amount_in: u64,
@@ -349,6 +352,12 @@ pub mod ballast {
             // SECOND vault account (e.g. another stock vault) to drain under the vault
             // authority's signature. Only funding_vault + stock_vault (named above) are ever
             // vault-owned in this CPI, and both are bounded by the net-effect guard.
+            // The venue accounts must be the venue's own. Reject the two vault accounts by key
+            // (they are prepended, never re-listed here), and reject any TOKEN ACCOUNT owned by
+            // the vault authority. A mint is token-program-owned but is not a token account, so
+            // it parses as neither and is correctly allowed through.
+            require_keys_neq!(ai.key(), ctx.accounts.funding_vault.key(), BallastError::BadVaultOwner);
+            require_keys_neq!(ai.key(), ctx.accounts.stock_vault.key(), BallastError::BadVaultOwner);
             if *ai.owner == anchor_spl::token::ID || *ai.owner == spl_token_2022::ID {
                 if let Ok(ta) = InterfaceAccount::<TokenAccount>::try_from(ai) {
                     require_keys_neq!(ta.owner, vault_key, BallastError::BadVaultOwner);
@@ -384,6 +393,16 @@ pub mod ballast {
         require!(post_stock >= pre_stock, BallastError::StockDecreased);
         let actual_out = post_stock - pre_stock;
 
+        // A balance-delta guard is not enough: a hostile venue holding the vault_authority
+        // signature could `approve` a delegate or `set_authority` on a vault account (balances
+        // unchanged) and drain it in a LATER transaction. Require both vault accounts came out
+        // untampered — still vault-owned, no delegate, no close authority.
+        for va in [&ctx.accounts.funding_vault, &ctx.accounts.stock_vault] {
+            require_keys_eq!(va.owner, vault_key, BallastError::VenueTampered);
+            require!(va.delegate.is_none(), BallastError::VenueTampered);
+            require!(va.close_authority.is_none(), BallastError::VenueTampered);
+        }
+
         // fair_out_base = actual_in * 10^stock_dec * 10^(-expo) / (10^quote_dec * price)
         let sd = ctx.accounts.stock_mint.decimals as u32;
         let qd = ctx.accounts.funding_mint.decimals as u32;
@@ -396,6 +415,9 @@ pub mod ballast {
         let floor = fair_out
             .checked_mul((10_000 - cfg.max_slippage_bps) as u128).ok_or(BallastError::MathOverflow)?
             .checked_div(10_000).ok_or(BallastError::MathOverflow)?;
+        // Reject dust: if the oracle floor rounds to zero, a near-zero fill would pass and let
+        // funding trickle out for nothing. Every spend must buy a nonzero, oracle-justified amount.
+        require!(floor > 0, BallastError::InsufficientBacking);
         require!(actual_out as u128 >= floor, BallastError::InsufficientBacking);
 
         emit!(Backed {
@@ -819,4 +841,6 @@ pub enum BallastError {
     StockDecreased,
     #[msg("Backing delivered less stock than the oracle floor")]
     InsufficientBacking,
+    #[msg("Venue tampered with a vault account (delegate/authority)")]
+    VenueTampered,
 }
