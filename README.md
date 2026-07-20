@@ -1,8 +1,11 @@
 # Ballast
 
-**Give your memecoin a floor.** Launch your coin on pump.fun and keep **100% of your creator
-fees** — Ballast adds a non-custodial vault of real tokenized stock (AAPLx, TSLAx, NVDAx…) that
-every holder can redeem against, on-chain, anytime. Backing only goes up. The floor only rises.
+**Give your memecoin a floor.** Keep **100% of your creator fees** — Ballast bolts a
+non-custodial vault of real tokenized stock (AAPLx, TSLAx, NVDAx…) onto your coin, one every
+holder can redeem against, on-chain, anytime. Backing only goes up. The floor only rises.
+
+Ballast is a backing layer, not a launchpad: launch your coin wherever you like, then give it a
+floor.
 
 - **You keep 100% of your creator fees.** Ballast never touches them.
 - **A redeemable floor.** Holders burn their coins for a pro-rata share of the vault's real stock.
@@ -12,7 +15,7 @@ every holder can redeem against, on-chain, anytime. Backing only goes up. The fl
   their own burned share. No admin withdrawal, no drain path — see [`docs/SECURITY-ARCHITECTURE.md`](docs/SECURITY-ARCHITECTURE.md).
 
 ## How it works
-1. Launch a normal coin on pump.fun (classic SPL). Keep all your creator fees.
+1. Launch a normal coin (a standard SPL memecoin). Keep all your creator fees.
 2. Open a Ballast vault for the coin, allowlisting which stocks may back it.
 3. Fund the vault with buybacks — `deposit_stock` (or `add_backing` to swap SOL→stock with an
    oracle price floor). Every deposit raises the redeemable floor and is publicly verifiable.
