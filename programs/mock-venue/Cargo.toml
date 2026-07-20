@@ -1,12 +1,12 @@
 [package]
-name = "ballast"
+name = "mock-venue"
 version = "0.1.0"
-description = "Ballast — asset-backed launchpad vault program"
+description = "TEST-ONLY mock swap venue implementing the Ballast Venue ABI v1"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "ballast"
+name = "mock_venue"
 
 [features]
 default = []
@@ -17,5 +17,5 @@ no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 
 [dependencies]
-anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"

@@ -13,6 +13,10 @@
 //! Devnet-only until audited (Sec3 / OtterSec tier) + legally reviewed. See docs/.
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{
+    instruction::{AccountMeta, Instruction},
+    program::invoke_signed,
+};
 use anchor_spl::token_interface::{
     self, Burn, Mint, TokenAccount, TokenInterface, TransferChecked,
 };
@@ -27,8 +31,23 @@ pub const MAX_STOCKS: usize = 8;
 /// in [0, MAX_FEE_BPS]; it can never exceed this, by construction.
 pub const MAX_FEE_BPS: u16 = 300;
 
+/// Hard ceiling on the slippage tolerance for backing swaps (5%). The vault will reject any
+/// swap that delivers less than `oracle_fair_out * (1 - max_slippage)`.
+pub const MAX_SLIPPAGE_BPS: u16 = 500;
+
+/// Oracle price is rejected if older than this many slots (~2 min at 400ms/slot).
+pub const MAX_PRICE_STALENESS_SLOTS: u64 = 300;
+
 pub const CONFIG_SEED: &[u8] = b"config";
 pub const VAULT_SEED: &[u8] = b"vault";
+pub const PRICE_SEED: &[u8] = b"price";
+
+/// Ballast Venue ABI v1: an allowlisted swap venue MUST expose an Anchor-compatible
+/// `swap(amount_in: u64)` instruction whose accounts begin with
+/// `[vault_authority (signer), funding_vault (w), stock_vault (w), ..venue pool accounts]`,
+/// pulling `amount_in` from `funding_vault` and depositing the swap output into `stock_vault`.
+/// This is the discriminator for that instruction: sha256("global:swap")[..8].
+pub const SWAP_DISCRIMINATOR: [u8; 8] = [248, 198, 158, 145, 225, 117, 135, 200];
 
 #[program]
 pub mod ballast {
@@ -40,11 +59,13 @@ pub mod ballast {
     pub fn initialize_vault(
         ctx: Context<InitializeVault>,
         backing_fee_bps: u16,
+        max_slippage_bps: u16,
         engine: Pubkey,
         swap_venue: Pubkey,
         stocks: Vec<Pubkey>,
     ) -> Result<()> {
         require!(backing_fee_bps <= MAX_FEE_BPS, BallastError::FeeTooHigh);
+        require!(max_slippage_bps <= MAX_SLIPPAGE_BPS, BallastError::SlippageTooHigh);
         require!(!stocks.is_empty(), BallastError::NoStocks);
         require!(stocks.len() <= MAX_STOCKS, BallastError::TooManyStocks);
         require!(engine != Pubkey::default(), BallastError::InvalidEngine);
@@ -64,6 +85,7 @@ pub mod ballast {
         cfg.engine = engine;
         cfg.swap_venue = swap_venue;
         cfg.backing_fee_bps = backing_fee_bps;
+        cfg.max_slippage_bps = max_slippage_bps;
         cfg.paused = false;
         cfg.stock_count = stocks.len() as u8;
         cfg.stock_allowlist = [Pubkey::default(); MAX_STOCKS];
@@ -217,6 +239,146 @@ pub mod ballast {
         });
         Ok(())
     }
+
+    /// Publish a stock price to the per-stock PriceFeed PDA. Admin-signed. This is the DEVNET
+    /// oracle stand-in — in production the min-out floor reads a Pyth price account instead;
+    /// the `add_backing` guard is identical, only the price source changes.
+    pub fn set_price(ctx: Context<SetPrice>, price: u64, expo: i32) -> Result<()> {
+        require!(price > 0, BallastError::BadOracle);
+        require!(expo <= 0, BallastError::BadOracle); // stocks priced with non-positive expo
+        let slot = Clock::get()?.slot;
+        let pf = &mut ctx.accounts.price_feed;
+        pf.stock_mint = ctx.accounts.stock_mint.key();
+        pf.price = price;
+        pf.expo = expo;
+        pf.publish_slot = slot;
+        emit!(PriceSet { stock_mint: pf.stock_mint, price, expo, slot });
+        Ok(())
+    }
+
+    /// Engine-triggered backing: spend up to `amount_in` of the funding asset through the
+    /// allowlisted venue and deposit an allowlisted stock into the vault.
+    ///
+    /// # Why this can never lose value
+    /// The program itself names the ONLY two vault accounts the swap may touch
+    /// (`funding_vault`, `stock_vault`); the engine supplies only the venue's own pool
+    /// accounts. After the CPI the program reloads both and enforces, in the vault's favor:
+    ///   * funding did not fall by more than `amount_in` (no overspend), and
+    ///   * stock rose by at least `oracle_fair_out * (1 - max_slippage)` (fair fill).
+    /// Whatever the venue did internally, the vault ends up richer by a fair margin or the
+    /// transaction reverts. A compromised engine can waste a transaction; it cannot extract
+    /// or under-fill the vault.
+    pub fn add_backing<'info>(
+        ctx: Context<'_, '_, 'info, 'info, AddBacking<'info>>,
+        amount_in: u64,
+    ) -> Result<()> {
+        let cfg = &ctx.accounts.config;
+        require!(!cfg.paused, BallastError::Paused);
+        require!(amount_in > 0, BallastError::ZeroAmount);
+
+        let stock_mint_key = ctx.accounts.stock_mint.key();
+        let vault_key = ctx.accounts.vault_authority.key();
+
+        // Stock must be allowlisted; venue must be THE allowlisted venue.
+        require!(
+            cfg.stock_allowlist[..cfg.stock_count as usize].contains(&stock_mint_key),
+            BallastError::StockMismatch
+        );
+        require_keys_eq!(ctx.accounts.swap_venue.key(), cfg.swap_venue, BallastError::WrongVenue);
+
+        // The two vault accounts must be vault-owned and correctly minted.
+        require_keys_eq!(ctx.accounts.funding_vault.owner, vault_key, BallastError::BadVaultOwner);
+        require_keys_eq!(ctx.accounts.stock_vault.owner, vault_key, BallastError::BadVaultOwner);
+        require_keys_eq!(ctx.accounts.stock_vault.mint, stock_mint_key, BallastError::StockMismatch);
+        require_keys_eq!(
+            ctx.accounts.funding_vault.mint,
+            ctx.accounts.funding_mint.key(),
+            BallastError::WrongMint
+        );
+
+        // Oracle freshness + sanity (price_feed PDA binding is enforced by the accounts struct).
+        let pf = &ctx.accounts.price_feed;
+        let slot = Clock::get()?.slot;
+        require!(slot.saturating_sub(pf.publish_slot) <= MAX_PRICE_STALENESS_SLOTS, BallastError::StaleOracle);
+        require!(pf.price > 0 && pf.expo <= 0, BallastError::BadOracle);
+
+        let pre_stock = ctx.accounts.stock_vault.amount;
+        let pre_funding = ctx.accounts.funding_vault.amount;
+        require!(pre_funding >= amount_in, BallastError::InsufficientFunding);
+
+        // ---- CPI the allowlisted venue's swap(amount_in). ----
+        let mint_key = cfg.token_mint;
+        let vault_bump = cfg.vault_authority_bump;
+        let signer_seeds: &[&[&[u8]]] = &[&[VAULT_SEED, mint_key.as_ref(), &[vault_bump]]];
+
+        let mut metas = vec![
+            AccountMeta::new_readonly(vault_key, true),
+            AccountMeta::new(ctx.accounts.funding_vault.key(), false),
+            AccountMeta::new(ctx.accounts.stock_vault.key(), false),
+        ];
+        let mut infos = vec![
+            ctx.accounts.vault_authority.to_account_info(),
+            ctx.accounts.funding_vault.to_account_info(),
+            ctx.accounts.stock_vault.to_account_info(),
+        ];
+        for ai in ctx.remaining_accounts.iter() {
+            metas.push(AccountMeta {
+                pubkey: ai.key(),
+                is_signer: ai.is_signer,
+                is_writable: ai.is_writable,
+            });
+            infos.push(ai.to_account_info());
+        }
+        infos.push(ctx.accounts.swap_venue.to_account_info());
+
+        let mut data = SWAP_DISCRIMINATOR.to_vec();
+        data.extend_from_slice(&amount_in.to_le_bytes());
+
+        invoke_signed(
+            &Instruction { program_id: ctx.accounts.swap_venue.key(), accounts: metas, data },
+            &infos,
+            signer_seeds,
+        )?;
+
+        // ---- Net-effect guard: the vault must end up richer by a fair margin. ----
+        ctx.accounts.stock_vault.reload()?;
+        ctx.accounts.funding_vault.reload()?;
+        let post_stock = ctx.accounts.stock_vault.amount;
+        let post_funding = ctx.accounts.funding_vault.amount;
+
+        require!(post_funding <= pre_funding, BallastError::FundingIncreased);
+        let actual_in = pre_funding - post_funding;
+        require!(actual_in <= amount_in, BallastError::OverSpend);
+        require!(post_stock >= pre_stock, BallastError::StockDecreased);
+        let actual_out = post_stock - pre_stock;
+
+        // fair_out_base = actual_in * 10^stock_dec * 10^(-expo) / (10^quote_dec * price)
+        let sd = ctx.accounts.stock_mint.decimals as u32;
+        let qd = ctx.accounts.funding_mint.decimals as u32;
+        let pe = (-pf.expo) as u32;
+        let num = (actual_in as u128)
+            .checked_mul(pow10(sd)?).ok_or(BallastError::MathOverflow)?
+            .checked_mul(pow10(pe)?).ok_or(BallastError::MathOverflow)?;
+        let den = pow10(qd)?.checked_mul(pf.price as u128).ok_or(BallastError::MathOverflow)?;
+        let fair_out = num.checked_div(den).ok_or(BallastError::MathOverflow)?;
+        let floor = fair_out
+            .checked_mul((10_000 - cfg.max_slippage_bps) as u128).ok_or(BallastError::MathOverflow)?
+            .checked_div(10_000).ok_or(BallastError::MathOverflow)?;
+        require!(actual_out as u128 >= floor, BallastError::InsufficientBacking);
+
+        emit!(Backed {
+            token_mint: mint_key,
+            stock_mint: stock_mint_key,
+            amount_in: actual_in,
+            amount_out: actual_out,
+        });
+        Ok(())
+    }
+}
+
+/// 10^n as u128, checked.
+fn pow10(n: u32) -> Result<u128> {
+    10u128.checked_pow(n).ok_or(error!(BallastError::MathOverflow))
 }
 
 // ------------------------------- Accounts -------------------------------
@@ -282,6 +444,53 @@ pub struct AdminOnly<'info> {
     pub admin: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct SetPrice<'info> {
+    #[account(has_one = admin @ BallastError::Unauthorized)]
+    pub config: Account<'info, VaultConfig>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub stock_mint: InterfaceAccount<'info, Mint>,
+    #[account(
+        init_if_needed,
+        payer = admin,
+        space = 8 + PriceFeed::INIT_SPACE,
+        seeds = [PRICE_SEED, stock_mint.key().as_ref()],
+        bump
+    )]
+    pub price_feed: Account<'info, PriceFeed>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AddBacking<'info> {
+    #[account(has_one = engine @ BallastError::Unauthorized)]
+    pub config: Account<'info, VaultConfig>,
+
+    pub engine: Signer<'info>,
+
+    /// CHECK: vault PDA signer; validated by seeds + stored bump.
+    #[account(seeds = [VAULT_SEED, config.token_mint.as_ref()], bump = config.vault_authority_bump)]
+    pub vault_authority: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    pub funding_vault: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub stock_vault: InterfaceAccount<'info, TokenAccount>,
+
+    pub stock_mint: InterfaceAccount<'info, Mint>,
+    pub funding_mint: InterfaceAccount<'info, Mint>,
+
+    /// Per-stock price feed; PDA binding to stock_mint enforced here.
+    #[account(seeds = [PRICE_SEED, stock_mint.key().as_ref()], bump)]
+    pub price_feed: Account<'info, PriceFeed>,
+
+    /// CHECK: must equal config.swap_venue (checked in handler); invoked via CPI.
+    pub swap_venue: UncheckedAccount<'info>,
+    // remaining_accounts: the venue's own pool accounts for the swap.
+}
+
 // ------------------------------- State -------------------------------
 
 #[account]
@@ -292,6 +501,7 @@ pub struct VaultConfig {
     pub engine: Pubkey,
     pub swap_venue: Pubkey,
     pub backing_fee_bps: u16,
+    pub max_slippage_bps: u16,
     pub paused: bool,
     pub stock_count: u8,
     pub vault_authority_bump: u8,
@@ -299,6 +509,16 @@ pub struct VaultConfig {
     pub stock_allowlist: [Pubkey; MAX_STOCKS],
     /// Forward-compat padding so a future upgrade can add fields without a migration.
     pub reserved: [u8; 128],
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct PriceFeed {
+    pub stock_mint: Pubkey,
+    /// Price of one whole stock in whole funding-asset units, scaled by 10^expo (expo <= 0).
+    pub price: u64,
+    pub expo: i32,
+    pub publish_slot: u64,
 }
 
 // ------------------------------- Events -------------------------------
@@ -325,6 +545,22 @@ pub struct Redeemed {
 pub struct ParamsUpdated {
     pub token_mint: Pubkey,
     pub field: String,
+}
+
+#[event]
+pub struct PriceSet {
+    pub stock_mint: Pubkey,
+    pub price: u64,
+    pub expo: i32,
+    pub slot: u64,
+}
+
+#[event]
+pub struct Backed {
+    pub token_mint: Pubkey,
+    pub stock_mint: Pubkey,
+    pub amount_in: u64,
+    pub amount_out: u64,
 }
 
 // ------------------------------- Errors -------------------------------
@@ -365,4 +601,22 @@ pub enum BallastError {
     MathOverflow,
     #[msg("Signer is not the admin")]
     Unauthorized,
+    #[msg("Slippage tolerance exceeds the hard cap")]
+    SlippageTooHigh,
+    #[msg("Swap venue does not match the allowlisted venue")]
+    WrongVenue,
+    #[msg("Oracle price is stale")]
+    StaleOracle,
+    #[msg("Oracle price is invalid")]
+    BadOracle,
+    #[msg("Funding account has insufficient balance")]
+    InsufficientFunding,
+    #[msg("Funding balance increased during backing")]
+    FundingIncreased,
+    #[msg("Swap spent more than the permitted amount")]
+    OverSpend,
+    #[msg("Stock balance decreased during backing")]
+    StockDecreased,
+    #[msg("Backing delivered less stock than the oracle floor")]
+    InsufficientBacking,
 }
