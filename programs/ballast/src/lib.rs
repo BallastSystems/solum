@@ -17,6 +17,7 @@ use anchor_lang::solana_program::{
     instruction::{AccountMeta, Instruction},
     program::invoke_signed,
 };
+use anchor_spl::token_2022::spl_token_2022;
 use anchor_spl::token_interface::{
     self, Burn, Mint, TokenAccount, TokenInterface, TransferChecked,
 };
@@ -41,6 +42,10 @@ pub const MAX_PRICE_STALENESS_SLOTS: u64 = 300;
 pub const CONFIG_SEED: &[u8] = b"config";
 pub const VAULT_SEED: &[u8] = b"vault";
 pub const PRICE_SEED: &[u8] = b"price";
+/// Authority (a program PDA) set as BOTH the Token-2022 transfer-fee-config authority and
+/// the withdraw-withheld authority of the launched mint. Because no instruction changes the
+/// fee rate, the tax is frozen; and withheld fees can only ever be pulled to the vault.
+pub const FEE_SEED: &[u8] = b"fee";
 
 /// Ballast Venue ABI v1: an allowlisted swap venue MUST expose an Anchor-compatible
 /// `swap(amount_in: u64)` instruction whose accounts begin with
@@ -374,6 +379,54 @@ pub mod ballast {
         });
         Ok(())
     }
+
+    /// Pull withheld Token-2022 transfer fees from the mint into the vault-owned fee account.
+    /// Permissionless: the destination is constrained to a vault-owned account for this exact
+    /// mint, so the only thing anyone can do is move fees INTO the vault — never out, never
+    /// elsewhere. (Sweeping withheld fees from holder accounts to the mint is the standard
+    /// permissionless Token-2022 `harvest_withheld_tokens_to_mint`, done off-program first.)
+    pub fn harvest_fees(ctx: Context<HarvestFees>) -> Result<()> {
+        require_keys_eq!(
+            ctx.accounts.fee_vault.owner,
+            ctx.accounts.vault_authority.key(),
+            BallastError::BadVaultOwner
+        );
+        require_keys_eq!(
+            ctx.accounts.fee_vault.mint,
+            ctx.accounts.token_mint.key(),
+            BallastError::WrongMint
+        );
+
+        let mint_key = ctx.accounts.token_mint.key();
+        let fee_bump = ctx.bumps.fee_authority;
+        let seeds: &[&[&[u8]]] = &[&[FEE_SEED, mint_key.as_ref(), &[fee_bump]]];
+
+        let ix = spl_token_2022::extension::transfer_fee::instruction::withdraw_withheld_tokens_from_mint(
+            &spl_token_2022::ID,
+            &mint_key,
+            &ctx.accounts.fee_vault.key(),
+            &ctx.accounts.fee_authority.key(),
+            &[],
+        )?;
+        invoke_signed(
+            &ix,
+            &[
+                ctx.accounts.token_mint.to_account_info(),
+                ctx.accounts.fee_vault.to_account_info(),
+                ctx.accounts.fee_authority.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+            ],
+            seeds,
+        )?;
+
+        ctx.accounts.fee_vault.reload()?;
+        emit!(FeesHarvested {
+            token_mint: mint_key,
+            fee_vault: ctx.accounts.fee_vault.key(),
+            balance: ctx.accounts.fee_vault.amount,
+        });
+        Ok(())
+    }
 }
 
 /// 10^n as u128, checked.
@@ -491,6 +544,28 @@ pub struct AddBacking<'info> {
     // remaining_accounts: the venue's own pool accounts for the swap.
 }
 
+#[derive(Accounts)]
+pub struct HarvestFees<'info> {
+    #[account(seeds = [CONFIG_SEED, token_mint.key().as_ref()], bump = config.config_bump)]
+    pub config: Account<'info, VaultConfig>,
+
+    #[account(mut, address = config.token_mint @ BallastError::WrongMint)]
+    pub token_mint: InterfaceAccount<'info, Mint>,
+
+    /// CHECK: transfer-fee withdraw authority PDA; validated by seeds, signs the withdraw.
+    #[account(seeds = [FEE_SEED, token_mint.key().as_ref()], bump)]
+    pub fee_authority: UncheckedAccount<'info>,
+
+    /// CHECK: vault authority PDA that owns fee_vault; validated by seeds.
+    #[account(seeds = [VAULT_SEED, token_mint.key().as_ref()], bump = config.vault_authority_bump)]
+    pub vault_authority: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    pub fee_vault: InterfaceAccount<'info, TokenAccount>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+}
+
 // ------------------------------- State -------------------------------
 
 #[account]
@@ -561,6 +636,13 @@ pub struct Backed {
     pub stock_mint: Pubkey,
     pub amount_in: u64,
     pub amount_out: u64,
+}
+
+#[event]
+pub struct FeesHarvested {
+    pub token_mint: Pubkey,
+    pub fee_vault: Pubkey,
+    pub balance: u64,
 }
 
 // ------------------------------- Errors -------------------------------
