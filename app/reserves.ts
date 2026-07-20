@@ -3,8 +3,16 @@
 // recompute this from the chain. Values are in the funding ("quote") asset's whole units.
 
 import { Connection, PublicKey } from "@solana/web3.js";
-import { getMint, getAccount, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { getMint, getAccount, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import * as anchor from "@coral-xyz/anchor";
+
+// A pump.fun coin is classic SPL; xStocks are Token-2022. Resolve each mint's program from
+// its on-chain owner so we never assume one program for both.
+async function tokenProgramOf(connection: Connection, mint: PublicKey): Promise<PublicKey> {
+  const info = await connection.getAccountInfo(mint);
+  if (!info) throw new Error(`mint not found: ${mint.toBase58()}`);
+  return info.owner.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+}
 
 export interface StockReserve {
   mint: string;
@@ -31,14 +39,14 @@ export interface Reserves {
 export async function computeReserves(
   connection: Connection,
   program: anchor.Program,
-  tokenMint: PublicKey,
-  tokenProgram: PublicKey = TOKEN_2022_PROGRAM_ID
+  tokenMint: PublicKey
 ): Promise<Reserves> {
   const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), tokenMint.toBuffer()], program.programId);
   const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), tokenMint.toBuffer()], program.programId);
   const cfg: any = await (program.account as any).vaultConfig.fetch(configPda);
 
-  const mintInfo = await getMint(connection, tokenMint, undefined, tokenProgram);
+  const coinProgram = await tokenProgramOf(connection, tokenMint);
+  const mintInfo = await getMint(connection, tokenMint, undefined, coinProgram);
   const decimals = mintInfo.decimals;
   const supplyBase = mintInfo.supply;
   const supplyWhole = Number(supplyBase) / 10 ** decimals;
@@ -49,11 +57,12 @@ export async function computeReserves(
 
   for (let i = 0; i < stockCount; i++) {
     const stockMint = cfg.stockAllowlist[i] as PublicKey;
-    const sm = await getMint(connection, stockMint, undefined, tokenProgram);
-    const ata = getAssociatedTokenAddressSync(stockMint, vaultAuth, true, tokenProgram);
+    const stockProgram = await tokenProgramOf(connection, stockMint);
+    const sm = await getMint(connection, stockMint, undefined, stockProgram);
+    const ata = getAssociatedTokenAddressSync(stockMint, vaultAuth, true, stockProgram);
 
     let balBase = 0n;
-    try { balBase = (await getAccount(connection, ata, undefined, tokenProgram)).amount; } catch { /* uncreated -> 0 */ }
+    try { balBase = (await getAccount(connection, ata, undefined, stockProgram)).amount; } catch { /* uncreated -> 0 */ }
     const balanceWhole = Number(balBase) / 10 ** sm.decimals;
 
     let price: number | null = null, expo: number | null = null, publishSlot: number | null = null;
