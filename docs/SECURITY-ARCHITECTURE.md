@@ -16,7 +16,21 @@ fully compromised.** This is the exact failure we watched break elsewhere (an en
 *could* extract collateral because the post-check was caller-supplied). Here, extraction is
 not gated — it does not exist as a code path.
 
-## Mechanism (v1): Token-2022 transfer fee → stock backing
+## Funding model (v1): pump.fun launch + manual buybacks
+
+The launched coin is a **plain pump.fun SPL token** — the creator keeps 100% of pump's
+creator fees, and Ballast never touches them. The vault is funded by **buybacks**: the
+operator (or anyone) buys tokenized stock and deposits it via `deposit_stock`, or swaps
+SOL→stock via `add_backing`. Backing only ever increases; every deposit is an on-chain event,
+so the reserves are fully verifiable. Because the coin is classic SPL and xStocks are
+Token-2022, `redeem` burns through the coin's token program and pays out through the stock's
+token program (two distinct programs in one instruction).
+
+> The Token-2022 transfer-fee path below (`harvest_fees`) is an **alternative for a
+> self-issued Token-2022 launch** — it does NOT apply to a pump.fun coin (pump mints are
+> classic SPL with no transfer-fee extension). Kept for optionality; unused in the pump model.
+
+## Alternative mechanism: Token-2022 transfer fee → stock backing (self-issued launches only)
 
 - The launched token is a **Token-2022 mint with the Transfer-Fee extension.** A fixed % of
   every transfer is withheld at the token level (protocol-enforced, works on any DEX —

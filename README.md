@@ -1,23 +1,32 @@
 # Ballast
 
-**The asset-backed launchpad.** A token launched on Ballast quietly accumulates real
-tokenized stock into an on-chain vault with a slice of every trade — a **redeemable floor
-that only rises.** Creators keep 100% of their fees. Memecoin culture, with a real balance
-sheet.
+**Give your memecoin a floor.** Launch your coin on pump.fun and keep **100% of your creator
+fees** — Ballast adds a non-custodial vault of real tokenized stock (AAPLx, TSLAx, NVDAx…) that
+every holder can redeem against, on-chain, anytime. Backing only goes up. The floor only rises.
 
-- **No leverage, nothing to liquidate.** Backing is *spot the vault actually holds.*
-- **Redeemable floor.** Holders can burn tokens for their pro-rata share of the vault, on-chain, anytime.
-- **Verifiable.** The vault balances *are* the proof-of-reserves.
-- **Safe by construction.** The engine can trigger backing; it can **never extract value.** See [`docs/SECURITY-ARCHITECTURE.md`](docs/SECURITY-ARCHITECTURE.md).
+- **You keep 100% of your creator fees.** Ballast never touches them.
+- **A redeemable floor.** Holders burn their coins for a pro-rata share of the vault's real stock.
+- **Backed by buybacks, with proof.** You (or anyone) deposit stock into the vault; every
+  deposit is on-chain and verifiable. The vault balances *are* the proof-of-reserves.
+- **Safe by construction.** The only way value ever leaves the vault is a holder redeeming
+  their own burned share. No admin withdrawal, no drain path — see [`docs/SECURITY-ARCHITECTURE.md`](docs/SECURITY-ARCHITECTURE.md).
+
+## How it works
+1. Launch a normal coin on pump.fun (classic SPL). Keep all your creator fees.
+2. Open a Ballast vault for the coin, allowlisting which stocks may back it.
+3. Fund the vault with buybacks — `deposit_stock` (or `add_backing` to swap SOL→stock with an
+   oracle price floor). Every deposit raises the redeemable floor and is publicly verifiable.
+4. Holders `redeem`: burn coins, receive their exact pro-rata slice of the vault's stock.
 
 ## Status
 Pre-alpha. **Devnet only.** No mainnet, no real assets, until audited and legally reviewed.
 
 ## Layout
-- `programs/` — Solana (Anchor) on-chain program: vault, backing, redemption.
-- `engine/` — off-chain trigger for `add_backing` (holds **no** extraction power).
-- `app/` — proof-of-reserves dashboard + launch UI.
-- `docs/` — architecture + security.
+- `programs/ballast/` — the vault program: `initialize_vault`, `deposit_stock`, `redeem`,
+  `add_backing` (optional SOL→stock buyback with oracle floor), `set_price`, admin controls.
+- `programs/mock-venue/` — TEST-ONLY swap venue for exercising `add_backing`.
+- `app/` — proof-of-reserves read layer (`reserves.ts`).
+- `docs/` — architecture, security, testing.
 
 ## Toolchain
 Anchor 0.31.1 · Solana 2.1.x · devnet.

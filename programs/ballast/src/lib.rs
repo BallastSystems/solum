@@ -198,9 +198,11 @@ pub mod ballast {
 
             let stock_mint = InterfaceAccount::<Mint>::try_from(stock_mint_ai)?;
 
+            // Stock transfer goes through the STOCK token program (Token-2022 for xStocks),
+            // which is distinct from the burn's token program (classic SPL for a pump.fun coin).
             token_interface::transfer_checked(
                 CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info(),
+                    ctx.accounts.stock_token_program.to_account_info(),
                     TransferChecked {
                         from: vault_ata_ai.to_account_info(),
                         mint: stock_mint_ai.to_account_info(),
@@ -427,6 +429,47 @@ pub mod ballast {
         });
         Ok(())
     }
+
+    /// Deposit backing stock into the vault — the manual-buyback path. Permissionless: anyone
+    /// (the operator, a partner, a treasury) can ADD backing, which only ever raises the floor.
+    /// Every deposit emits an event, giving verifiable on-chain provenance for each buyback.
+    pub fn deposit_stock(ctx: Context<DepositStock>, amount: u64) -> Result<()> {
+        let cfg = &ctx.accounts.config;
+        require!(amount > 0, BallastError::ZeroAmount);
+        let stock_mint_key = ctx.accounts.stock_mint.key();
+        require!(
+            cfg.stock_allowlist[..cfg.stock_count as usize].contains(&stock_mint_key),
+            BallastError::StockMismatch
+        );
+        require_keys_eq!(
+            ctx.accounts.stock_vault.owner,
+            ctx.accounts.vault_authority.key(),
+            BallastError::BadVaultOwner
+        );
+        require_keys_eq!(ctx.accounts.stock_vault.mint, stock_mint_key, BallastError::StockMismatch);
+
+        token_interface::transfer_checked(
+            CpiContext::new(
+                ctx.accounts.stock_token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.depositor_stock_account.to_account_info(),
+                    mint: ctx.accounts.stock_mint.to_account_info(),
+                    to: ctx.accounts.stock_vault.to_account_info(),
+                    authority: ctx.accounts.depositor.to_account_info(),
+                },
+            ),
+            amount,
+            ctx.accounts.stock_mint.decimals,
+        )?;
+
+        emit!(BackingDeposited {
+            token_mint: cfg.token_mint,
+            stock_mint: stock_mint_key,
+            depositor: ctx.accounts.depositor.key(),
+            amount,
+        });
+        Ok(())
+    }
 }
 
 /// 10^n as u128, checked.
@@ -483,10 +526,14 @@ pub struct Redeem<'info> {
         mut,
         token::mint = token_mint,
         token::authority = redeemer,
+        token::token_program = token_program,
     )]
     pub redeemer_token_account: InterfaceAccount<'info, TokenAccount>,
 
+    /// Token program of the redeemed coin (classic SPL for a pump.fun launch). Burns here.
     pub token_program: Interface<'info, TokenInterface>,
+    /// Token program of the backing stock (Token-2022 for xStocks). Stock transfers here.
+    pub stock_token_program: Interface<'info, TokenInterface>,
     // remaining_accounts: [stock_mint, vault_ata, user_ata] * stock_count, in allowlist order.
 }
 
@@ -566,6 +613,28 @@ pub struct HarvestFees<'info> {
     pub token_program: Interface<'info, TokenInterface>,
 }
 
+#[derive(Accounts)]
+pub struct DepositStock<'info> {
+    pub config: Account<'info, VaultConfig>,
+
+    /// CHECK: vault authority PDA that owns stock_vault; validated by seeds.
+    #[account(seeds = [VAULT_SEED, config.token_mint.as_ref()], bump = config.vault_authority_bump)]
+    pub vault_authority: UncheckedAccount<'info>,
+
+    pub stock_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(mut)]
+    pub depositor: Signer<'info>,
+
+    #[account(mut)]
+    pub depositor_stock_account: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub stock_vault: InterfaceAccount<'info, TokenAccount>,
+
+    pub stock_token_program: Interface<'info, TokenInterface>,
+}
+
 // ------------------------------- State -------------------------------
 
 #[account]
@@ -643,6 +712,14 @@ pub struct FeesHarvested {
     pub token_mint: Pubkey,
     pub fee_vault: Pubkey,
     pub balance: u64,
+}
+
+#[event]
+pub struct BackingDeposited {
+    pub token_mint: Pubkey,
+    pub stock_mint: Pubkey,
+    pub depositor: Pubkey,
+    pub amount: u64,
 }
 
 // ------------------------------- Errors -------------------------------
