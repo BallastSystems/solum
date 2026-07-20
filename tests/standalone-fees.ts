@@ -47,8 +47,8 @@ async function main() {
   const mintKp = Keypair.generate();
   const mint = mintKp.publicKey;
   const [feeAuth] = PublicKey.findProgramAddressSync([Buffer.from("fee"), mint.toBuffer()], ballast.programId);
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), mint.toBuffer()], ballast.programId);
-  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), mint.toBuffer()], ballast.programId);
+  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), mint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
+  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), mint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
 
   const mintLen = getMintLen([ExtensionType.TransferFeeConfig]);
   const lamports = await conn.getMinimumBalanceForRentExemption(mintLen);
@@ -60,7 +60,7 @@ async function main() {
 
   // vault for this mint (stocks/venue irrelevant to harvest — dummy values)
   await ballast.methods
-    .initializeVault(FEE_BPS, 500, Keypair.generate().publicKey, Keypair.generate().publicKey, [Keypair.generate().publicKey])
+    .initializeVault(FEE_BPS, 500, Keypair.generate().publicKey, Keypair.generate().publicKey, Keypair.generate().publicKey, [Keypair.generate().publicKey])
     .accounts({ admin: payer.publicKey, tokenMint: mint })
     .rpc();
 

@@ -50,11 +50,11 @@ async function main() {
   const stockA = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, STK);
   const stockB = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, STK);
 
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), coin.toBuffer()], program.programId);
-  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), coin.toBuffer()], program.programId);
+  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), coin.toBuffer(), payer.publicKey.toBuffer()], program.programId);
+  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), coin.toBuffer(), payer.publicKey.toBuffer()], program.programId);
 
   await program.methods
-    .initializeVault(100, 500, user.publicKey, Keypair.generate().publicKey, [stockA, stockB])
+    .initializeVault(100, 500, user.publicKey, Keypair.generate().publicKey, Keypair.generate().publicKey, [stockA, stockB])
     .accounts({ admin: payer.publicKey, tokenMint: coin })
     .rpc();
 

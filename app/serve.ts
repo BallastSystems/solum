@@ -23,7 +23,8 @@ http.createServer(async (req, res) => {
   if (url.pathname === "/api/reserves") {
     try {
       const mint = new PublicKey(url.searchParams.get("mint") || "");
-      const r = await computeReserves(conn, program, mint);
+      const admin = new PublicKey(url.searchParams.get("admin") || "");
+      const r = await computeReserves(conn, program, mint, admin);
       res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
       res.end(JSON.stringify(r));
     } catch (e: any) {

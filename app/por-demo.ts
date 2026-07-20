@@ -31,10 +31,10 @@ async function main() {
   const holder = await createAssociatedTokenAccount(conn, payer, coin, payer.publicKey, {}, COIN);
   await mintTo(conn, payer, coin, holder, payer, 1_000_000_000, [], undefined, COIN); // 1000 whole
 
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), coin.toBuffer()], program.programId);
-  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), coin.toBuffer()], program.programId);
+  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), coin.toBuffer(), payer.publicKey.toBuffer()], program.programId);
+  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), coin.toBuffer(), payer.publicKey.toBuffer()], program.programId);
 
-  await program.methods.initializeVault(100, 500, payer.publicKey, Keypair.generate().publicKey, [aapl, tsla])
+  await program.methods.initializeVault(100, 500, payer.publicKey, Keypair.generate().publicKey, Keypair.generate().publicKey, [aapl, tsla])
     .accounts({ admin: payer.publicKey, tokenMint: coin }).rpc();
 
   // publish prices: AAPL $150, TSLA $30 (expo 0)
@@ -52,7 +52,7 @@ async function main() {
       .accounts({ config: configPda, vaultAuthority: vaultAuth, stockMint: mint, depositor: payer.publicKey, depositorStockAccount: src, stockVault: vault, stockTokenProgram: STK }).rpc();
   }
 
-  const r = await computeReserves(conn, program, coin);
+  const r = await computeReserves(conn, program, coin, payer.publicKey);
 
   console.log("\n=== Proof of Reserves ===");
   console.log(`coin ${r.tokenMint.slice(0, 8)}…  supply ${r.supplyWhole}`);

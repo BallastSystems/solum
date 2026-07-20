@@ -49,12 +49,12 @@ async function main() {
   const stock = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, TP);
   const funding = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, TP);
 
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), ballastMint.toBuffer()], ballast.programId);
-  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), ballastMint.toBuffer()], ballast.programId);
-  const [priceFeed] = PublicKey.findProgramAddressSync([Buffer.from("price"), stock.toBuffer()], ballast.programId);
+  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), ballastMint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
+  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), ballastMint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
+  const [priceFeed] = PublicKey.findProgramAddressSync([Buffer.from("price"), configPda.toBuffer(), stock.toBuffer()], ballast.programId);
 
   await ballast.methods
-    .initializeVault(100, 500, engine.publicKey, mock.programId, [stock])
+    .initializeVault(100, 500, engine.publicKey, mock.programId, funding, [stock])
     .accounts({ admin: payer.publicKey, tokenMint: ballastMint })
     .rpc();
 

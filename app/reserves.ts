@@ -39,10 +39,13 @@ export interface Reserves {
 export async function computeReserves(
   connection: Connection,
   program: anchor.Program,
-  tokenMint: PublicKey
+  tokenMint: PublicKey,
+  admin: PublicKey // the vault creator; a vault is uniquely (coin, admin)
 ): Promise<Reserves> {
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), tokenMint.toBuffer()], program.programId);
-  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), tokenMint.toBuffer()], program.programId);
+  const [configPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("config"), tokenMint.toBuffer(), admin.toBuffer()], program.programId);
+  const [vaultAuth] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault"), tokenMint.toBuffer(), admin.toBuffer()], program.programId);
   const cfg: any = await (program.account as any).vaultConfig.fetch(configPda);
 
   const coinProgram = await tokenProgramOf(connection, tokenMint);
@@ -67,7 +70,7 @@ export async function computeReserves(
 
     let price: number | null = null, expo: number | null = null, publishSlot: number | null = null;
     try {
-      const [pf] = PublicKey.findProgramAddressSync([Buffer.from("price"), stockMint.toBuffer()], program.programId);
+      const [pf] = PublicKey.findProgramAddressSync([Buffer.from("price"), configPda.toBuffer(), stockMint.toBuffer()], program.programId);
       const feed: any = await (program.account as any).priceFeed.fetch(pf);
       expo = feed.expo;
       price = Number(feed.price) * 10 ** feed.expo;

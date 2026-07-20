@@ -67,6 +67,7 @@ pub mod ballast {
         max_slippage_bps: u16,
         engine: Pubkey,
         swap_venue: Pubkey,
+        funding_mint: Pubkey,
         stocks: Vec<Pubkey>,
     ) -> Result<()> {
         require!(backing_fee_bps <= MAX_FEE_BPS, BallastError::FeeTooHigh);
@@ -75,10 +76,14 @@ pub mod ballast {
         require!(stocks.len() <= MAX_STOCKS, BallastError::TooManyStocks);
         require!(engine != Pubkey::default(), BallastError::InvalidEngine);
         require!(swap_venue != Pubkey::default(), BallastError::InvalidVenue);
+        require!(funding_mint != Pubkey::default(), BallastError::WrongMint);
 
-        // Deny-by-default allowlist hygiene: no zero mints, no duplicates.
+        // Deny-by-default allowlist hygiene: no zero mints, no duplicates, and the funding
+        // asset may never be one of the backing stocks (else add_backing could spend a stock
+        // reserve as "funding" and swap it out).
         for (i, s) in stocks.iter().enumerate() {
             require!(*s != Pubkey::default(), BallastError::InvalidStock);
+            require!(*s != funding_mint, BallastError::FundingIsStock);
             for other in &stocks[i + 1..] {
                 require!(other != s, BallastError::DuplicateStock);
             }
@@ -89,6 +94,7 @@ pub mod ballast {
         cfg.admin = ctx.accounts.admin.key();
         cfg.engine = engine;
         cfg.swap_venue = swap_venue;
+        cfg.funding_mint = funding_mint;
         cfg.backing_fee_bps = backing_fee_bps;
         cfg.max_slippage_bps = max_slippage_bps;
         cfg.paused = false;
@@ -151,10 +157,12 @@ pub mod ballast {
             amount,
         )?;
 
-        // Vault PDA signs each transfer out. Seeds bound to this vault's token_mint only.
+        // Vault PDA signs each transfer out. Seeds bound to this vault's (token_mint, admin).
         let mint_key = cfg.token_mint;
+        let admin_key = cfg.admin;
         let vault_bump = cfg.vault_authority_bump;
-        let signer_seeds: &[&[&[u8]]] = &[&[VAULT_SEED, mint_key.as_ref(), &[vault_bump]]];
+        let signer_seeds: &[&[&[u8]]] =
+            &[&[VAULT_SEED, mint_key.as_ref(), admin_key.as_ref(), &[vault_bump]]];
 
         // ---- Pro-rata payout of each allowlisted stock. ----
         for i in 0..stock_count {
@@ -251,6 +259,11 @@ pub mod ballast {
     /// oracle stand-in — in production the min-out floor reads a Pyth price account instead;
     /// the `add_backing` guard is identical, only the price source changes.
     pub fn set_price(ctx: Context<SetPrice>, price: u64, expo: i32) -> Result<()> {
+        let cfg = &ctx.accounts.config;
+        require!(
+            cfg.stock_allowlist[..cfg.stock_count as usize].contains(&ctx.accounts.stock_mint.key()),
+            BallastError::StockMismatch
+        );
         require!(price > 0, BallastError::BadOracle);
         require!(expo <= 0, BallastError::BadOracle); // stocks priced with non-positive expo
         let slot = Clock::get()?.slot;
@@ -315,8 +328,10 @@ pub mod ballast {
 
         // ---- CPI the allowlisted venue's swap(amount_in). ----
         let mint_key = cfg.token_mint;
+        let admin_key = cfg.admin;
         let vault_bump = cfg.vault_authority_bump;
-        let signer_seeds: &[&[&[u8]]] = &[&[VAULT_SEED, mint_key.as_ref(), &[vault_bump]]];
+        let signer_seeds: &[&[&[u8]]] =
+            &[&[VAULT_SEED, mint_key.as_ref(), admin_key.as_ref(), &[vault_bump]]];
 
         let mut metas = vec![
             AccountMeta::new_readonly(vault_key, true),
@@ -501,14 +516,15 @@ pub struct InitializeVault<'info> {
         init,
         payer = admin,
         space = 8 + VaultConfig::INIT_SPACE,
-        seeds = [CONFIG_SEED, token_mint.key().as_ref()],
+        seeds = [CONFIG_SEED, token_mint.key().as_ref(), admin.key().as_ref()],
         bump
     )]
     pub config: Account<'info, VaultConfig>,
 
     /// CHECK: data-less PDA that owns the vault's stock token accounts and signs transfers.
-    /// Validated purely by seeds; never carries data.
-    #[account(seeds = [VAULT_SEED, token_mint.key().as_ref()], bump)]
+    /// Bound to (token_mint, admin) so a vault is uniquely the creator's — no one can
+    /// front-run init and hijack the treasury address for a coin.
+    #[account(seeds = [VAULT_SEED, token_mint.key().as_ref(), admin.key().as_ref()], bump)]
     pub vault_authority: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
@@ -516,17 +532,16 @@ pub struct InitializeVault<'info> {
 
 #[derive(Accounts)]
 pub struct Redeem<'info> {
-    #[account(
-        seeds = [CONFIG_SEED, token_mint.key().as_ref()],
-        bump = config.config_bump,
-    )]
     pub config: Account<'info, VaultConfig>,
 
     #[account(mut, address = config.token_mint @ BallastError::WrongMint)]
     pub token_mint: InterfaceAccount<'info, Mint>,
 
-    /// CHECK: vault PDA signer; validated by seeds + stored bump.
-    #[account(seeds = [VAULT_SEED, token_mint.key().as_ref()], bump = config.vault_authority_bump)]
+    /// CHECK: vault PDA signer; derived from the config's (token_mint, admin) + stored bump.
+    #[account(
+        seeds = [VAULT_SEED, config.token_mint.as_ref(), config.admin.as_ref()],
+        bump = config.vault_authority_bump
+    )]
     pub vault_authority: UncheckedAccount<'info>,
 
     #[account(mut)]
@@ -565,7 +580,7 @@ pub struct SetPrice<'info> {
         init_if_needed,
         payer = admin,
         space = 8 + PriceFeed::INIT_SPACE,
-        seeds = [PRICE_SEED, stock_mint.key().as_ref()],
+        seeds = [PRICE_SEED, config.key().as_ref(), stock_mint.key().as_ref()],
         bump
     )]
     pub price_feed: Account<'info, PriceFeed>,
@@ -579,8 +594,11 @@ pub struct AddBacking<'info> {
 
     pub engine: Signer<'info>,
 
-    /// CHECK: vault PDA signer; validated by seeds + stored bump.
-    #[account(seeds = [VAULT_SEED, config.token_mint.as_ref()], bump = config.vault_authority_bump)]
+    /// CHECK: vault PDA signer; derived from the config's (token_mint, admin) + stored bump.
+    #[account(
+        seeds = [VAULT_SEED, config.token_mint.as_ref(), config.admin.as_ref()],
+        bump = config.vault_authority_bump
+    )]
     pub vault_authority: UncheckedAccount<'info>,
 
     #[account(mut)]
@@ -590,10 +608,13 @@ pub struct AddBacking<'info> {
     pub stock_vault: InterfaceAccount<'info, TokenAccount>,
 
     pub stock_mint: InterfaceAccount<'info, Mint>,
+
+    /// The vault's pinned funding asset — `add_backing` may only ever spend this, never a stock.
+    #[account(address = config.funding_mint @ BallastError::WrongMint)]
     pub funding_mint: InterfaceAccount<'info, Mint>,
 
-    /// Per-stock price feed; PDA binding to stock_mint enforced here.
-    #[account(seeds = [PRICE_SEED, stock_mint.key().as_ref()], bump)]
+    /// Per-vault, per-stock price feed; binding to (config, stock_mint) enforced here.
+    #[account(seeds = [PRICE_SEED, config.key().as_ref(), stock_mint.key().as_ref()], bump)]
     pub price_feed: Account<'info, PriceFeed>,
 
     /// CHECK: must equal config.swap_venue (checked in handler); invoked via CPI.
@@ -603,7 +624,6 @@ pub struct AddBacking<'info> {
 
 #[derive(Accounts)]
 pub struct HarvestFees<'info> {
-    #[account(seeds = [CONFIG_SEED, token_mint.key().as_ref()], bump = config.config_bump)]
     pub config: Account<'info, VaultConfig>,
 
     #[account(mut, address = config.token_mint @ BallastError::WrongMint)]
@@ -613,13 +633,17 @@ pub struct HarvestFees<'info> {
     #[account(seeds = [FEE_SEED, token_mint.key().as_ref()], bump)]
     pub fee_authority: UncheckedAccount<'info>,
 
-    /// CHECK: vault authority PDA that owns fee_vault; validated by seeds.
-    #[account(seeds = [VAULT_SEED, token_mint.key().as_ref()], bump = config.vault_authority_bump)]
+    /// CHECK: vault authority PDA that owns fee_vault; derived from (token_mint, admin).
+    #[account(
+        seeds = [VAULT_SEED, config.token_mint.as_ref(), config.admin.as_ref()],
+        bump = config.vault_authority_bump
+    )]
     pub vault_authority: UncheckedAccount<'info>,
 
     #[account(mut)]
     pub fee_vault: InterfaceAccount<'info, TokenAccount>,
 
+    #[account(address = spl_token_2022::ID @ BallastError::WrongMint)]
     pub token_program: Interface<'info, TokenInterface>,
 }
 
@@ -627,8 +651,11 @@ pub struct HarvestFees<'info> {
 pub struct DepositStock<'info> {
     pub config: Account<'info, VaultConfig>,
 
-    /// CHECK: vault authority PDA that owns stock_vault; validated by seeds.
-    #[account(seeds = [VAULT_SEED, config.token_mint.as_ref()], bump = config.vault_authority_bump)]
+    /// CHECK: vault authority PDA that owns stock_vault; derived from (token_mint, admin).
+    #[account(
+        seeds = [VAULT_SEED, config.token_mint.as_ref(), config.admin.as_ref()],
+        bump = config.vault_authority_bump
+    )]
     pub vault_authority: UncheckedAccount<'info>,
 
     pub stock_mint: InterfaceAccount<'info, Mint>,
@@ -654,6 +681,8 @@ pub struct VaultConfig {
     pub admin: Pubkey,
     pub engine: Pubkey,
     pub swap_venue: Pubkey,
+    /// The one asset `add_backing` may spend (e.g. wSOL/USDC). Pinned at init; never a stock.
+    pub funding_mint: Pubkey,
     pub backing_fee_bps: u16,
     pub max_slippage_bps: u16,
     pub paused: bool,
@@ -746,6 +775,8 @@ pub enum BallastError {
     InvalidStock,
     #[msg("Duplicate stock in allowlist")]
     DuplicateStock,
+    #[msg("Funding mint may not also be a backing stock")]
+    FundingIsStock,
     #[msg("Engine authority may not be the default pubkey")]
     InvalidEngine,
     #[msg("Swap venue may not be the default pubkey")]

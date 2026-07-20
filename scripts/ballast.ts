@@ -33,10 +33,12 @@ function ctx() {
   const program = new anchor.Program(idl as anchor.Idl, provider);
   return { provider, conn: provider.connection, wallet: (provider.wallet as anchor.Wallet).payer, program };
 }
-const pdas = (program: anchor.Program, coin: PublicKey) => ({
-  config: PublicKey.findProgramAddressSync([Buffer.from("config"), coin.toBuffer()], program.programId)[0],
-  vault: PublicKey.findProgramAddressSync([Buffer.from("vault"), coin.toBuffer()], program.programId)[0],
+// A vault is uniquely (coin, admin). The operator's own commands use their wallet as admin.
+const pdas = (program: anchor.Program, coin: PublicKey, admin: PublicKey) => ({
+  config: PublicKey.findProgramAddressSync([Buffer.from("config"), coin.toBuffer(), admin.toBuffer()], program.programId)[0],
+  vault: PublicKey.findProgramAddressSync([Buffer.from("vault"), coin.toBuffer(), admin.toBuffer()], program.programId)[0],
 });
+const WSOL = new PublicKey("So11111111111111111111111111111111111111112");
 async function tokenProgramOf(conn: anchor.web3.Connection, mint: PublicKey) {
   const info = await conn.getAccountInfo(mint);
   if (!info) throw new Error(`mint not found: ${mint.toBase58()}`);
@@ -64,8 +66,9 @@ async function main() {
     const slippage = parseInt(opt("slippage", "300")!);
     const venue = new PublicKey(opt("venue", wallet.publicKey.toBase58())!);
     const engine = new PublicKey(opt("engine", wallet.publicKey.toBase58())!);
+    const funding = new PublicKey(opt("funding", WSOL.toBase58())!);
     const sig = await program.methods
-      .initializeVault(0, slippage, engine, venue, stocks)
+      .initializeVault(0, slippage, engine, venue, funding, stocks)
       .accounts({ admin: wallet.publicKey, tokenMint: coin })
       .rpc();
     console.log(`vault created for ${coin.toBase58()}\n  stocks: ${stocks.map((s) => s.toBase58()).join(", ")}\n  ${sig}`);
@@ -76,7 +79,7 @@ async function main() {
     const coin = new PublicKey(pos[0]), stock = new PublicKey(pos[1]);
     const price = parseInt(pos[2]), expo = parseInt(pos[3] ?? "0");
     const sig = await program.methods.setPrice(new anchor.BN(price), expo)
-      .accounts({ config: pdas(program, coin).config, admin: wallet.publicKey, stockMint: stock })
+      .accounts({ config: pdas(program, coin, wallet.publicKey).config, admin: wallet.publicKey, stockMint: stock })
       .rpc();
     console.log(`price set: 1 ${stock.toBase58().slice(0, 6)}… = ${price}e${expo} quote\n  ${sig}`);
     return;
@@ -84,7 +87,7 @@ async function main() {
 
   if (cmd === "deposit") {
     const coin = new PublicKey(pos[0]), stock = new PublicKey(pos[1]);
-    const { config, vault } = pdas(program, coin);
+    const { config, vault } = pdas(program, coin, wallet.publicKey);
     const sp = await tokenProgramOf(conn, stock);
     const decimals = (await getMint(conn, stock, undefined, sp)).decimals;
     const amount = BigInt(Math.round(parseFloat(pos[2]) * 10 ** decimals));
@@ -106,7 +109,8 @@ async function main() {
 
   if (cmd === "reserves") {
     const coin = new PublicKey(pos[0]);
-    const r = await computeReserves(conn, program, coin);
+    const admin = new PublicKey(opt("admin", wallet.publicKey.toBase58())!);
+    const r = await computeReserves(conn, program, coin, admin);
     console.log(`\nProof of Reserves — ${coin.toBase58()}`);
     console.log(`  supply           ${r.supplyWhole.toLocaleString()}`);
     for (const s of r.stocks) console.log(`  ${s.mint.slice(0, 8)}…  ${s.balanceWhole} @ $${s.price ?? "—"}  = $${s.valueQuote.toLocaleString()}`);

@@ -96,6 +96,7 @@
     </div>
     <form id="f">
       <input id="mint" class="mono" placeholder="coin mint address" spellcheck="false" autocomplete="off">
+      <input id="admin" class="mono" placeholder="vault creator address" spellcheck="false" autocomplete="off">
       <button type="submit">Verify</button>
     </form>
   </div>
@@ -145,12 +146,12 @@
   const money = (n) => "$" + Number(n).toLocaleString(undefined, { maximumFractionDigits: n < 1 ? 8 : 2 });
   const short = (s) => s.slice(0, 6) + "…" + s.slice(-4);
 
-  async function load(mint) {
+  async function load(mint, admin) {
     const msg = $("msg"), report = $("report");
     msg.className = ""; msg.hidden = false; report.hidden = true;
     msg.textContent = "Reading reserves from the chain…";
     try {
-      const r = await fetch("/api/reserves?mint=" + encodeURIComponent(mint)).then((x) => x.json());
+      const r = await fetch("/api/reserves?mint=" + encodeURIComponent(mint) + "&admin=" + encodeURIComponent(admin)).then((x) => x.json());
       if (r.error) throw new Error(r.error);
       $("floor").textContent = money(r.floorPerTokenQuote);
       $("reserves").textContent = money(r.totalValueQuote);
@@ -178,12 +179,12 @@
   }
 
   const params = new URLSearchParams(location.search);
-  const initial = params.get("mint");
-  if (initial) { $("mint").value = initial; load(initial); }
+  const initialMint = params.get("mint"), initialAdmin = params.get("admin");
+  if (initialMint && initialAdmin) { $("mint").value = initialMint; $("admin").value = initialAdmin; load(initialMint, initialAdmin); }
   $("f").addEventListener("submit", (e) => {
     e.preventDefault();
-    const m = $("mint").value.trim();
-    if (m) { history.replaceState(null, "", "?mint=" + m); load(m); }
+    const m = $("mint").value.trim(), a = $("admin").value.trim();
+    if (m && a) { history.replaceState(null, "", "?mint=" + m + "&admin=" + a); load(m, a); }
   });
 </script>
 </body>

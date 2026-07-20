@@ -10,14 +10,15 @@ import { computeReserves } from "./reserves";
 
 async function main() {
   const mintArg = process.argv[2];
-  if (!mintArg) { console.error("usage: por <coin-mint>"); process.exit(1); }
+  const adminArg = process.argv[3];
+  if (!mintArg || !adminArg) { console.error("usage: por <coin-mint> <vault-creator-pubkey>"); process.exit(1); }
   const url = process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899";
   const conn = new Connection(url, "confirmed");
   const provider = new anchor.AnchorProvider(conn, new anchor.Wallet(Keypair.generate()), {});
   const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8"));
   const program = new anchor.Program(idl as anchor.Idl, provider);
 
-  const r = await computeReserves(conn, program, new PublicKey(mintArg));
+  const r = await computeReserves(conn, program, new PublicKey(mintArg), new PublicKey(adminArg));
   console.log(JSON.stringify(r, null, 2));
 }
 

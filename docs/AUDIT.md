@@ -27,12 +27,12 @@ backing but can never extract value, even if fully compromised. Confirm by inspe
 
 | ix | signer | effect | key guards |
 |----|--------|--------|-----------|
-| `initialize_vault` | admin | one-time config: stock allowlist, engine, venue, slippage cap | fee/slippage ≤ hard caps; no zero/dup stocks; PDAs derived |
+| `initialize_vault` | admin | one-time config: stock allowlist, engine, venue, funding mint, slippage cap | fee/slippage ≤ hard caps; no zero/dup stocks; funding mint ≠ any stock; **config + vault PDAs bound to (token_mint, admin) — no front-run hijack** |
 | `deposit_stock` | anyone | add backing stock to the vault (buyback) | stock ∈ allowlist; dest is the vault ATA (owner == vault PDA, mint matches); only increases |
 | `redeem` | holder | burn N coins → pro-rata slice of every vault stock | supply captured **before** burn; payout `= N·bal/supply` in u128 **rounded down**; source must be vault-owned; burns via coin's token program, pays via stock's token program |
-| `add_backing` | engine | swap funding→stock via allowlisted venue into vault | venue == allowlisted; **reload** vault after CPI, require stock ↑ ≥ oracle floor·(1−slippage) and funding ↓ ≤ amount_in; oracle freshness ≤ 300 slots; **rejects any vault-owned account in venue accounts** |
+| `add_backing` | engine | swap funding→stock via allowlisted venue into vault | venue == allowlisted; **funding mint pinned to `config.funding_mint` (never a stock)**; **reload** vault after CPI, require stock ↑ ≥ oracle floor·(1−slippage) and funding ↓ ≤ amount_in; oracle freshness ≤ 300 slots; rejects any vault-owned account in venue accounts |
 | `harvest_fees` | anyone | pull Token-2022 withheld fees → vault fee account | dest vault-owned + correct mint; PDA-signed. **N/A to a pump.fun (classic-SPL) coin — alternative for a self-issued Token-2022 launch** |
-| `set_price` | admin | publish a stock price to its PriceFeed PDA | price > 0, expo ≤ 0. **Devnet oracle stand-in — see limitations** |
+| `set_price` | admin | publish a stock price to the vault's per-stock PriceFeed PDA | price > 0, expo ≤ 0; **stock ∈ this vault's allowlist; feed is per-vault (seeded by config) — no cross-vault oracle pollution**. Devnet oracle stand-in — see limitations |
 | `set_pause` / `set_engine` | admin | pause; rotate engine | cannot move funds |
 
 ## Threat model → mitigation
@@ -55,6 +55,15 @@ backing but can never extract value, even if fully compromised. Confirm by inspe
 | `tests/standalone-redeem.ts` | 12 | deposit funds vault; deposit-to-non-vault rejected; dual-program redeem exact; hostile source / over-redeem / mismatch / zero / paused all revert; floor preserved |
 | `tests/standalone-backing.ts` | 6 | honest fill lands ≥ floor & spends ≤ amount_in; shortchange / wrong-venue / non-engine / paused all revert |
 | `tests/standalone-fees.ts` | 2 | withheld fees land only in the vault; harvest-to-attacker rejected |
+| `tests/standalone-hardening.ts` | 4 | front-run vault is a separate account & non-admin can't control it; funding ≠ stock; set_price is allowlist-scoped |
+
+## Internal review (2026-07-20) — findings found and fixed
+
+An independent adversarial pass (fresh reviewer) found three issues, all now fixed and covered by `tests/standalone-hardening.ts`:
+
+1. **HIGH — permissionless `initialize_vault` front-run.** Config/vault PDAs keyed only on `token_mint` let anyone win the init and set a hostile venue/admin. **Fixed:** PDAs are now bound to `(token_mint, admin)`, so a vault is uniquely its creator's and cannot be hijacked; a front-runner only ever gets their own separate vault.
+2. **HIGH — unconstrained `add_backing` funding asset.** The engine could feed a vault *stock* reserve in as "funding" and swap it out under a dimensionally-broken floor. **Fixed:** `funding_mint` is pinned in config (and may never be a stock); `add_backing` requires `funding_mint == config.funding_mint`.
+3. **MEDIUM — global oracle pollution.** `PriceFeed` was a per-stock singleton any admin could write. **Fixed:** feeds are per-vault (seeded by config) and `set_price` requires the stock be in that vault's allowlist.
 
 ## Assumptions & limitations (please review)
 
