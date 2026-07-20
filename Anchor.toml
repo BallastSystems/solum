@@ -12,7 +12,7 @@ ballast = "A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = ".wallet/ballast-devnet.json"
 
 [scripts]
