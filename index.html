@@ -80,6 +80,10 @@
   @media (prefers-color-scheme:light){html:not([data-theme]) .btn.primary{color:#fff}}
   .btn.ghost{border-color:var(--line-2);color:var(--text)}
   .btn.ghost:hover{background:var(--hull-2)}
+  .btn.cashtag{border:1px solid color-mix(in srgb,var(--floor) 46%,transparent);color:var(--floor);
+    background:color-mix(in srgb,var(--floor) 9%,transparent);font-weight:700;letter-spacing:.02em}
+  .btn.cashtag:hover{background:color-mix(in srgb,var(--floor) 17%,transparent);box-shadow:0 6px 22px var(--floor-glow)}
+  @media (max-width:520px){.nav-in .btn.ghost{display:none}}
   @media (max-width:600px){.tag-devnet{display:none}}
 
   /* hero */
@@ -174,6 +178,7 @@
   <span class="brand"><svg><use href="#anchor"/></svg>BALLAST</span>
   <span class="spacer"></span>
   <span class="tag-devnet">DEVNET · OPEN SOURCE</span>
+  <a class="btn cashtag" href="https://pump.fun/coin/9KMSiw3iKX2pvSLuMZoxcPnYMm3uAWUpJM65RU8wpump" target="_blank" rel="noopener">$BALLAST ↗</a>
   <a class="btn ghost" href="https://github.com/BallastSystems/ballast" target="_blank" rel="noopener">GitHub ↗</a>
   <a class="btn primary" href="https://github.com/BallastSystems/ballast" target="_blank" rel="noopener">Add a floor</a>
 </div></nav>
@@ -273,6 +278,7 @@
 
 <footer><div class="wrap foot-in">
   <span class="brand"><svg style="width:20px;height:20px"><use href="#anchor"/></svg>BALLAST</span>
+  <a href="https://pump.fun/coin/9KMSiw3iKX2pvSLuMZoxcPnYMm3uAWUpJM65RU8wpump" target="_blank" rel="noopener">$BALLAST</a>
   <a href="https://github.com/BallastSystems/ballast" target="_blank" rel="noopener">GitHub</a>
   <a href="#how">How it works</a>
   <a href="#safe">Safety</a>
