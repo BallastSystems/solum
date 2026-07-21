@@ -40,8 +40,8 @@ token program (two distinct programs in one instruction).
   - `WithdrawWithheld` authority (can move withheld fees) = `fee_authority` PDA.
   - ⇒ withheld fees can *only* be routed by the program, *only* into the vault flow. The
     engine cannot sweep withheld fees to itself.
-- **Creator fees are untouched** — this is a *separate* transfer fee, not the launchpad's
-  creator fee. The creator keeps 100% of theirs. (The wedge.)
+- **Creator fees are untouched** — this is a *separate* transfer fee, not the creator fee your
+  launch venue pays you. The creator keeps 100% of theirs. (The wedge.)
 
 ## Accounts
 

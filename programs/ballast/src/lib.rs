@@ -1,4 +1,4 @@
-//! Ballast — asset-backed launchpad vault program.
+//! Ballast — non-custodial redeemable-floor vault program.
 //!
 //! # The one invariant
 //! No instruction moves a vault asset anywhere except:
