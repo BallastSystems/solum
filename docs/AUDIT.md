@@ -56,6 +56,18 @@ backing but can never extract value, even if fully compromised. Confirm by inspe
 | `tests/standalone-backing.ts` | 7 | honest fill lands ≥ floor & spends ≤ amount_in; shortchange / wrong-venue / non-engine / paused / **venue-delegate-tampering** all revert |
 | `tests/standalone-fees.ts` | 2 | withheld fees land only in the vault; harvest-to-attacker rejected |
 | `tests/standalone-hardening.ts` | 4 | front-run vault is a separate account & non-admin can't control it; funding ≠ stock; set_price is allowlist-scoped |
+| `tests/fuzz-invariants.ts` | 1,200+/run | stateful property-based fuzzer vs an off-chain reference model — invariants I1–I4 (below) |
+
+**Property-based fuzzing.** `tests/fuzz-invariants.ts` runs randomized, seeded (reproducible)
+sequences of deposit / redeem / transfer against the program on a validator, and after **every**
+operation asserts the on-chain state equals an independent off-chain reference model (exact
+BigInt) and that four invariants hold: **I1** conservation (vault + Σ holders == deposited),
+**I2** floor-monotonicity (reserves / supply never decreases), **I3** redeem-exactness (payout ==
+⌊N·bal/supply⌋, burn == N), **I4** supply integrity. The harness is validated with a **negative
+control** — an injected model error is caught on op #0 — so a green run is meaningful, not
+toothless. Campaigns to date: 3,600 ops (12 episodes, varied stock/decimal/holder configs) plus a
+fresh **1,200-op / 10-episode** run (base seed 20260721, all-independent seeds) — **zero invariant
+violations.** Configurable via `FUZZ_EPISODES` / `FUZZ_OPS` / `FUZZ_SEED`.
 
 ## Internal review (2026-07-20) — findings found and fixed
 
