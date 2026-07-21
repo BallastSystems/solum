@@ -1,0 +1,345 @@
+<title>Ballast — give your memecoin a floor</title>
+<style>
+  :root{
+    --ink-900:#0A0D12; --ink-850:#0D1218; --ink-800:#10151C; --ink-700:#171E27;
+    --hairline:rgba(255,255,255,.09); --hairline-2:rgba(255,255,255,.15);
+    --text:#E6EDF3; --dim:#8A97A6; --faint:#5B6673;
+    --emerald:#35C88F; --emerald-deep:#1E7D57; --e-glow:rgba(53,200,143,.14);
+    --gold:#D6AC5A; --gold-deep:#8A6D34; --g-glow:rgba(214,172,90,.12);
+    --amber:#E0A33E;
+    --sans:"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
+    --mono:"SF Mono","JetBrains Mono","IBM Plex Mono",ui-monospace,Menlo,monospace;
+    --w:1120px;
+  }
+  @media (prefers-color-scheme:light){:root{
+    --ink-900:#EEF1F5; --ink-850:#F3F5F9; --ink-800:#FFFFFF; --ink-700:#F0F3F7;
+    --hairline:rgba(11,15,20,.10); --hairline-2:rgba(11,15,20,.16);
+    --text:#0B1119; --dim:#586472; --faint:#8593A1;
+    --emerald:#0F8A5B; --emerald-deep:#0B6B47; --e-glow:rgba(15,138,91,.08);
+    --gold:#93701F; --gold-deep:#6F5417; --g-glow:rgba(147,112,31,.08);
+  }}
+  :root[data-theme="light"]{
+    --ink-900:#EEF1F5; --ink-850:#F3F5F9; --ink-800:#FFFFFF; --ink-700:#F0F3F7;
+    --hairline:rgba(11,15,20,.10); --hairline-2:rgba(11,15,20,.16);
+    --text:#0B1119; --dim:#586472; --faint:#8593A1;
+    --emerald:#0F8A5B; --emerald-deep:#0B6B47; --e-glow:rgba(15,138,91,.08);
+    --gold:#93701F; --gold-deep:#6F5417; --g-glow:rgba(147,112,31,.08);
+  }
+  :root[data-theme="dark"]{
+    --ink-900:#0A0D12; --ink-850:#0D1218; --ink-800:#10151C; --ink-700:#171E27;
+    --hairline:rgba(255,255,255,.09); --hairline-2:rgba(255,255,255,.15);
+    --text:#E6EDF3; --dim:#8A97A6; --faint:#5B6673;
+    --emerald:#35C88F; --emerald-deep:#1E7D57; --e-glow:rgba(53,200,143,.14);
+    --gold:#D6AC5A; --gold-deep:#8A6D34; --g-glow:rgba(214,172,90,.12);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{margin:0;background:var(--ink-900);color:var(--text);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:var(--w);margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+  h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;margin:0}
+  a{color:inherit}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
+    background:color-mix(in srgb,var(--ink-900) 78%,transparent);border-bottom:1px solid var(--hairline)}
+  .nav-in{display:flex;align-items:center;gap:20px;height:60px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.02em}
+  .brand svg{width:24px;height:24px}
+  .nav-links{margin-left:auto;display:flex;gap:26px;align-items:center;font-size:13.5px;color:var(--dim)}
+  .nav-links a{text-decoration:none} .nav-links a:hover{color:var(--text)}
+  .nav-links .devnet{font-family:var(--mono);font-size:10.5px;color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 36%,transparent);padding:3px 8px;border-radius:6px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:650;font-size:13.5px;padding:9px 16px;border-radius:9px;text-decoration:none;border:1px solid transparent;cursor:pointer}
+  .btn.primary{background:var(--emerald);color:#04120c} :root[data-theme="light"] .btn.primary{color:#fff}
+  .btn.ghost{border-color:var(--hairline-2);color:var(--text)} .btn.ghost:hover{background:var(--ink-800)}
+  @media (max-width:720px){.nav-links a:not(.devnet):not(.btn){display:none}}
+
+  /* hero */
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--hairline)}
+  .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(80% 60% at 15% -10%,var(--e-glow),transparent 60%),radial-gradient(70% 60% at 100% 0%,var(--g-glow),transparent 55%);pointer-events:none}
+  .hero-in{position:relative;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;padding:74px 0 68px}
+  @media (max-width:860px){.hero-in{grid-template-columns:1fr;padding:52px 0}}
+  .hero h1{font-size:clamp(38px,6vw,62px);line-height:1.02;font-weight:700}
+  .hero h1 .g{color:var(--emerald)}
+  .hero p.lead{font-size:clamp(16px,2.2vw,19px);color:var(--dim);max-width:52ch;margin:20px 0 12px}
+  .hero .kept{font-family:var(--mono);font-size:13px;color:var(--gold);margin-bottom:26px;display:inline-flex;gap:8px;align-items:center}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+  .hero-meta{margin-top:26px;display:flex;gap:24px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .hero-meta b{color:var(--text);font-weight:600}
+
+  .vessel-wrap{background:linear-gradient(180deg,var(--ink-800),var(--ink-850));border:1px solid var(--hairline);border-radius:18px;padding:22px}
+  .vessel-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .vessel-top .tk{font-family:var(--mono);font-weight:700;color:var(--gold)}
+  #vessel{width:100%;height:230px;display:block}
+  .vessel-read{display:flex;justify-content:space-between;margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .vessel-read b{display:block;color:var(--text);font-size:17px;font-weight:600;margin-top:3px}
+  .vessel-read .em{color:var(--emerald)} .vessel-read .gd{color:var(--gold)}
+
+  /* sections */
+  section{padding:74px 0;border-bottom:1px solid var(--hairline)}
+  .sec-head{max-width:60ch;margin-bottom:40px}
+  .sec-head h2{font-size:clamp(26px,3.6vw,38px);font-weight:700}
+  .sec-head p{color:var(--dim);font-size:16px;margin-top:14px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media (max-width:820px){.steps{grid-template-columns:1fr}}
+  .step{background:var(--ink-800);border:1px solid var(--hairline);border-radius:14px;padding:24px}
+  .step .n{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.1em}
+  .step h3{font-size:18px;margin:14px 0 8px}
+  .step p{color:var(--dim);font-size:14px;margin:0}
+  .step .tag{margin-top:14px;display:inline-block;font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:6px}
+  .step .tag.e{color:var(--emerald);background:var(--e-glow)}
+  .step .tag.g{color:var(--gold);background:var(--g-glow)}
+
+  /* proof of reserves showcase */
+  .por{background:var(--ink-850);border:1px solid var(--hairline);border-radius:18px;overflow:hidden}
+  .por-top{display:flex;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--hairline);flex-wrap:wrap}
+  .por-top .tk{font-family:var(--mono);font-weight:700;color:var(--gold)}
+  .por-top .verified{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;color:var(--emerald);border:1px solid color-mix(in srgb,var(--emerald) 40%,transparent);background:var(--e-glow);padding:5px 11px;border-radius:999px}
+  .por-top .verified .dot{width:6px;height:6px;border-radius:50%;background:var(--emerald)}
+  .por-body{display:grid;grid-template-columns:.9fr 1.4fr;gap:0}
+  @media (max-width:820px){.por-body{grid-template-columns:1fr}}
+  .por-floor{padding:26px 24px;border-right:1px solid var(--hairline)}
+  @media (max-width:820px){.por-floor{border-right:0;border-bottom:1px solid var(--hairline)}}
+  .por-floor .big{font-family:var(--mono);font-weight:700;color:var(--emerald);font-size:clamp(34px,5vw,46px);line-height:1;margin:10px 0 8px}
+  .por-floor .sub{color:var(--dim);font-size:13.5px}
+  .por-floor .row{display:flex;gap:22px;margin-top:22px}
+  .por-floor .row .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+  .por-floor .row .v{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:4px}
+  .por-floor .row .v.gd{color:var(--gold)}
+  .por-tbl{padding:16px 8px}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px}
+  th{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);text-align:right;padding:6px 14px;font-weight:500}
+  th:first-child{text-align:left}
+  td{padding:12px 14px;border-top:1px solid var(--hairline);text-align:right;font-variant-numeric:tabular-nums}
+  td:first-child{text-align:left}
+  .tk-s{font-weight:700;color:var(--gold)} .fn{color:var(--dim);font-size:11px;font-family:var(--sans);margin-left:8px}
+  .bar{height:6px;width:96px;margin-left:auto;background:var(--ink-700);border-radius:4px;overflow:hidden}
+  .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--gold-deep),var(--gold))}
+  .por-foot{padding:14px 22px;border-top:1px solid var(--hairline);font-family:var(--mono);font-size:12px;color:var(--faint);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .por-foot .cmd{color:var(--text)} .por-foot .p{color:var(--emerald)}
+
+  /* safety pillars */
+  .pillars{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media (max-width:720px){.pillars{grid-template-columns:1fr}}
+  .pillar{background:var(--ink-800);border:1px solid var(--hairline);border-radius:14px;padding:22px;display:flex;gap:15px}
+  .pillar .ic{flex:none;width:34px;height:34px;border-radius:9px;background:var(--e-glow);display:grid;place-items:center;color:var(--emerald)}
+  .pillar h3{font-size:15.5px;margin-bottom:6px} .pillar p{color:var(--dim);font-size:13.5px;margin:0}
+  .pillar .ic.g{background:var(--g-glow);color:var(--gold)}
+
+  /* creators band */
+  .band{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center}
+  @media (max-width:820px){.band{grid-template-columns:1fr}}
+  .band .fee{background:var(--ink-800);border:1px solid var(--hairline);border-radius:16px;padding:26px}
+  .band .fee .line{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--hairline);font-family:var(--mono);font-size:13.5px}
+  .band .fee .line:last-child{border-bottom:0}
+  .band .fee .you{color:var(--emerald);font-weight:700}
+  .band .fee .v{color:var(--gold)}
+
+  /* cta */
+  .cta{text-align:center;padding:88px 0}
+  .cta h2{font-size:clamp(28px,4vw,42px);font-weight:700}
+  .cta p{color:var(--dim);max-width:52ch;margin:16px auto 28px}
+  .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+  footer{padding:40px 0;color:var(--faint);font-size:13px}
+  .foot-in{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .foot-in a{color:var(--dim);text-decoration:none;margin-right:18px} .foot-in a:hover{color:var(--text)}
+  .foot-in .right{margin-left:auto;font-family:var(--mono);font-size:11px}
+
+  .reveal{opacity:0;transform:translateY(14px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
+</style>
+
+<nav><div class="wrap nav-in">
+  <span class="brand">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="4" r="2.1" stroke="var(--emerald)" stroke-width="1.6"/>
+      <path d="M12 6.1V20M7 10h10" stroke="var(--emerald)" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M4.5 13.5c0 4.2 3.4 6.5 7.5 6.5s7.5-2.3 7.5-6.5" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>BALLAST
+  </span>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#reserves">Reserves</a>
+    <a href="#safe">Safety</a>
+    <a href="#creators">Creators</a>
+    <span class="devnet">DEVNET</span>
+    <a class="btn primary" href="#launch">Add a floor</a>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap hero-in">
+  <div>
+    <div class="eyebrow">A redeemable floor for memecoins</div>
+    <h1>Give your memecoin<br>a <span class="g">floor</span>.</h1>
+    <p class="lead">Keep <b style="color:var(--text)">100% of your creator fees</b>. Ballast bolts a non-custodial vault of real tokenized stock onto your coin — a floor every holder can redeem against, that you raise with buybacks and that only ever goes up.</p>
+    <span class="kept">▲ backed by spot the vault actually holds — no leverage, nothing to liquidate</span>
+    <div class="hero-cta">
+      <a class="btn primary" href="#launch">Add a floor →</a>
+      <a class="btn ghost" href="#reserves">See the reserves</a>
+    </div>
+    <div class="hero-meta">
+      <span>redeemable floor · <b>on-chain</b></span>
+      <span>proof of reserves · <b>verifiable</b></span>
+      <span>custody · <b>non-custodial</b></span>
+    </div>
+  </div>
+  <div class="vessel-wrap reveal">
+    <div class="vessel-top"><span class="tk mono">$KEEL</span><span class="eyebrow">reserve coverage</span></div>
+    <canvas id="vessel" width="480" height="230" aria-label="A hull filling with gold reserves to a rising waterline"></canvas>
+    <div class="vessel-read">
+      <span>redeemable floor<b class="em mono">$0.000422</b></span>
+      <span>real reserves<b class="gd mono">$422,094</b></span>
+      <span>coverage<b class="mono">32.2%</b></span>
+    </div>
+  </div>
+</div></header>
+
+<section id="how"><div class="wrap">
+  <div class="sec-head reveal">
+    <div class="eyebrow">How it works</div>
+    <h2>Three steps to a coin with a real, rising floor.</h2>
+    <p>Nothing here touches your creator fees, and nothing can ever remove value from the vault except a holder redeeming their own share.</p>
+  </div>
+  <div class="steps">
+    <div class="step reveal"><div class="n">01</div><h3>Launch your coin</h3><p>Launch your memecoin however you like — you're the creator and you keep every creator fee. Open a Ballast vault for it and pick which tokenized stocks may back it.</p><span class="tag g">you keep 100% of fees</span></div>
+    <div class="step reveal"><div class="n">02</div><h3>Fund the floor</h3><p>Buy tokenized stock (AAPLx, NVDAx, TSLAx…) and deposit it into the vault. Every buyback raises the floor and is an on-chain event — provable, not a promise.</p><span class="tag g">reserves only go up</span></div>
+    <div class="step reveal"><div class="n">03</div><h3>Holders redeem</h3><p>Any holder can burn their coins for a pro-rata slice of the vault's real stock, on-chain, anytime. The floor is enforced by code, and it's preserved for everyone who stays.</p><span class="tag e">the redeemable floor</span></div>
+  </div>
+</div></section>
+
+<section id="reserves"><div class="wrap">
+  <div class="sec-head reveal">
+    <div class="eyebrow">Proof of reserves</div>
+    <h2>Don't trust — verify.</h2>
+    <p>The vault balances <i>are</i> the reserves. Anyone can read them straight from the chain and recompute the floor. Here's what a backed coin looks like.</p>
+  </div>
+  <div class="por reveal">
+    <div class="por-top"><span class="tk mono">$KEEL</span><span style="color:var(--dim);font-size:13px">Keelhaul</span><span class="verified"><span class="dot"></span>Reserves verified on-chain</span></div>
+    <div class="por-body">
+      <div class="por-floor">
+        <div class="eyebrow">Redeemable floor · per token</div>
+        <div class="big mono">$0.000422</div>
+        <div class="sub">Burn 1 $KEEL for your share of the vault's real stock. This floor only ever rises.</div>
+        <div class="row">
+          <div><div class="k">Total reserves</div><div class="v gd mono">$422,094</div></div>
+          <div><div class="k">Coverage</div><div class="v mono">32.2%</div></div>
+          <div><div class="k">Supply</div><div class="v mono">1.00B</div></div>
+        </div>
+      </div>
+      <div class="por-tbl">
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>Asset</th><th>Shares</th><th>Mark</th><th>Value</th><th>% of vault</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><span class="tk-s">AAPLx</span><span class="fn">Apple</span></td><td>1,200.00</td><td>$150.25</td><td>$180,300</td><td>42.7%</td><td><span class="bar"><span style="width:100%"></span></span></td></tr>
+            <tr><td><span class="tk-s">NVDAx</span><span class="fn">NVIDIA</span></td><td>150.00</td><td>$920.40</td><td>$138,060</td><td>32.7%</td><td><span class="bar"><span style="width:76.6%"></span></span></td></tr>
+            <tr><td><span class="tk-s">TSLAx</span><span class="fn">Tesla</span></td><td>340.00</td><td>$305.10</td><td>$103,734</td><td>24.6%</td><td><span class="bar"><span style="width:57.5%"></span></span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="por-foot"><span class="p">$</span><span class="cmd">npm run ballast -- reserves &lt;coin&gt; &lt;creator&gt;</span><span style="margin-left:auto">read-only · anyone can run it</span></div>
+  </div>
+</div></section>
+
+<section id="safe"><div class="wrap">
+  <div class="sec-head reveal">
+    <div class="eyebrow">Safe by construction</div>
+    <h2>The only way value leaves the vault is you redeeming your own share.</h2>
+    <p>Not a policy — a property of the code. There is no withdraw, no admin drain, no sweep. Verified by 25 adversarial tests and two rounds of independent review.</p>
+  </div>
+  <div class="pillars">
+    <div class="pillar reveal"><div class="ic">⚓</div><div><h3>No drain path exists</h3><p>The vault is a program-derived account with no private key. Admin and engine keys can configure and add backing — they can never extract a single unit, even if fully compromised.</p></div></div>
+    <div class="pillar reveal"><div class="ic g">◈</div><div><h3>Real spot, no leverage</h3><p>Backing is tokenized stock the vault actually holds. Nothing to liquidate, nothing to evaporate on a wick. The floor can't be margin-called.</p></div></div>
+    <div class="pillar reveal"><div class="ic">↻</div><div><h3>Always redeemable</h3><p>Redemption can never be paused — not even by a compromised admin. Your claim on the floor is available on-chain, any time, forever.</p></div></div>
+    <div class="pillar reveal"><div class="ic g">◎</div><div><h3>Open & verifiable</h3><p>Open-source, with on-chain proof of reserves anyone can recompute. Independent audit and legal review precede any mainnet launch.</p></div></div>
+  </div>
+</div></section>
+
+<section id="creators"><div class="wrap">
+  <div class="band">
+    <div class="reveal">
+      <div class="eyebrow">For creators</div>
+      <h2 style="font-size:clamp(24px,3.4vw,34px);margin:12px 0 14px">Keep every creator fee. Back the floor on your terms.</h2>
+      <p style="color:var(--dim);font-size:15.5px">Ballast never touches your creator fees — they're yours, 100%. The floor is a separate flywheel you fund with buybacks whenever you want. Every deposit is public, so consistency becomes your reputation.</p>
+    </div>
+    <div class="fee reveal">
+      <div class="line"><span>Trade on your coin</span><span class="v mono">1 SOL</span></div>
+      <div class="line"><span>Creator fee</span><span class="you mono">→ YOU · 100%</span></div>
+      <div class="line"><span>Ballast's cut of your fees</span><span class="mono" style="color:var(--faint)">0%</span></div>
+      <div class="line"><span>Floor funding</span><span class="mono" style="color:var(--dim)">your buybacks, when you choose</span></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="launch" class="cta"><div class="wrap reveal">
+  <div class="eyebrow" style="text-align:center">Devnet preview</div>
+  <h2>A memecoin with a balance sheet.</h2>
+  <p>Ballast is live on devnet and open-source. Explore the code, run the proof-of-reserves yourself, and watch the floor rise.</p>
+  <div class="cta-row">
+    <a class="btn primary" href="https://github.com/BallastSystems/ballast">View the code →</a>
+    <a class="btn ghost" href="#reserves">See a live vault</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap foot-in">
+  <span class="brand" style="font-size:14px">
+    <svg viewBox="0 0 24 24" fill="none" style="width:20px;height:20px" aria-hidden="true"><circle cx="12" cy="4" r="2.1" stroke="var(--emerald)" stroke-width="1.6"/><path d="M12 6.1V20M7 10h10" stroke="var(--emerald)" stroke-width="1.6" stroke-linecap="round"/><path d="M4.5 13.5c0 4.2 3.4 6.5 7.5 6.5s7.5-2.3 7.5-6.5" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"/></svg>BALLAST
+  </span>
+  <a href="https://github.com/BallastSystems/ballast">GitHub</a>
+  <a href="#how">How it works</a>
+  <a href="#safe">Safety</a>
+  <span class="right">Devnet · pre-audit · illustrative figures · not investment advice</span>
+</div></footer>
+
+<script>
+(() => {
+  const rm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  // scroll reveals
+  const io = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } }), {threshold:.14});
+  document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+  // hero vessel: hull filling with gold reserves to a wavy waterline
+  const cv = document.getElementById("vessel"), ctx = cv.getContext("2d");
+  const COVER = 0.322;
+  let start = null;
+  function frame(ts){
+    if (start === null) start = ts;
+    const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio||1);
+    cv.width = r.width*dpr; cv.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w = r.width, h = r.height, pad = 12, top = pad, bot = h-pad, left = pad+8, right = w-pad-8;
+    const p = new Path2D();
+    p.moveTo(left, top); p.lineTo(right, top);
+    p.lineTo(right, bot-(right-left)*0.26);
+    p.quadraticCurveTo((left+right)/2, bot+(bot-top)*0.16, left, bot-(right-left)*0.26);
+    p.closePath();
+    const prog = rm ? 1 : Math.min(1,(ts-start)/1400), ease = 1-Math.pow(1-prog,3);
+    ctx.clearRect(0,0,w,h);
+    ctx.save(); ctx.clip(p);
+    ctx.fillStyle = css("--ink-700"); ctx.fillRect(0,0,w,h);
+    const level = COVER*ease, surf = bot-(bot-top)*level;
+    const amp = rm?0:3, k = 2*Math.PI/(w*0.7), ph = ts/750;
+    const grd = ctx.createLinearGradient(0,surf,0,bot);
+    grd.addColorStop(0, css("--gold")); grd.addColorStop(1, css("--gold-deep"));
+    ctx.beginPath(); ctx.moveTo(0,bot);
+    for(let x=0;x<=w;x+=4) ctx.lineTo(x, surf+Math.sin(x*k+ph)*amp);
+    ctx.lineTo(w,bot); ctx.closePath(); ctx.fillStyle=grd; ctx.fill();
+    ctx.beginPath();
+    for(let x=0;x<=w;x+=4){const y=surf+Math.sin(x*k+ph)*amp; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle=css("--emerald"); ctx.lineWidth=1.6; ctx.globalAlpha=.9; ctx.stroke(); ctx.globalAlpha=1;
+    ctx.restore();
+    ctx.lineWidth=1.4; ctx.strokeStyle=css("--hairline-2"); ctx.stroke(p);
+    ctx.fillStyle=css("--emerald"); ctx.font="600 11px "+css("--mono").replace(/"/g,""); ctx.textAlign="left";
+    ctx.fillText("floor", 16, surf-7);
+    if (prog<1 || !rm) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  addEventListener("resize", () => { start=performance.now(); requestAnimationFrame(frame); });
+})();
+</script>
