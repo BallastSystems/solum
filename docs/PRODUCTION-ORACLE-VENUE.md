@@ -21,12 +21,14 @@ binds a stock to a *feed id* (not a price). The `fair_out` math is byte-for-byte
 # programs/ballast/Cargo.toml
 pyth-solana-receiver-sdk = "0.6"   # PriceUpdateV2, get_price_no_older_than, feed_id parsing
 ```
-> ⚠️ **BUILD RISK — verify first.** The pinned 1.79 SBF toolchain (see `Cargo.lock` note in
-> `TESTING.md`) already fights edition2024 transitive crates. `pyth-solana-receiver-sdk` may pull
-> newer deps that don't build on 1.79. **Before adopting this, run `anchor build` with the dep
-> added and, if it breaks, either pin the offending crates down (same `cargo update --precise`
-> dance) or bump platform-tools via `solana-install`.** Do this spike early — it's the one thing
-> that can invalidate the plan.
+> ✅ **BUILD RISK — RESOLVED (spiked 2026-07-21).** Added `pyth-solana-receiver-sdk = "0.6.1"` and a
+> throwaway `oracle_probe` instruction that actually calls `get_price_no_older_than`, then ran
+> `anchor build` on the pinned 1.79 SBF toolchain. Result: **clean build, zero errors, no crate
+> pins needed.** The SDK resolves against anchor 0.31.1 / solana 2.1 (no version conflict),
+> `pyth-solana-receiver-sdk 0.6.1` + its `pythnet-sdk 2.3.1` dep compile on rustc 1.79, and the
+> API links into a callable instruction (the `.so` grew 369,048 → 381,288 bytes, proving real
+> linkage, not dead-stripping). No platform-tools bump required. The probe was reverted; this doc
+> records the result.
 
 ### Storage change — bind a stock to its Pyth feed id
 Replace the price-carrying `PriceFeed` with a config-only `StockOracle` PDA (same

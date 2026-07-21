@@ -1,7 +1,7 @@
 [package]
 name = "ballast"
 version = "0.1.0"
-description = "Ballast — asset-backed launchpad vault program"
+description = "Ballast — non-custodial redeemable-floor vault program"
 edition = "2021"
 
 [lib]
