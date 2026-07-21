@@ -3,203 +3,366 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ballast — give your memecoin a floor</title>
-<meta name="description" content="Ballast bolts a non-custodial vault of real tokenized stock onto your memecoin — a redeemable floor holders can cash out on-chain, that only ever goes up. Keep 100% of your creator fees.">
+<title>Ballast — a floor for your memecoin</title>
+<meta name="description" content="Ballast locks real tokenized stocks into a vault on your memecoin, so holders can always redeem for a real on-chain share — a price floor that only rises and no one can drain.">
+<meta property="og:title" content="Ballast — a floor for your memecoin">
+<meta property="og:description" content="Lock real tokenized stocks into a vault on your memecoin. Holders redeem for a real on-chain share. A price floor that only rises — and no one can drain.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgcng9IjUiIGZpbGw9IiMwQTBEMTIiLz4KPGNpcmNsZSBjeD0iMTIiIGN5PSI0LjQiIHI9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM1Qzg4RiIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KPHBhdGggZD0iTTEyIDYuNFYyME03IDEwLjJoMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM1Qzg4RiIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8cGF0aCBkPSJNNC42IDEzLjdjMCA0LjEgMy40IDYuMyA3LjQgNi4zczcuNC0yLjIgNy40LTYuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRDZBQzVBIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik00LjYgMTMuN2wtMS42IDFNMTkuNCAxMy43bDEuNiAxIiBmaWxsPSJub25lIiBzdHJva2U9IiNENkFDNUEiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg==">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,380;9..144,460;9..144,560&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#0A0D12; --ink-2:#10151C; --card:#0E141B;
-    --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.18);
-    --text:#E6EDF3; --dim:#93A0AF; --faint:#5B6673;
-    --emerald:#35C88F; --gold:#D6AC5A; --amber:#E0A33E;
-    --sans:"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
-    --mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,monospace;
-    --w:960px;
+    --abyss:#070B0F; --hull:#0C131A; --hull-2:#111A23;
+    --line:rgba(150,178,190,.13); --line-2:rgba(150,178,190,.24);
+    --text:#E9EFF1; --dim:#8B9BA4; --faint:#54626B;
+    --floor:#3BD98E; --floor-deep:#128C5B; --floor-glow:rgba(59,217,142,.16);
+    --brass:#CDA349; --brass-deep:#8A6D2E; --brass-glow:rgba(205,163,73,.14);
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,monospace;
+    --w:1140px;
   }
   @media (prefers-color-scheme:light){:root{
-    --ink:#EEF1F5; --ink-2:#FFFFFF; --card:#FFFFFF;
-    --line:rgba(11,15,20,.11); --line-2:rgba(11,15,20,.18);
-    --text:#0B1119; --dim:#54606E; --faint:#8593A1;
-    --emerald:#0F8A5B; --gold:#8A6A22;
+    --abyss:#EEF2F1; --hull:#FBFCFB; --hull-2:#F4F7F5;
+    --line:rgba(12,30,30,.12); --line-2:rgba(12,30,30,.22);
+    --text:#0A1518; --dim:#4B5B60; --faint:#869598;
+    --floor:#0E8A57; --floor-deep:#0A6B43; --floor-glow:rgba(14,138,87,.10);
+    --brass:#8A6A22; --brass-deep:#6E541A; --brass-glow:rgba(138,106,34,.10);
   }}
   :root[data-theme="light"]{
-    --ink:#EEF1F5; --ink-2:#FFFFFF; --card:#FFFFFF;
-    --line:rgba(11,15,20,.11); --line-2:rgba(11,15,20,.18);
-    --text:#0B1119; --dim:#54606E; --faint:#8593A1;
-    --emerald:#0F8A5B; --gold:#8A6A22;
+    --abyss:#EEF2F1; --hull:#FBFCFB; --hull-2:#F4F7F5;
+    --line:rgba(12,30,30,.12); --line-2:rgba(12,30,30,.22);
+    --text:#0A1518; --dim:#4B5B60; --faint:#869598;
+    --floor:#0E8A57; --floor-deep:#0A6B43; --floor-glow:rgba(14,138,87,.10);
+    --brass:#8A6A22; --brass-deep:#6E541A; --brass-glow:rgba(138,106,34,.10);
   }
   :root[data-theme="dark"]{
-    --ink:#0A0D12; --ink-2:#10151C; --card:#0E141B;
-    --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.18);
-    --text:#E6EDF3; --dim:#93A0AF; --faint:#5B6673;
-    --emerald:#35C88F; --gold:#D6AC5A;
+    --abyss:#070B0F; --hull:#0C131A; --hull-2:#111A23;
+    --line:rgba(150,178,190,.13); --line-2:rgba(150,178,190,.24);
+    --text:#E9EFF1; --dim:#8B9BA4; --faint:#54626B;
+    --floor:#3BD98E; --floor-deep:#128C5B; --floor-glow:rgba(59,217,142,.16);
+    --brass:#CDA349; --brass-deep:#8A6D2E; --brass-glow:rgba(205,163,73,.14);
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-  body{margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:var(--w);margin:0 auto;padding:0 24px}
-  h1,h2,h3{margin:0;letter-spacing:-.02em;text-wrap:balance;line-height:1.1}
+  body{margin:0;background:var(--abyss);color:var(--text);font-family:var(--sans);
+    line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  .wrap{max-width:var(--w);margin:0 auto;padding:0 28px}
+  h1,h2,h3{margin:0;font-family:var(--serif);font-weight:460;letter-spacing:-.01em;line-height:1.08;text-wrap:balance}
   p{margin:0}
-  a{color:inherit}
+  a{color:inherit;text-decoration:none}
   .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
-  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  .kicker{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+
+  /* focus + motion */
+  a:focus-visible,button:focus-visible{outline:2px solid var(--floor);outline-offset:3px;border-radius:4px}
+  .reveal{opacity:0;transform:translateY(14px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
   /* nav */
-  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
-    background:color-mix(in srgb,var(--ink) 80%,transparent);border-bottom:1px solid var(--line)}
-  .nav-in{display:flex;align-items:center;gap:16px;height:58px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.04em;text-decoration:none}
-  .brand svg{width:24px;height:24px}
+  nav{position:sticky;top:0;z-index:30;backdrop-filter:blur(14px) saturate(1.2);
+    background:color-mix(in srgb,var(--abyss) 74%,transparent);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;gap:18px;height:64px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.14em}
+  .brand svg{width:25px;height:25px}
   .spacer{margin-left:auto}
-  .devnet{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 38%,transparent);padding:3px 8px;border-radius:6px}
-  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:650;font-size:13.5px;padding:9px 16px;border-radius:9px;text-decoration:none;border:1px solid transparent;cursor:pointer}
-  .btn.primary{background:var(--emerald);color:#04120c} :root[data-theme="light"] .btn.primary{color:#fff}
-  .btn.ghost{border-color:var(--line-2);color:var(--text)} .btn.ghost:hover{background:var(--ink-2)}
-  .nav-in a.ghost{font-size:13px}
-  @media (max-width:640px){.nav-in .devnet{display:none}}
+  .tag-devnet{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--brass);
+    border:1px solid color-mix(in srgb,var(--brass) 40%,transparent);padding:4px 9px;border-radius:100px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-weight:600;font-size:12.5px;
+    letter-spacing:.03em;padding:10px 17px;border-radius:100px;border:1px solid transparent;cursor:pointer;transition:transform .15s,background .2s,border-color .2s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{background:var(--floor);color:#04140c}
+  .btn.primary:hover{box-shadow:0 8px 30px var(--floor-glow)}
+  :root[data-theme="light"] .btn.primary,html:not([data-theme]) .btn.primary{color:#fff}
+  @media (prefers-color-scheme:light){html:not([data-theme]) .btn.primary{color:#fff}}
+  .btn.ghost{border-color:var(--line-2);color:var(--text)}
+  .btn.ghost:hover{background:var(--hull-2)}
+  @media (max-width:600px){.tag-devnet{display:none}}
 
   /* hero */
-  .hero{padding:92px 0 76px;text-align:center;position:relative;overflow:hidden}
-  .hero::before{content:"";position:absolute;inset:-40% 0 auto 0;height:520px;z-index:0;
-    background:radial-gradient(60% 60% at 50% 0%,var(--emerald),transparent 70%);opacity:.10;pointer-events:none}
-  .hero>*{position:relative;z-index:1}
-  .hero h1{font-size:clamp(38px,7vw,66px);font-weight:760}
-  .hero .lead{max-width:640px;margin:22px auto 0;font-size:clamp(16px,2.3vw,19px);color:var(--dim)}
-  .hero .lead b{color:var(--text);font-weight:650}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:34px}
-  .assurance{margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--faint);display:inline-flex;gap:8px;align-items:center}
-  .assurance b{color:var(--emerald);font-weight:600}
+  .hero{position:relative;padding:76px 0 40px}
+  .hero-grid{display:grid;grid-template-columns:1.04fr .96fr;gap:52px;align-items:center}
+  @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:32px}.hero{padding:52px 0 20px}}
+  .hero .kicker{display:flex;align-items:center;gap:12px}
+  .hero .kicker::after{content:"";height:1px;width:56px;background:linear-gradient(90deg,var(--line-2),transparent)}
+  h1{font-size:clamp(29px,4.4vw,50px);margin-top:22px;font-weight:380}
+  h1 em{font-style:normal;font-weight:560;color:var(--floor)}
+  h1 em.b{color:var(--brass)}
+  .hero-sub{margin-top:22px;max-width:520px;color:var(--dim);font-size:16.5px;line-height:1.6}
+  .hero-cta{margin-top:30px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .textlink{font-family:var(--mono);font-size:12.5px;color:var(--dim);border-bottom:1px solid var(--line-2);padding-bottom:2px}
+  .textlink:hover{color:var(--text)}
+  .spec{margin-top:40px;display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--line)}
+  .spec>div{flex:1;min-width:120px;padding:14px 18px 0 0;border-right:1px solid var(--line)}
+  .spec>div:last-child{border-right:0}
+  .spec dt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .spec dd{margin:6px 0 0;font-family:var(--mono);font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:6px}
+  .spec dd .up{color:var(--floor)}
+
+  /* chart card */
+  .chart-card{position:relative;background:
+      radial-gradient(120% 90% at 80% 0%,color-mix(in srgb,var(--floor) 7%,transparent),transparent 60%),
+      var(--hull);
+    border:1px solid var(--line);border-radius:18px;padding:20px 20px 16px;overflow:hidden}
+  .chart-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+  .chart-head .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .chart-head .val{font-family:var(--mono);font-weight:600;font-size:22px;color:var(--floor);line-height:1;letter-spacing:-.01em}
+  .chart-head .val small{font-size:11px;color:var(--dim);font-weight:400}
+  .chart-head .pill{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--brass);
+    border:1px solid color-mix(in srgb,var(--brass) 38%,transparent);border-radius:100px;padding:4px 9px;white-space:nowrap}
+  canvas{display:block;width:100%;height:248px}
+  .chart-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.06em;margin-top:2px}
 
   /* sections */
-  section{padding:62px 0;border-top:1px solid var(--line)}
-  .sec-head{text-align:center;max-width:620px;margin:0 auto 44px}
-  .sec-head h2{font-size:clamp(26px,4vw,36px);font-weight:720}
-  .sec-head p{margin-top:14px;color:var(--dim);font-size:16px}
+  section{padding:78px 0;border-top:1px solid var(--line)}
+  .sec-kicker{text-align:center}
+  .sec-title{text-align:center;font-size:clamp(24px,3.4vw,34px);margin:16px auto 0;max-width:640px;font-weight:400}
+  .sec-lead{text-align:center;max-width:560px;margin:16px auto 0;color:var(--dim);font-size:15.5px}
 
-  .grid{display:grid;gap:16px}
-  .g3{grid-template-columns:repeat(3,1fr)}
-  @media (max-width:760px){.g3{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px}
-  .card .n{font-family:var(--mono);font-size:12px;color:var(--emerald);letter-spacing:.05em}
-  .card h3{font-size:19px;font-weight:680;margin:14px 0 8px}
-  .card p{color:var(--dim);font-size:14.5px}
-  .card .tag{margin-top:16px;display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
-    color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 34%,transparent);border-radius:20px;padding:4px 11px}
-  .card .ico{font-size:20px;color:var(--emerald);line-height:1}
+  /* how — instrument steps */
+  .steps{margin-top:52px;display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  @media (max-width:760px){.steps{grid-template-columns:1fr}}
+  .step{padding:30px 28px;border-right:1px solid var(--line);position:relative}
+  .step:last-child{border-right:0}
+  @media (max-width:760px){.step{border-right:0;border-bottom:1px solid var(--line)}.step:last-child{border-bottom:0}}
+  .step .idx{font-family:var(--mono);font-size:12px;color:var(--floor);letter-spacing:.08em}
+  .step h3{font-family:var(--serif);font-size:20px;font-weight:500;margin:16px 0 9px}
+  .step p{color:var(--dim);font-size:14.5px}
+  .step .note{margin-top:16px;font-family:var(--mono);font-size:11px;letter-spacing:.03em;color:var(--brass)}
 
-  /* closing */
-  .close{text-align:center;padding:72px 0}
-  .close h2{font-size:clamp(24px,4vw,34px);font-weight:720}
-  .close p{max-width:560px;margin:14px auto 0;color:var(--dim);font-size:16px}
+  /* safe — spec sheet */
+  .guarantees{margin-top:52px;border-top:1px solid var(--line)}
+  .g-row{display:grid;grid-template-columns:38px 200px 1fr;gap:20px;align-items:baseline;
+    padding:26px 6px;border-bottom:1px solid var(--line)}
+  @media (max-width:720px){.g-row{grid-template-columns:1fr;gap:8px;padding:22px 4px}}
+  .g-row .sym{font-family:var(--mono);color:var(--floor);font-size:17px}
+  .g-row h3{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--text)}
+  .g-row p{color:var(--dim);font-size:14.5px}
+  .g-foot{margin-top:26px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.02em}
+  .g-foot b{color:var(--floor);font-weight:600}
 
-  footer{border-top:1px solid var(--line);padding:34px 0}
-  .foot-in{display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--dim)}
-  .foot-in a{text-decoration:none} .foot-in a:hover{color:var(--text)}
-  .disclaimer{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
-  @media (max-width:640px){.disclaimer{margin-left:0;width:100%}}
+  /* close */
+  .close{padding:96px 0;text-align:center;position:relative}
+  .close::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--floor),transparent);opacity:.5}
+  .close h2{font-size:clamp(26px,4vw,42px);font-weight:400}
+  .close h2 em{font-style:normal;color:var(--brass)}
+  .close p{max-width:520px;margin:18px auto 0;color:var(--dim);font-size:16px}
+  .close .hero-cta{justify-content:center;margin-top:30px}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:38px 0}
+  .foot-in{display:flex;align-items:center;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .foot-in .brand{font-size:13px}
+  .foot-in a:hover{color:var(--text)}
+  .foot-in .disc{margin-left:auto;color:var(--faint);font-size:10.5px;letter-spacing:.06em}
+  @media (max-width:640px){.foot-in .disc{margin-left:0;width:100%}}
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="anchor" viewBox="0 0 24 24">
-  <circle cx="12" cy="4.4" r="2" fill="none" stroke="var(--emerald)" stroke-width="1.6"/>
-  <path d="M12 6.4V20M7 10.2h10" fill="none" stroke="var(--emerald)" stroke-width="1.6" stroke-linecap="round"/>
-  <path d="M4.6 13.7c0 4.1 3.4 6.3 7.4 6.3s7.4-2.2 7.4-6.3" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"/>
-  <path d="M4.6 13.7l-1.6 1M19.4 13.7l1.6 1" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="12" cy="4.4" r="2" fill="none" stroke="var(--floor)" stroke-width="1.6"/>
+  <path d="M12 6.4V20M7 10.2h10" fill="none" stroke="var(--floor)" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M4.6 13.7c0 4.1 3.4 6.3 7.4 6.3s7.4-2.2 7.4-6.3" fill="none" stroke="var(--brass)" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M4.6 13.7l-1.6 1M19.4 13.7l1.6 1" fill="none" stroke="var(--brass)" stroke-width="1.6" stroke-linecap="round"/>
 </symbol></svg>
 
 <nav><div class="wrap nav-in">
-  <a class="brand" href="#top"><svg><use href="#anchor"/></svg>BALLAST</a>
+  <span class="brand"><svg><use href="#anchor"/></svg>BALLAST</span>
   <span class="spacer"></span>
-  <span class="devnet">DEVNET</span>
-  <a class="btn ghost" href="https://github.com/BallastSystems/ballast" target="_blank" rel="noopener">GitHub</a>
+  <span class="tag-devnet">DEVNET · OPEN SOURCE</span>
+  <a class="btn ghost" href="https://github.com/BallastSystems/ballast" target="_blank" rel="noopener">GitHub ↗</a>
   <a class="btn primary" href="https://github.com/BallastSystems/ballast">Add a floor</a>
 </div></nav>
 
-<header id="top" class="hero"><div class="wrap">
-  <p class="eyebrow">A redeemable floor for memecoins</p>
-  <h1>Give your memecoin<br>a floor.</h1>
-  <p class="lead">Ballast bolts a non-custodial vault of <b>real tokenized stock</b> onto your coin — a floor every holder can redeem against, that you raise with buybacks and that <b>only ever goes up.</b> Keep <b>100% of your creator fees.</b></p>
-  <div class="cta">
-    <a class="btn primary" href="https://github.com/BallastSystems/ballast">View the code →</a>
-    <a class="btn ghost" href="#how">How it works</a>
+<header class="hero"><div class="wrap hero-grid">
+  <div class="reveal in">
+    <p class="kicker">A memecoin with a balance sheet</p>
+    <h1>Lock <em>real tokenized stocks</em> into a vault on your memecoin, so holders can always redeem for a real on-chain share — a price floor that <em>only rises</em>, that <em class="b">no one can drain.</em></h1>
+    <p class="hero-sub">Apple, NVIDIA, Tesla — held as spot the vault actually owns. You fund the floor with buybacks. You keep 100% of your creator fees.</p>
+    <div class="hero-cta">
+      <a class="btn primary" href="https://github.com/BallastSystems/ballast">View the code →</a>
+      <a class="textlink" href="#how">How it works</a>
+    </div>
+    <dl class="spec">
+      <div><dt>Floor</dt><dd><span class="up">▲</span> only rises</dd></div>
+      <div><dt>Reserves</dt><dd>on-chain</dd></div>
+      <div><dt>Custody</dt><dd>non-custodial</dd></div>
+    </dl>
   </div>
-  <div class="assurance">▲&nbsp; Backed by spot the vault actually holds — <b>no leverage, nothing to liquidate</b></div>
+
+  <div class="chart-card reveal in" style="transition-delay:.12s">
+    <div class="chart-head">
+      <div>
+        <div class="lbl">Redeemable floor · per token</div>
+        <div class="val" id="floorVal">$0.000000 <small>/ only ever up</small></div>
+      </div>
+      <div class="pill">RESERVES ↑</div>
+    </div>
+    <canvas id="floorChart" aria-label="A chart of the redeemable floor rising over time and never falling"></canvas>
+    <div class="chart-foot"><span>buyback → reserves → floor</span><span>illustrative</span></div>
+  </div>
 </div></header>
 
 <section id="how"><div class="wrap">
-  <div class="sec-head">
-    <h2>How it works</h2>
-    <p>Three steps to a coin with a real, rising floor. Nothing here touches your creator fees.</p>
-  </div>
-  <div class="grid g3">
-    <div class="card">
-      <div class="n">01</div>
+  <p class="sec-kicker kicker" style="display:block;text-align:center">How it works</p>
+  <h2 class="sec-title">Three steps to a coin with a real, rising floor.</h2>
+  <p class="sec-lead">Nothing here touches your creator fees. The only value that ever leaves the vault is a holder redeeming their own share.</p>
+  <div class="steps reveal">
+    <div class="step">
+      <div class="idx">01 / LAUNCH</div>
       <h3>Launch your coin</h3>
       <p>Launch your memecoin however you like — you keep every creator fee. Open a Ballast vault and pick which tokenized stocks may back it.</p>
-      <span class="tag">you keep 100% of fees</span>
+      <div class="note">you keep 100% of fees</div>
     </div>
-    <div class="card">
-      <div class="n">02</div>
+    <div class="step">
+      <div class="idx">02 / FUND</div>
       <h3>Fund the floor</h3>
-      <p>Buy tokenized stock — AAPLx, NVDAx, TSLAx — and deposit it into the vault. Every buyback raises the floor and is a public on-chain event.</p>
-      <span class="tag">reserves only go up</span>
+      <p>Buy tokenized stock and deposit it into the vault. Every buyback raises the floor and is a public, on-chain event.</p>
+      <div class="note">reserves only go up</div>
     </div>
-    <div class="card">
-      <div class="n">03</div>
+    <div class="step">
+      <div class="idx">03 / REDEEM</div>
       <h3>Holders redeem</h3>
       <p>Any holder can burn their coins for a pro-rata slice of the vault's real stock, on-chain, anytime. The floor is enforced by code.</p>
-      <span class="tag">the redeemable floor</span>
+      <div class="note">the redeemable floor</div>
     </div>
   </div>
 </div></section>
 
 <section id="safe"><div class="wrap">
-  <div class="sec-head">
-    <h2>Safe by construction</h2>
-    <p>The only way value leaves the vault is you redeeming your own share. Not a policy — a property of the code.</p>
-  </div>
-  <div class="grid g3">
-    <div class="card">
-      <div class="ico">⚓</div>
-      <h3>No drain path</h3>
-      <p>The vault is a program-derived account with no private key. Admin keys can configure and add backing — they can never extract a single unit, even if fully compromised.</p>
+  <p class="sec-kicker kicker" style="display:block;text-align:center">Safe by construction</p>
+  <h2 class="sec-title">Not a policy — a property of the code.</h2>
+  <p class="sec-lead">There is no withdraw, no admin drain, no sweep. Value leaves the vault one way only: you redeeming your own share.</p>
+  <div class="guarantees reveal">
+    <div class="g-row">
+      <div class="sym">⚓</div>
+      <h3>NO DRAIN PATH</h3>
+      <p>The vault is a program-derived account with no private key. Admin and engine keys can configure and add backing — they can never extract a single unit, even if fully compromised.</p>
     </div>
-    <div class="card">
-      <div class="ico">◈</div>
-      <h3>Real spot, no leverage</h3>
+    <div class="g-row">
+      <div class="sym">◆</div>
+      <h3>REAL SPOT, NO LEVERAGE</h3>
       <p>Backing is tokenized stock the vault actually holds. Nothing to liquidate, nothing to evaporate on a wick. The floor can't be margin-called.</p>
     </div>
-    <div class="card">
-      <div class="ico">↻</div>
-      <h3>Always redeemable</h3>
+    <div class="g-row">
+      <div class="sym">↻</div>
+      <h3>ALWAYS REDEEMABLE</h3>
       <p>Redemption can never be paused — not even by a compromised admin. Your claim on the floor is on-chain, any time, forever.</p>
     </div>
+    <div class="g-row">
+      <div class="sym">◎</div>
+      <h3>OPEN &amp; VERIFIABLE</h3>
+      <p>Open-source, with on-chain proof of reserves anyone can recompute. Independent audit and legal review precede any mainnet launch.</p>
+    </div>
   </div>
-  <div style="text-align:center;margin-top:30px" class="mono">
-    <span style="font-size:12.5px;color:var(--faint)">Hardened by a <b style="color:var(--emerald)">25-check adversarial test suite</b> + two internal security reviews. Independent audit precedes any mainnet launch.</span>
-  </div>
+  <p class="g-foot">Hardened by a <b>25-check adversarial test suite</b> + a 360-operation invariant fuzzer + two internal security reviews. Devnet · pre-audit.</p>
 </div></section>
 
 <div class="close"><div class="wrap">
-  <h2>A memecoin with a balance sheet.</h2>
+  <h2>A memecoin with a <em>balance sheet.</em></h2>
   <p>Ballast is live on devnet and fully open-source. Read the code, run the proof-of-reserves yourself, and watch the floor rise.</p>
-  <div class="cta">
+  <div class="hero-cta">
     <a class="btn primary" href="https://github.com/BallastSystems/ballast">View the code →</a>
+    <a class="textlink" href="#how">How it works</a>
   </div>
 </div></div>
 
 <footer><div class="wrap foot-in">
-  <a class="brand" href="#top" style="font-size:14px"><svg style="width:20px;height:20px"><use href="#anchor"/></svg>BALLAST</a>
+  <span class="brand"><svg style="width:20px;height:20px"><use href="#anchor"/></svg>BALLAST</span>
   <a href="https://github.com/BallastSystems/ballast" target="_blank" rel="noopener">GitHub</a>
   <a href="#how">How it works</a>
   <a href="#safe">Safety</a>
-  <span class="disclaimer">Devnet · pre-audit · illustrative · not investment advice</span>
+  <span class="disc">DEVNET · PRE-AUDIT · ILLUSTRATIVE FIGURES · NOT INVESTMENT ADVICE</span>
 </div></footer>
 
 <script>
-  // Respect a saved theme toggle if present; otherwise follow the OS.
+  // theme memory (if a host toggle sets one)
   try{var t=localStorage.getItem("ballast-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}
+
+  // reveal-on-scroll
+  var rm=matchMedia("(prefers-reduced-motion:reduce)").matches;
+  if(!rm){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});},{threshold:.18});
+    document.querySelectorAll(".reveal:not(.in)").forEach(function(el){io.observe(el);});
+  }else{document.querySelectorAll(".reveal").forEach(function(el){el.classList.add("in");});}
+
+  // ---- rising-floor canvas: a monotonic staircase (floor holds, then buybacks raise it) ----
+  (function(){
+    var cv=document.getElementById("floorChart"), out=document.getElementById("floorVal");
+    if(!cv||!cv.getContext) return;
+    var ctx=cv.getContext("2d");
+    // normalized non-decreasing sequence: plateaus (floor holds) then jumps (buyback)
+    var seq=[0.05,0.05,0.13,0.13,0.13,0.23,0.30,0.30,0.30,0.42,0.53,0.53,0.64,0.72,0.72,0.86,0.93];
+    var TARGET=0.000422; // illustrative floor, $/token
+    var W,H,dpr;
+    function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+    function size(){
+      dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+      W=cv.clientWidth; H=cv.clientHeight;
+      cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    function draw(p){
+      var floorC=css("--floor")||"#3BD98E", brassC=css("--brass")||"#CDA349", lineC=css("--line")||"rgba(150,178,190,.13)";
+      var padL=8, padR=8, padT=14, padB=8;
+      var w=W-padL-padR, h=H-padT-padB;
+      ctx.clearRect(0,0,W,H);
+      // grid hairlines
+      ctx.strokeStyle=lineC; ctx.lineWidth=1;
+      for(var g=0; g<=3; g++){var gy=padT+h*g/3; ctx.beginPath(); ctx.moveTo(padL,gy); ctx.lineTo(W-padR,gy); ctx.stroke();}
+      var n=seq.length;
+      var X=function(i){return padL + w*(i/(n-1));};
+      var Y=function(v){return padT + h*(1-v)*0.92 - h*0.02;};
+      // frontier index (animated)
+      var fi=p*(n-1);
+      // build staircase points up to frontier
+      var pts=[]; var last=Math.floor(fi);
+      for(var i=0;i<=last;i++) pts.push([X(i),Y(seq[i])]);
+      // interpolate the partial segment
+      var cx, cy;
+      if(last<n-1){var fr=fi-last; cx=X(last)+(X(last+1)-X(last))*fr; cy=Y(seq[last]); pts.push([cx,cy]);}
+      else {cx=X(n-1); cy=Y(seq[n-1]);}
+      // area fill (reserves — brass gradient) under a STEPPED path
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], H-padB);
+      for(var k=0;k<pts.length;k++){
+        if(k>0) ctx.lineTo(pts[k][0], pts[k-1][1]); // horizontal hold at prev height
+        ctx.lineTo(pts[k][0], pts[k][1]);           // step up
+      }
+      ctx.lineTo(pts[pts.length-1][0], H-padB); ctx.closePath();
+      var grd=ctx.createLinearGradient(0,padT,0,H-padB);
+      grd.addColorStop(0, brassC+"38"); grd.addColorStop(1, brassC+"05");
+      ctx.fillStyle=grd; ctx.fill();
+      // floor line (emerald, glowing) — stepped
+      ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+      for(var m=1;m<pts.length;m++){ctx.lineTo(pts[m][0],pts[m-1][1]); ctx.lineTo(pts[m][0],pts[m][1]);}
+      ctx.strokeStyle=floorC; ctx.lineWidth=2.4; ctx.lineJoin="round"; ctx.lineCap="round";
+      ctx.shadowColor=floorC; ctx.shadowBlur=14; ctx.stroke(); ctx.shadowBlur=0;
+      // endpoint marker
+      ctx.beginPath(); ctx.arc(cx,cy,4.4,0,7); ctx.fillStyle=floorC; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy,8.5,0,7); ctx.strokeStyle=floorC+"55"; ctx.lineWidth=1.5; ctx.stroke();
+      // value readout counts up to floor * current height fraction of target
+      var shown=(TARGET*(seq[Math.min(last, n-1)])/seq[n-1])*(0.4+0.6*p);
+      out.innerHTML="$"+shown.toFixed(6)+" <small>/ only ever up</small>";
+    }
+    var t0=null, DUR=1900;
+    function frame(ts){
+      if(t0===null)t0=ts;
+      var p=Math.min(1,(ts-t0)/DUR);
+      var e=1-Math.pow(1-p,3); // easeOutCubic
+      draw(e);
+      if(p<1) requestAnimationFrame(frame);
+      else out.innerHTML="$"+TARGET.toFixed(6)+" <small>/ only ever up</small>";
+    }
+    function start(){size(); if(rm){draw(1); out.innerHTML="$"+TARGET.toFixed(6)+" <small>/ only ever up</small>";} else {t0=null; requestAnimationFrame(frame);}}
+    var rt;
+    window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){size();draw(1);out.innerHTML="$"+TARGET.toFixed(6)+" <small>/ only ever up</small>";},160);});
+    // kick off once fonts/layout settle
+    if(document.readyState==="complete") start(); else window.addEventListener("load",start);
+  })();
 </script>
 </body>
 </html>
