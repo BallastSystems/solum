@@ -444,20 +444,10 @@ pub mod solum {
             require!(va.close_authority.is_none(), SolumError::VenueTampered);
         }
 
-        // fair_out_base = actual_in * 10^stock_dec * 10^(-expo) / (10^quote_dec * price)
+        // Oracle-justified minimum stock output (pure + checked; unit-tested in `mod tests`).
         let sd = ctx.accounts.stock_mint.decimals as u32;
         let qd = ctx.accounts.funding_mint.decimals as u32;
-        let num = (actual_in as u128)
-            .checked_mul(pow10(sd)?).ok_or(SolumError::MathOverflow)?
-            .checked_mul(pow10(pe)?).ok_or(SolumError::MathOverflow)?;
-        let den = pow10(qd)?.checked_mul(oracle_price).ok_or(SolumError::MathOverflow)?;
-        let fair_out = num.checked_div(den).ok_or(SolumError::MathOverflow)?;
-        let floor = fair_out
-            .checked_mul((10_000 - cfg.max_slippage_bps) as u128).ok_or(SolumError::MathOverflow)?
-            .checked_div(10_000).ok_or(SolumError::MathOverflow)?;
-        // Reject dust: if the oracle floor rounds to zero, a near-zero fill would pass and let
-        // funding trickle out for nothing. Every spend must buy a nonzero, oracle-justified amount.
-        require!(floor > 0, SolumError::InsufficientBacking);
+        let floor = min_out_floor(actual_in, oracle_price, pe, sd, qd, cfg.max_slippage_bps)?;
         require!(actual_out as u128 >= floor, SolumError::InsufficientBacking);
 
         emit!(Backed {
@@ -562,6 +552,89 @@ pub mod solum {
 /// 10^n as u128, checked.
 fn pow10(n: u32) -> Result<u128> {
     10u128.checked_pow(n).ok_or(error!(SolumError::MathOverflow))
+}
+
+/// Oracle-justified minimum stock output for `actual_in` funding spent, after the slippage
+/// haircut. `oracle_price` × 10^(-pe) is the price of one whole stock in funding units; `sd`/`qd`
+/// are the stock/funding decimals; `max_slippage_bps` is bounded ≤ MAX_SLIPPAGE_BPS by config.
+///   fair_out = actual_in · 10^sd · 10^pe / (10^qd · oracle_price);  floor = fair_out · (1 − slip)
+/// Every step is checked (no overflow, no div-by-zero), and a floor that rounds to zero is
+/// rejected so a dust fill can't drain funding for nothing. This is the security-critical
+/// arithmetic of `add_backing`, isolated here so it can be exhaustively unit-tested.
+fn min_out_floor(
+    actual_in: u64,
+    oracle_price: u128,
+    pe: u32,
+    sd: u32,
+    qd: u32,
+    max_slippage_bps: u16,
+) -> Result<u128> {
+    let num = (actual_in as u128)
+        .checked_mul(pow10(sd)?)
+        .ok_or(SolumError::MathOverflow)?
+        .checked_mul(pow10(pe)?)
+        .ok_or(SolumError::MathOverflow)?;
+    let den = pow10(qd)?
+        .checked_mul(oracle_price)
+        .ok_or(SolumError::MathOverflow)?;
+    let fair_out = num.checked_div(den).ok_or(SolumError::MathOverflow)?;
+    let floor = fair_out
+        .checked_mul((10_000 - max_slippage_bps) as u128)
+        .ok_or(SolumError::MathOverflow)?
+        .checked_div(10_000)
+        .ok_or(SolumError::MathOverflow)?;
+    require!(floor > 0, SolumError::InsufficientBacking);
+    Ok(floor)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::min_out_floor;
+
+    #[test]
+    fn basic_one_to_one() {
+        // price 1 (expo 0), 6-dec both, spend 1.0 funding → require 1.0 stock, no slippage.
+        assert_eq!(min_out_floor(1_000_000, 1, 0, 6, 6, 0).unwrap(), 1_000_000);
+    }
+
+    #[test]
+    fn applies_slippage_haircut() {
+        // 5% slippage → floor is 95% of fair.
+        assert_eq!(min_out_floor(1_000_000, 1, 0, 6, 6, 500).unwrap(), 950_000);
+    }
+
+    #[test]
+    fn lower_price_requires_more_out() {
+        // The confidence-conservative Pyth read uses price−conf (a LOWER price); that must demand
+        // MORE stock out, never less — i.e. more protective for the vault.
+        let lo_price = min_out_floor(1_000_000, 1, 0, 6, 6, 0).unwrap();
+        let hi_price = min_out_floor(1_000_000, 2, 0, 6, 6, 0).unwrap();
+        assert!(lo_price > hi_price);
+    }
+
+    #[test]
+    fn exponent_scales_price() {
+        // price 100 with pe=2 == effective price 1.00 → same floor as the 1:1 case.
+        assert_eq!(min_out_floor(1_000_000, 100, 2, 6, 6, 0).unwrap(), 1_000_000);
+    }
+
+    #[test]
+    fn handles_decimal_mismatch() {
+        // stock 8-dec, funding 6-dec, price 1 → fair = in · 10^8 / 10^6 = in · 100.
+        assert_eq!(min_out_floor(1_000_000, 1, 0, 8, 6, 0).unwrap(), 100_000_000);
+    }
+
+    #[test]
+    fn rejects_dust_floor() {
+        // tiny spend at a huge price → floor rounds to 0 → rejected, not silently allowed.
+        assert!(min_out_floor(1, 1_000_000_000_000, 0, 6, 6, 0).is_err());
+    }
+
+    #[test]
+    fn guards_overflow_without_panicking() {
+        // extreme inputs overflow the checked math → Err, never a panic.
+        assert!(min_out_floor(u64::MAX, u128::MAX / 2, 30, 30, 0, 0).is_err());
+    }
 }
 
 // ------------------------------- Accounts -------------------------------
