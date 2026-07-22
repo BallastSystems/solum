@@ -196,14 +196,9 @@ pub mod solum {
             require_keys_eq!(vault_ata.mint, cfg.stock_allowlist[i], SolumError::StockMismatch);
             require_keys_eq!(user_ata.mint, cfg.stock_allowlist[i], SolumError::StockMismatch);
 
-            // payout = amount * vault_balance / supply_before  (u128, round down)
-            let payout: u64 = (amount as u128)
-                .checked_mul(vault_ata.amount as u128)
-                .ok_or(SolumError::MathOverflow)?
-                .checked_div(supply_before as u128)
-                .ok_or(SolumError::MathOverflow)?
-                .try_into()
-                .map_err(|_| SolumError::MathOverflow)?;
+            // Pro-rata payout: amount * vault_balance / supply_before (u128, round down).
+            // Pure + checked; exhaustively unit-tested in `mod tests`.
+            let payout: u64 = redeem_payout(amount, vault_ata.amount, supply_before)?;
 
             if payout == 0 {
                 continue;
@@ -587,9 +582,24 @@ fn min_out_floor(
     Ok(floor)
 }
 
+/// Pro-rata redemption payout: `amount * vault_balance / supply` in u128, rounded DOWN, fit to
+/// u64. Rounding down guarantees a redeemer never receives more than their exact share — so the
+/// per-token floor for everyone who stays is preserved (and nudged up by the truncated remainder).
+/// This is the most security-critical arithmetic in the protocol; isolated here for unit testing.
+fn redeem_payout(amount: u64, vault_balance: u64, supply: u64) -> Result<u64> {
+    let p: u64 = (amount as u128)
+        .checked_mul(vault_balance as u128)
+        .ok_or(SolumError::MathOverflow)?
+        .checked_div(supply as u128)
+        .ok_or(SolumError::MathOverflow)?
+        .try_into()
+        .map_err(|_| SolumError::MathOverflow)?;
+    Ok(p)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::min_out_floor;
+    use super::{min_out_floor, redeem_payout};
 
     #[test]
     fn basic_one_to_one() {
@@ -634,6 +644,51 @@ mod tests {
     fn guards_overflow_without_panicking() {
         // extreme inputs overflow the checked math → Err, never a panic.
         assert!(min_out_floor(u64::MAX, u128::MAX / 2, 30, 30, 0, 0).is_err());
+    }
+
+    // ---- redeem_payout: the redemption floor arithmetic ----
+
+    #[test]
+    fn payout_exact_half() {
+        // redeem 50% of supply → exactly 50% of the vault balance.
+        assert_eq!(redeem_payout(500, 1_000, 1_000).unwrap(), 500);
+    }
+
+    #[test]
+    fn payout_rounds_down_never_overpays() {
+        // 1 of 3 supply against a balance of 10 → 10/3 = 3.33 → 3, never 4.
+        assert_eq!(redeem_payout(1, 10, 3).unwrap(), 3);
+    }
+
+    #[test]
+    fn payout_full_redeem_takes_full_balance() {
+        assert_eq!(redeem_payout(1_000, 777, 1_000).unwrap(), 777);
+    }
+
+    #[test]
+    fn payout_tiny_share_rounds_to_zero() {
+        // a single unit of a 1e9 supply against a 5-unit balance → 0 (handled by the caller's skip).
+        assert_eq!(redeem_payout(1, 5, 1_000_000_000).unwrap(), 0);
+    }
+
+    #[test]
+    fn payout_floor_preserved_sum_within_balance() {
+        // Property: rounding down means N redeemers' payouts never sum above the vault balance —
+        // the leftover remainder stays in the vault, nudging everyone else's floor UP.
+        let (bal, supply, third) = (1_000_000u64, 1_000_000u64, 333_333u64);
+        let p = redeem_payout(third, bal, supply).unwrap();
+        assert!(p * 3 <= bal);
+    }
+
+    #[test]
+    fn payout_zero_supply_errors_not_panics() {
+        assert!(redeem_payout(1, 10, 0).is_err());
+    }
+
+    #[test]
+    fn payout_overflow_guarded() {
+        // a payout that can't fit u64 must Err at the try_into, never wrap or panic.
+        assert!(redeem_payout(u64::MAX, u64::MAX, 1).is_err());
     }
 }
 
