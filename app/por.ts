@@ -15,7 +15,7 @@ async function main() {
   const url = process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899";
   const conn = new Connection(url, "confirmed");
   const provider = new anchor.AnchorProvider(conn, new anchor.Wallet(Keypair.generate()), {});
-  const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8"));
+  const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8"));
   const program = new anchor.Program(idl as anchor.Idl, provider);
 
   const r = await computeReserves(conn, program, new PublicKey(mintArg), new PublicKey(adminArg));

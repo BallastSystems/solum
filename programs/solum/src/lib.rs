@@ -55,7 +55,7 @@ pub const FEE_SEED: &[u8] = b"fee";
 pub const SWAP_DISCRIMINATOR: [u8; 8] = [248, 198, 158, 145, 225, 117, 135, 200];
 
 #[program]
-pub mod ballast {
+pub mod solum {
     use super::*;
 
     /// One-time registration of a vault for a launched token. Sets the immutable-ish policy:

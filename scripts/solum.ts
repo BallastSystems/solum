@@ -1,10 +1,10 @@
 // Solum operator CLI. Wallet + RPC come from the environment:
 //   ANCHOR_PROVIDER_URL=<rpc>  ANCHOR_WALLET=<keypair.json>
 //
-//   ballast init-vault  <coinMint> <stockMint[,stockMint...]> [--slippage bps] [--venue PUBKEY] [--engine PUBKEY]
-//   ballast set-price   <coinMint> <stockMint> <priceWholeQuote> [expo=0]
-//   ballast deposit     <coinMint> <stockMint> <sharesWhole>        # a buyback: adds backing
-//   ballast reserves    <coinMint>
+//   solum init-vault  <coinMint> <stockMint[,stockMint...]> [--slippage bps] [--venue PUBKEY] [--engine PUBKEY]
+//   solum set-price   <coinMint> <stockMint> <priceWholeQuote> [expo=0]
+//   solum deposit     <coinMint> <stockMint> <sharesWhole>        # a buyback: adds backing
+//   solum reserves    <coinMint>
 //
 // deposit/init only ever ADD to or configure the vault; nothing here can remove value.
 
@@ -29,7 +29,7 @@ const opt = (name: string, def?: string) => {
 function ctx() {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
-  const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8"));
+  const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8"));
   const program = new anchor.Program(idl as anchor.Idl, provider);
   return { provider, conn: provider.connection, wallet: (provider.wallet as anchor.Wallet).payer, program };
 }
