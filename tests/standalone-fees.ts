@@ -1,7 +1,7 @@
 // Standalone runner for the Token-2022 transfer-fee harvest path.
 //
 // Creates a real transfer-fee mint whose fee-config AND withdraw-withheld authorities are the
-// Ballast `fee_authority` PDA, accrues fees via a taxed transfer, and proves:
+// Solum `fee_authority` PDA, accrues fees via a taxed transfer, and proves:
 //   * harvest_fees pulls the withheld fees into the vault-owned fee account, and
 //   * an attacker cannot redirect withheld fees to an account they own (BadVaultOwner).
 // The tax rate is frozen (no instruction changes it) and no human key can move withheld fees.

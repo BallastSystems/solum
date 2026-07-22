@@ -1,4 +1,4 @@
-// Ballast operator CLI. Wallet + RPC come from the environment:
+// Solum operator CLI. Wallet + RPC come from the environment:
 //   ANCHOR_PROVIDER_URL=<rpc>  ANCHOR_WALLET=<keypair.json>
 //
 //   ballast init-vault  <coinMint> <stockMint[,stockMint...]> [--slippage bps] [--venue PUBKEY] [--engine PUBKEY]

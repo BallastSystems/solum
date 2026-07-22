@@ -1,4 +1,4 @@
-// Property-based, stateful invariant fuzzer for the Ballast vault.
+// Property-based, stateful invariant fuzzer for the Solum vault.
 //
 // Methodology: keep an off-chain REFERENCE MODEL of expected balances/supply. Run a long
 // sequence of RANDOM operations (deposit / redeem / transfer) against the real program on a

@@ -1,4 +1,4 @@
-# Ballast — Security Architecture
+# Solum — Security Architecture
 
 > The protocol holds **real assets** on behalf of thousands of holders. The vault is a
 > honeypot. Every design decision below exists to make theft **structurally impossible**,
@@ -19,7 +19,7 @@ not gated — it does not exist as a code path.
 ## Funding model (v1): pump.fun launch + manual buybacks
 
 The launched coin is a **plain pump.fun SPL token** — the creator keeps 100% of pump's
-creator fees, and Ballast never touches them. The vault is funded by **buybacks**: the
+creator fees, and Solum never touches them. The vault is funded by **buybacks**: the
 operator (or anyone) buys tokenized stock and deposits it via `deposit_stock`, or swaps
 SOL→stock via `add_backing`. Backing only ever increases; every deposit is an on-chain event,
 so the reserves are fully verifiable. Because the coin is classic SPL and xStocks are
@@ -35,7 +35,7 @@ token program (two distinct programs in one instruction).
 - The launched token is a **Token-2022 mint with the Transfer-Fee extension.** A fixed % of
   every transfer is withheld at the token level (protocol-enforced, works on any DEX —
   Jupiter/Raydium — with no custom AMM).
-- **Both authorities are a Ballast program PDA**, never a human key:
+- **Both authorities are a Solum program PDA**, never a human key:
   - `TransferFeeConfig` authority (can adjust rate within a hard-capped range) = `config_authority` PDA.
   - `WithdrawWithheld` authority (can move withheld fees) = `fee_authority` PDA.
   - ⇒ withheld fees can *only* be routed by the program, *only* into the vault flow. The

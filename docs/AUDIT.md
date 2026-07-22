@@ -1,4 +1,4 @@
-# Ballast — Audit Package
+# Solum — Audit Package
 
 Prepared for external security review. Pairs with [`SECURITY-ARCHITECTURE.md`](SECURITY-ARCHITECTURE.md)
 (design + threat model) and the test suites under `tests/`. **Devnet only; not yet deployed to
@@ -10,7 +10,7 @@ mainnet.**
   `A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU`. Anchor 0.31.1, Solana SBF (rustc 1.79).
 - **Out of scope:** `programs/mock-venue` is a TEST-ONLY constant-rate AMM used to exercise
   `add_backing`; it is never deployed to mainnet. The pump.fun program itself (the coin is a
-  plain SPL token launched there; Ballast only reads/uses the mint).
+  plain SPL token launched there; Solum only reads/uses the mint).
 
 ## Core invariant (the one thing to break)
 

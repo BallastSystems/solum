@@ -1,4 +1,4 @@
-//! Ballast — non-custodial redeemable-floor vault program.
+//! Solum — non-custodial redeemable-floor vault program.
 //!
 //! # The one invariant
 //! No instruction moves a vault asset anywhere except:
@@ -47,7 +47,7 @@ pub const PRICE_SEED: &[u8] = b"price";
 /// fee rate, the tax is frozen; and withheld fees can only ever be pulled to the vault.
 pub const FEE_SEED: &[u8] = b"fee";
 
-/// Ballast Venue ABI v1: an allowlisted swap venue MUST expose an Anchor-compatible
+/// Solum Venue ABI v1: an allowlisted swap venue MUST expose an Anchor-compatible
 /// `swap(amount_in: u64)` instruction whose accounts begin with
 /// `[vault_authority (signer), funding_vault (w), stock_vault (w), ..venue pool accounts]`,
 /// pulling `amount_in` from `funding_vault` and depositing the swap output into `stock_vault`.
@@ -70,22 +70,22 @@ pub mod ballast {
         funding_mint: Pubkey,
         stocks: Vec<Pubkey>,
     ) -> Result<()> {
-        require!(backing_fee_bps <= MAX_FEE_BPS, BallastError::FeeTooHigh);
-        require!(max_slippage_bps <= MAX_SLIPPAGE_BPS, BallastError::SlippageTooHigh);
-        require!(!stocks.is_empty(), BallastError::NoStocks);
-        require!(stocks.len() <= MAX_STOCKS, BallastError::TooManyStocks);
-        require!(engine != Pubkey::default(), BallastError::InvalidEngine);
-        require!(swap_venue != Pubkey::default(), BallastError::InvalidVenue);
-        require!(funding_mint != Pubkey::default(), BallastError::WrongMint);
+        require!(backing_fee_bps <= MAX_FEE_BPS, SolumError::FeeTooHigh);
+        require!(max_slippage_bps <= MAX_SLIPPAGE_BPS, SolumError::SlippageTooHigh);
+        require!(!stocks.is_empty(), SolumError::NoStocks);
+        require!(stocks.len() <= MAX_STOCKS, SolumError::TooManyStocks);
+        require!(engine != Pubkey::default(), SolumError::InvalidEngine);
+        require!(swap_venue != Pubkey::default(), SolumError::InvalidVenue);
+        require!(funding_mint != Pubkey::default(), SolumError::WrongMint);
 
         // Deny-by-default allowlist hygiene: no zero mints, no duplicates, and the funding
         // asset may never be one of the backing stocks (else add_backing could spend a stock
         // reserve as "funding" and swap it out).
         for (i, s) in stocks.iter().enumerate() {
-            require!(*s != Pubkey::default(), BallastError::InvalidStock);
-            require!(*s != funding_mint, BallastError::FundingIsStock);
+            require!(*s != Pubkey::default(), SolumError::InvalidStock);
+            require!(*s != funding_mint, SolumError::FundingIsStock);
             for other in &stocks[i + 1..] {
-                require!(other != s, BallastError::DuplicateStock);
+                require!(other != s, SolumError::DuplicateStock);
             }
         }
 
@@ -133,17 +133,17 @@ pub mod ballast {
         let cfg = &ctx.accounts.config;
         // Redemption is deliberately NOT pausable: the floor must always be reachable, even by
         // a compromised admin. `paused` gates only the value-ADDING paths (add_backing).
-        require!(amount > 0, BallastError::ZeroAmount);
+        require!(amount > 0, SolumError::ZeroAmount);
 
         // Denominator captured BEFORE the burn. Burning first would shrink supply and
         // over-pay the redeemer at the expense of everyone else's floor.
         let supply_before = ctx.accounts.token_mint.supply;
-        require!(supply_before > 0, BallastError::EmptySupply);
-        require!(amount <= supply_before, BallastError::AmountExceedsSupply);
+        require!(supply_before > 0, SolumError::EmptySupply);
+        require!(amount <= supply_before, SolumError::AmountExceedsSupply);
 
         let stock_count = cfg.stock_count as usize;
         let rem = ctx.remaining_accounts;
-        require!(rem.len() == stock_count * 3, BallastError::BadRemainingAccounts);
+        require!(rem.len() == stock_count * 3, SolumError::BadRemainingAccounts);
 
         // ---- State change first: burn the redeemed tokens. ----
         token_interface::burn(
@@ -175,7 +175,7 @@ pub mod ballast {
             require_keys_eq!(
                 stock_mint_ai.key(),
                 cfg.stock_allowlist[i],
-                BallastError::StockMismatch
+                SolumError::StockMismatch
             );
 
             // Deserialize + validate the token accounts (owner/mint), reading balances.
@@ -187,19 +187,19 @@ pub mod ballast {
             require_keys_eq!(
                 vault_ata.owner,
                 ctx.accounts.vault_authority.key(),
-                BallastError::BadVaultOwner
+                SolumError::BadVaultOwner
             );
-            require_keys_eq!(vault_ata.mint, cfg.stock_allowlist[i], BallastError::StockMismatch);
-            require_keys_eq!(user_ata.mint, cfg.stock_allowlist[i], BallastError::StockMismatch);
+            require_keys_eq!(vault_ata.mint, cfg.stock_allowlist[i], SolumError::StockMismatch);
+            require_keys_eq!(user_ata.mint, cfg.stock_allowlist[i], SolumError::StockMismatch);
 
             // payout = amount * vault_balance / supply_before  (u128, round down)
             let payout: u64 = (amount as u128)
                 .checked_mul(vault_ata.amount as u128)
-                .ok_or(BallastError::MathOverflow)?
+                .ok_or(SolumError::MathOverflow)?
                 .checked_div(supply_before as u128)
-                .ok_or(BallastError::MathOverflow)?
+                .ok_or(SolumError::MathOverflow)?
                 .try_into()
-                .map_err(|_| BallastError::MathOverflow)?;
+                .map_err(|_| SolumError::MathOverflow)?;
 
             if payout == 0 {
                 continue;
@@ -247,7 +247,7 @@ pub mod ballast {
     /// Admin-only: rotate the engine trigger authority. The engine can only ever trigger
     /// add-backing; rotating it grants no withdrawal power.
     pub fn set_engine(ctx: Context<AdminOnly>, new_engine: Pubkey) -> Result<()> {
-        require!(new_engine != Pubkey::default(), BallastError::InvalidEngine);
+        require!(new_engine != Pubkey::default(), SolumError::InvalidEngine);
         ctx.accounts.config.engine = new_engine;
         emit!(ParamsUpdated {
             token_mint: ctx.accounts.config.token_mint,
@@ -263,10 +263,10 @@ pub mod ballast {
         let cfg = &ctx.accounts.config;
         require!(
             cfg.stock_allowlist[..cfg.stock_count as usize].contains(&ctx.accounts.stock_mint.key()),
-            BallastError::StockMismatch
+            SolumError::StockMismatch
         );
-        require!(price > 0, BallastError::BadOracle);
-        require!(expo <= 0, BallastError::BadOracle); // stocks priced with non-positive expo
+        require!(price > 0, SolumError::BadOracle);
+        require!(expo <= 0, SolumError::BadOracle); // stocks priced with non-positive expo
         let slot = Clock::get()?.slot;
         let pf = &mut ctx.accounts.price_feed;
         pf.stock_mint = ctx.accounts.stock_mint.key();
@@ -296,8 +296,8 @@ pub mod ballast {
         amount_in: u64,
     ) -> Result<()> {
         let cfg = &ctx.accounts.config;
-        require!(!cfg.paused, BallastError::Paused);
-        require!(amount_in > 0, BallastError::ZeroAmount);
+        require!(!cfg.paused, SolumError::Paused);
+        require!(amount_in > 0, SolumError::ZeroAmount);
 
         let stock_mint_key = ctx.accounts.stock_mint.key();
         let vault_key = ctx.accounts.vault_authority.key();
@@ -305,29 +305,29 @@ pub mod ballast {
         // Stock must be allowlisted; venue must be THE allowlisted venue.
         require!(
             cfg.stock_allowlist[..cfg.stock_count as usize].contains(&stock_mint_key),
-            BallastError::StockMismatch
+            SolumError::StockMismatch
         );
-        require_keys_eq!(ctx.accounts.swap_venue.key(), cfg.swap_venue, BallastError::WrongVenue);
+        require_keys_eq!(ctx.accounts.swap_venue.key(), cfg.swap_venue, SolumError::WrongVenue);
 
         // The two vault accounts must be vault-owned and correctly minted.
-        require_keys_eq!(ctx.accounts.funding_vault.owner, vault_key, BallastError::BadVaultOwner);
-        require_keys_eq!(ctx.accounts.stock_vault.owner, vault_key, BallastError::BadVaultOwner);
-        require_keys_eq!(ctx.accounts.stock_vault.mint, stock_mint_key, BallastError::StockMismatch);
+        require_keys_eq!(ctx.accounts.funding_vault.owner, vault_key, SolumError::BadVaultOwner);
+        require_keys_eq!(ctx.accounts.stock_vault.owner, vault_key, SolumError::BadVaultOwner);
+        require_keys_eq!(ctx.accounts.stock_vault.mint, stock_mint_key, SolumError::StockMismatch);
         require_keys_eq!(
             ctx.accounts.funding_vault.mint,
             ctx.accounts.funding_mint.key(),
-            BallastError::WrongMint
+            SolumError::WrongMint
         );
 
         // Oracle freshness + sanity (price_feed PDA binding is enforced by the accounts struct).
         let pf = &ctx.accounts.price_feed;
         let slot = Clock::get()?.slot;
-        require!(slot.saturating_sub(pf.publish_slot) <= MAX_PRICE_STALENESS_SLOTS, BallastError::StaleOracle);
-        require!(pf.price > 0 && pf.expo <= 0, BallastError::BadOracle);
+        require!(slot.saturating_sub(pf.publish_slot) <= MAX_PRICE_STALENESS_SLOTS, SolumError::StaleOracle);
+        require!(pf.price > 0 && pf.expo <= 0, SolumError::BadOracle);
 
         let pre_stock = ctx.accounts.stock_vault.amount;
         let pre_funding = ctx.accounts.funding_vault.amount;
-        require!(pre_funding >= amount_in, BallastError::InsufficientFunding);
+        require!(pre_funding >= amount_in, SolumError::InsufficientFunding);
 
         // ---- CPI the allowlisted venue's swap(amount_in). ----
         let mint_key = cfg.token_mint;
@@ -356,11 +356,11 @@ pub mod ballast {
             // (they are prepended, never re-listed here), and reject any TOKEN ACCOUNT owned by
             // the vault authority. A mint is token-program-owned but is not a token account, so
             // it parses as neither and is correctly allowed through.
-            require_keys_neq!(ai.key(), ctx.accounts.funding_vault.key(), BallastError::BadVaultOwner);
-            require_keys_neq!(ai.key(), ctx.accounts.stock_vault.key(), BallastError::BadVaultOwner);
+            require_keys_neq!(ai.key(), ctx.accounts.funding_vault.key(), SolumError::BadVaultOwner);
+            require_keys_neq!(ai.key(), ctx.accounts.stock_vault.key(), SolumError::BadVaultOwner);
             if *ai.owner == anchor_spl::token::ID || *ai.owner == spl_token_2022::ID {
                 if let Ok(ta) = InterfaceAccount::<TokenAccount>::try_from(ai) {
-                    require_keys_neq!(ta.owner, vault_key, BallastError::BadVaultOwner);
+                    require_keys_neq!(ta.owner, vault_key, SolumError::BadVaultOwner);
                 }
             }
             metas.push(AccountMeta {
@@ -387,10 +387,10 @@ pub mod ballast {
         let post_stock = ctx.accounts.stock_vault.amount;
         let post_funding = ctx.accounts.funding_vault.amount;
 
-        require!(post_funding <= pre_funding, BallastError::FundingIncreased);
+        require!(post_funding <= pre_funding, SolumError::FundingIncreased);
         let actual_in = pre_funding - post_funding;
-        require!(actual_in <= amount_in, BallastError::OverSpend);
-        require!(post_stock >= pre_stock, BallastError::StockDecreased);
+        require!(actual_in <= amount_in, SolumError::OverSpend);
+        require!(post_stock >= pre_stock, SolumError::StockDecreased);
         let actual_out = post_stock - pre_stock;
 
         // A balance-delta guard is not enough: a hostile venue holding the vault_authority
@@ -398,9 +398,9 @@ pub mod ballast {
         // unchanged) and drain it in a LATER transaction. Require both vault accounts came out
         // untampered — still vault-owned, no delegate, no close authority.
         for va in [&ctx.accounts.funding_vault, &ctx.accounts.stock_vault] {
-            require_keys_eq!(va.owner, vault_key, BallastError::VenueTampered);
-            require!(va.delegate.is_none(), BallastError::VenueTampered);
-            require!(va.close_authority.is_none(), BallastError::VenueTampered);
+            require_keys_eq!(va.owner, vault_key, SolumError::VenueTampered);
+            require!(va.delegate.is_none(), SolumError::VenueTampered);
+            require!(va.close_authority.is_none(), SolumError::VenueTampered);
         }
 
         // fair_out_base = actual_in * 10^stock_dec * 10^(-expo) / (10^quote_dec * price)
@@ -408,17 +408,17 @@ pub mod ballast {
         let qd = ctx.accounts.funding_mint.decimals as u32;
         let pe = (-pf.expo) as u32;
         let num = (actual_in as u128)
-            .checked_mul(pow10(sd)?).ok_or(BallastError::MathOverflow)?
-            .checked_mul(pow10(pe)?).ok_or(BallastError::MathOverflow)?;
-        let den = pow10(qd)?.checked_mul(pf.price as u128).ok_or(BallastError::MathOverflow)?;
-        let fair_out = num.checked_div(den).ok_or(BallastError::MathOverflow)?;
+            .checked_mul(pow10(sd)?).ok_or(SolumError::MathOverflow)?
+            .checked_mul(pow10(pe)?).ok_or(SolumError::MathOverflow)?;
+        let den = pow10(qd)?.checked_mul(pf.price as u128).ok_or(SolumError::MathOverflow)?;
+        let fair_out = num.checked_div(den).ok_or(SolumError::MathOverflow)?;
         let floor = fair_out
-            .checked_mul((10_000 - cfg.max_slippage_bps) as u128).ok_or(BallastError::MathOverflow)?
-            .checked_div(10_000).ok_or(BallastError::MathOverflow)?;
+            .checked_mul((10_000 - cfg.max_slippage_bps) as u128).ok_or(SolumError::MathOverflow)?
+            .checked_div(10_000).ok_or(SolumError::MathOverflow)?;
         // Reject dust: if the oracle floor rounds to zero, a near-zero fill would pass and let
         // funding trickle out for nothing. Every spend must buy a nonzero, oracle-justified amount.
-        require!(floor > 0, BallastError::InsufficientBacking);
-        require!(actual_out as u128 >= floor, BallastError::InsufficientBacking);
+        require!(floor > 0, SolumError::InsufficientBacking);
+        require!(actual_out as u128 >= floor, SolumError::InsufficientBacking);
 
         emit!(Backed {
             token_mint: mint_key,
@@ -438,12 +438,12 @@ pub mod ballast {
         require_keys_eq!(
             ctx.accounts.fee_vault.owner,
             ctx.accounts.vault_authority.key(),
-            BallastError::BadVaultOwner
+            SolumError::BadVaultOwner
         );
         require_keys_eq!(
             ctx.accounts.fee_vault.mint,
             ctx.accounts.token_mint.key(),
-            BallastError::WrongMint
+            SolumError::WrongMint
         );
 
         let mint_key = ctx.accounts.token_mint.key();
@@ -482,18 +482,18 @@ pub mod ballast {
     /// Every deposit emits an event, giving verifiable on-chain provenance for each buyback.
     pub fn deposit_stock(ctx: Context<DepositStock>, amount: u64) -> Result<()> {
         let cfg = &ctx.accounts.config;
-        require!(amount > 0, BallastError::ZeroAmount);
+        require!(amount > 0, SolumError::ZeroAmount);
         let stock_mint_key = ctx.accounts.stock_mint.key();
         require!(
             cfg.stock_allowlist[..cfg.stock_count as usize].contains(&stock_mint_key),
-            BallastError::StockMismatch
+            SolumError::StockMismatch
         );
         require_keys_eq!(
             ctx.accounts.stock_vault.owner,
             ctx.accounts.vault_authority.key(),
-            BallastError::BadVaultOwner
+            SolumError::BadVaultOwner
         );
-        require_keys_eq!(ctx.accounts.stock_vault.mint, stock_mint_key, BallastError::StockMismatch);
+        require_keys_eq!(ctx.accounts.stock_vault.mint, stock_mint_key, SolumError::StockMismatch);
 
         token_interface::transfer_checked(
             CpiContext::new(
@@ -521,7 +521,7 @@ pub mod ballast {
 
 /// 10^n as u128, checked.
 fn pow10(n: u32) -> Result<u128> {
-    10u128.checked_pow(n).ok_or(error!(BallastError::MathOverflow))
+    10u128.checked_pow(n).ok_or(error!(SolumError::MathOverflow))
 }
 
 // ------------------------------- Accounts -------------------------------
@@ -531,7 +531,7 @@ pub struct InitializeVault<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
-    /// The launched Ballast token mint this vault backs.
+    /// The launched Solum token mint this vault backs.
     pub token_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -556,7 +556,7 @@ pub struct InitializeVault<'info> {
 pub struct Redeem<'info> {
     pub config: Account<'info, VaultConfig>,
 
-    #[account(mut, address = config.token_mint @ BallastError::WrongMint)]
+    #[account(mut, address = config.token_mint @ SolumError::WrongMint)]
     pub token_mint: InterfaceAccount<'info, Mint>,
 
     /// CHECK: vault PDA signer; derived from the config's (token_mint, admin) + stored bump.
@@ -586,14 +586,14 @@ pub struct Redeem<'info> {
 
 #[derive(Accounts)]
 pub struct AdminOnly<'info> {
-    #[account(mut, has_one = admin @ BallastError::Unauthorized)]
+    #[account(mut, has_one = admin @ SolumError::Unauthorized)]
     pub config: Account<'info, VaultConfig>,
     pub admin: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct SetPrice<'info> {
-    #[account(has_one = admin @ BallastError::Unauthorized)]
+    #[account(has_one = admin @ SolumError::Unauthorized)]
     pub config: Account<'info, VaultConfig>,
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -611,7 +611,7 @@ pub struct SetPrice<'info> {
 
 #[derive(Accounts)]
 pub struct AddBacking<'info> {
-    #[account(has_one = engine @ BallastError::Unauthorized)]
+    #[account(has_one = engine @ SolumError::Unauthorized)]
     pub config: Account<'info, VaultConfig>,
 
     pub engine: Signer<'info>,
@@ -632,7 +632,7 @@ pub struct AddBacking<'info> {
     pub stock_mint: InterfaceAccount<'info, Mint>,
 
     /// The vault's pinned funding asset — `add_backing` may only ever spend this, never a stock.
-    #[account(address = config.funding_mint @ BallastError::WrongMint)]
+    #[account(address = config.funding_mint @ SolumError::WrongMint)]
     pub funding_mint: InterfaceAccount<'info, Mint>,
 
     /// Per-vault, per-stock price feed; binding to (config, stock_mint) enforced here.
@@ -648,7 +648,7 @@ pub struct AddBacking<'info> {
 pub struct HarvestFees<'info> {
     pub config: Account<'info, VaultConfig>,
 
-    #[account(mut, address = config.token_mint @ BallastError::WrongMint)]
+    #[account(mut, address = config.token_mint @ SolumError::WrongMint)]
     pub token_mint: InterfaceAccount<'info, Mint>,
 
     /// CHECK: transfer-fee withdraw authority PDA; validated by seeds, signs the withdraw.
@@ -665,7 +665,7 @@ pub struct HarvestFees<'info> {
     #[account(mut)]
     pub fee_vault: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(address = spl_token_2022::ID @ BallastError::WrongMint)]
+    #[account(address = spl_token_2022::ID @ SolumError::WrongMint)]
     pub token_program: Interface<'info, TokenInterface>,
 }
 
@@ -786,7 +786,7 @@ pub struct BackingDeposited {
 // ------------------------------- Errors -------------------------------
 
 #[error_code]
-pub enum BallastError {
+pub enum SolumError {
     #[msg("Backing fee exceeds the hard cap")]
     FeeTooHigh,
     #[msg("Allowlist must contain at least one stock")]

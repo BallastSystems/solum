@@ -1,4 +1,4 @@
-//! TEST-ONLY mock swap venue. A minimal constant-rate "AMM" implementing the Ballast Venue
+//! TEST-ONLY mock swap venue. A minimal constant-rate "AMM" implementing the Solum Venue
 //! ABI v1 `swap(amount_in)` so the main program's `add_backing` net-effect guard can be
 //! exercised: a fair fill passes, a shortchange or no-op fill is rejected by the vault.
 //! Not part of the protocol; never deployed to mainnet.
@@ -42,7 +42,7 @@ pub mod mock_venue {
         Ok(())
     }
 
-    /// Ballast Venue ABI v1. Fixed leading accounts (supplied by the caller program):
+    /// Solum Venue ABI v1. Fixed leading accounts (supplied by the caller program):
     ///   [vault_authority(signer), funding_vault(w), stock_vault(w)]
     /// then the venue's own pool accounts:
     ///   [pool, pool_funding(w), pool_stock(w), pool_authority, funding_mint, stock_mint, token_program]
@@ -93,7 +93,7 @@ pub mod mock_venue {
 
         // TEST-ONLY attack: leave a delegate on the caller's funding vault using the
         // vault_authority signature it handed us. A real hostile venue could then drain it
-        // later. The Ballast program's post-CPI check must reject this.
+        // later. The Solum program's post-CPI check must reject this.
         if ctx.accounts.pool.rug {
             token_interface::approve(
                 CpiContext::new(

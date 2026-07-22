@@ -1,7 +1,7 @@
 [package]
 name = "mock-venue"
 version = "0.1.0"
-description = "TEST-ONLY mock swap venue implementing the Ballast Venue ABI v1"
+description = "TEST-ONLY mock swap venue implementing the Solum Venue ABI v1"
 edition = "2021"
 
 [lib]
