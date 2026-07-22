@@ -597,9 +597,43 @@ fn redeem_payout(amount: u64, vault_balance: u64, supply: u64) -> Result<u64> {
     Ok(p)
 }
 
+/// Fixed-point precision for the staking reward-per-share accumulator.
+#[allow(dead_code)] // staking reward core — wired by the stake/claim instructions (next increment)
+pub const REWARD_PRECISION: u128 = 1_000_000_000_000;
+
+/// Fold newly-arrived reward tokens into the per-share accumulator:
+/// `acc' = acc + reward_in · PRECISION / total_staked`. No-op when nothing is staked (rewards wait
+/// for the next staker — never lost, never mis-credited) or nothing arrived. Checked. docs/STAKING.md.
+#[allow(dead_code)]
+fn acc_add(acc: u128, reward_in: u64, total_staked: u64) -> Result<u128> {
+    if total_staked == 0 || reward_in == 0 {
+        return Ok(acc);
+    }
+    let inc = (reward_in as u128)
+        .checked_mul(REWARD_PRECISION)
+        .ok_or(SolumError::MathOverflow)?
+        .checked_div(total_staked as u128)
+        .ok_or(SolumError::MathOverflow)?;
+    acc.checked_add(inc).ok_or(error!(SolumError::MathOverflow))
+}
+
+/// Pending reward for a stake: `amount · acc / PRECISION − reward_debt`, floored at 0 and fit to
+/// u64. `reward_debt` credits everything that accrued before this stake, so a joiner never claims
+/// past rewards, and saturating the subtraction means pending is never negative. Checked.
+#[allow(dead_code)]
+fn pending_reward(amount: u64, acc: u128, reward_debt: u128) -> Result<u64> {
+    let gross = (amount as u128)
+        .checked_mul(acc)
+        .ok_or(SolumError::MathOverflow)?
+        .checked_div(REWARD_PRECISION)
+        .ok_or(SolumError::MathOverflow)?;
+    let net = gross.saturating_sub(reward_debt);
+    u64::try_from(net).map_err(|_| error!(SolumError::MathOverflow))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{min_out_floor, redeem_payout};
+    use super::{acc_add, min_out_floor, pending_reward, redeem_payout};
 
     #[test]
     fn basic_one_to_one() {
@@ -689,6 +723,63 @@ mod tests {
     fn payout_overflow_guarded() {
         // a payout that can't fit u64 must Err at the try_into, never wrap or panic.
         assert!(redeem_payout(u64::MAX, u64::MAX, 1).is_err());
+    }
+
+    // ---- staking reward accumulator (acc_add / pending_reward) ----
+
+    #[test]
+    fn acc_add_basic_distribution() {
+        // 1000 reward across 100 staked → acc = 1000·1e12/100 = 1e13.
+        assert_eq!(acc_add(0, 1000, 100).unwrap(), 10_000_000_000_000);
+    }
+
+    #[test]
+    fn acc_add_noop_when_nothing_staked() {
+        // rewards arriving with 0 staked don't move the accumulator — they wait for a staker.
+        assert_eq!(acc_add(5, 1000, 0).unwrap(), 5);
+    }
+
+    #[test]
+    fn acc_add_noop_when_no_reward() {
+        assert_eq!(acc_add(42, 0, 100).unwrap(), 42);
+    }
+
+    #[test]
+    fn pending_zero_before_any_accrual() {
+        assert_eq!(pending_reward(100, 0, 0).unwrap(), 0);
+    }
+
+    #[test]
+    fn pending_sole_staker_earns_all() {
+        let acc = acc_add(0, 1000, 100).unwrap();
+        assert_eq!(pending_reward(100, acc, 0).unwrap(), 1000);
+    }
+
+    #[test]
+    fn pending_splits_proportionally() {
+        // stakers 100 and 300 (total 400), 800 reward → 200 / 600, fully distributed, no leak.
+        let acc = acc_add(0, 800, 400).unwrap();
+        let a = pending_reward(100, acc, 0).unwrap();
+        let b = pending_reward(300, acc, 0).unwrap();
+        assert_eq!((a, b, a + b), (200, 600, 800));
+    }
+
+    #[test]
+    fn pending_excludes_pre_stake_rewards() {
+        // a joiner's reward_debt is set to amount·acc/PRECISION at stake time (100·2e12/1e12 = 200),
+        // so pending starts at 0 — they can't claim rewards that accrued before they joined.
+        let acc = acc_add(0, 800, 400).unwrap(); // 2e12
+        assert_eq!(pending_reward(100, acc, 200).unwrap(), 0);
+    }
+
+    #[test]
+    fn acc_add_overflow_guarded() {
+        assert!(acc_add(u128::MAX - 1, u64::MAX, 1).is_err());
+    }
+
+    #[test]
+    fn pending_overflow_guarded() {
+        assert!(pending_reward(u64::MAX, u128::MAX, 0).is_err());
     }
 }
 
