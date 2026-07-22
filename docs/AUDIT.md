@@ -57,6 +57,7 @@ backing but can never extract value, even if fully compromised. Confirm by inspe
 | `tests/standalone-fees.ts` | 2 | withheld fees land only in the vault; harvest-to-attacker rejected |
 | `tests/standalone-hardening.ts` | 4 | front-run vault is a separate account & non-admin can't control it; funding ≠ stock; set_price is allowlist-scoped |
 | `tests/fuzz-invariants.ts` | 1,200+/run | stateful property-based fuzzer vs an off-chain reference model — invariants I1–I4 (below) |
+| Rust unit tests (`#[cfg(test)] mod tests`) | 14 | the two most security-critical pure computations, isolated + exhaustively tested: **`min_out_floor`** (7: 1:1, slippage haircut, confidence-conservative lower-price⇒more-out, exponent scaling, decimal mismatch, dust-floor rejection, overflow-without-panic) and **`redeem_payout`** (7: exact share, rounds-down/never-overpays, full redeem, dust→0, floor-preserved sum-within-balance, zero-supply→err, overflow-guarded). Run: `cargo test -p solum --features no-entrypoint`. |
 
 **Property-based fuzzing.** `tests/fuzz-invariants.ts` runs randomized, seeded (reproducible)
 sequences of deposit / redeem / transfer against the program on a validator, and after **every**
