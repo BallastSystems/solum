@@ -81,10 +81,15 @@ product, the rewards vault + staking is the primary mechanism.)
 
 ## Build status
 
-- ✅ **Core reward math implemented + unit-tested** (`acc_add`, `pending_reward` — proportional
-  split, no pre-stake rewards, zero-staked no-op, overflow-guarded).
-- ⏳ Next: the `StakePool` / `StakeAccount` state + the 5 instructions + adversarial tests +
-  fuzzing the accumulator against a reference model.
+- ✅ **Core reward math** (`acc_add`, `pending_reward`) — 10 unit tests (proportional split, no
+  pre-stake rewards, zero-staked no-op, overflow-guarded).
+- ✅ **All 5 instructions implemented + integration-tested on a validator** (`tests/standalone-stake.ts`,
+  **11/11**): stake locks coins in custody; a sole staker earns the full reward stream; two stakers
+  split new rewards proportionally (100:300 ⇒ 200:600) while a joiner earns nothing on pre-stake
+  rewards; double-claim reverts; claiming another's stake is blocked by the account seeds; unstake
+  > staked reverts; unstake returns the staked coins exactly.
+- ⏳ Recommended next hardening: a stateful fuzzer for random stake/unstake/claim/fund sequences
+  against an off-chain reference model (same discipline as the vault core's I1–I4 fuzzer), then audit.
 
 ## Legal note
 
