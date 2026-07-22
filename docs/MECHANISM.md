@@ -6,7 +6,7 @@ not creator charity — grows a redeemable vault of real assets underneath it. T
 core already exists (see `SECURITY-ARCHITECTURE.md`, `AUDIT.md`); this doc specifies the funding
 loop bolted onto it.
 
-> **Flagship backing asset: tokenized gold.** The program is asset-agnostic (an allowlist of mints), so "gold" here is simply which mints a vault allowlists; other real assets are a config choice, not a code change.
+> **Flagship backing: a basket of tokenized blue-chip stocks** (Apple, NVIDIA, Tesla, Coinbase, MicroStrategy). The program is asset-agnostic (an allowlist of mints), so "gold" here is simply which mints a vault allowlists; other real assets are a config choice, not a code change.
 
 ## 1. The loop in one picture
 
@@ -18,9 +18,9 @@ loop bolted onto it.
         │  harvest_fees  (PDA-signed; only destination is the vault)
         ▼
    vault holds collected coin
-        │  add_backing   (sell coin → buy allowlisted gold, oracle-floored)
+        │  add_backing   (sell coin → buy allowlisted stock, oracle-floored)
         ▼
-   vault holds REAL tokenized gold  ── floor = vault value / circulating supply
+   vault holds REAL tokenized stock  ── floor = vault value / circulating supply
         │  redeem  (holder burns coins → pro-rata slice of the real stock)
         ▼
    holder exits at the floor, anytime, on-chain
@@ -45,7 +45,7 @@ drain path exists.
 
 **Model A — transfer-fee → convert (buildable now; ~80% already coded).**
 The tax accrues *in the coin*. To turn it into real backing, the protocol sells the collected
-coin for SOL/USDC and buys allowlisted tokenized gold into the vault (`add_backing`, oracle-
+coin for SOL/USDC and buys allowlisted tokenized stock into the vault (`add_backing`, oracle-
 floored). **Honest tradeoff:** converting the tax means selling the coin, i.e. the backing engine
 applies continuous sell pressure (~the tax % of volume). Value is not destroyed — it migrates
 from *paper market cap* into *real, redeemable vault backing* — but traders feel the sell. Convert
