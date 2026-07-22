@@ -75,6 +75,15 @@
   .hero-sub{max-width:620px;margin:22px auto 0;color:var(--dim);font-size:clamp(15px,2vw,18px)}
   .hero-sub b{color:var(--text);font-weight:600}
   .hero-cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  /* backing basket ticker strip */
+  .basket{padding:6px 0 46px}
+  .basket-label{text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:16px}
+  .tickers{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+  .tk{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;color:var(--dim);border:1px solid var(--line-2);border-radius:100px;padding:8px 15px;background:var(--card);transition:border-color .2s,transform .15s}
+  .tk:hover{border-color:color-mix(in srgb,var(--sun) 45%,transparent);transform:translateY(-1px)}
+  .tk b{color:var(--sun);font-weight:700;letter-spacing:.02em}
+  .tk .co{color:var(--faint);font-size:12px}
+  @media (max-width:640px){.tk{font-size:12px;padding:7px 12px}.tk .co{display:none}}
 
   /* SIMULATOR */
   .sim{margin:44px auto 0;max-width:1000px;background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;text-align:left}
@@ -219,6 +228,17 @@
   </div>
   <p class="caption">Notice the floor <b>never dips</b> — buys and sells both stack real stocks under you. The price can only fall so far before the floor catches it.</p>
 </div></header>
+
+<div class="basket"><div class="wrap">
+  <p class="basket-label">What backs the floor — real, on-chain, redeemable</p>
+  <div class="tickers">
+    <span class="tk"><b>AAPLx</b> <span class="co">Apple</span></span>
+    <span class="tk"><b>NVDAx</b> <span class="co">NVIDIA</span></span>
+    <span class="tk"><b>TSLAx</b> <span class="co">Tesla</span></span>
+    <span class="tk"><b>COINx</b> <span class="co">Coinbase</span></span>
+    <span class="tk"><b>MSTRx</b> <span class="co">MicroStrategy</span></span>
+  </div>
+</div></div>
 
 <section id="why"><div class="wrap">
   <p class="sec-kicker kicker">Why traders are aping</p>
