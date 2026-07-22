@@ -26,7 +26,7 @@ async function main() {
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
   const program = new anchor.Program(
-    JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8")) as anchor.Idl, provider) as Program;
+    JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8")) as anchor.Idl, provider) as Program;
   const cfgPda = (coin: PublicKey, admin: PublicKey) =>
     PublicKey.findProgramAddressSync([Buffer.from("config"), coin.toBuffer(), admin.toBuffer()], program.programId)[0];
 

@@ -41,7 +41,7 @@ async function main() {
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
   const ballast = new anchor.Program(
-    JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8")) as anchor.Idl, provider);
+    JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8")) as anchor.Idl, provider);
 
   // --- create a transfer-fee mint whose authorities are the fee_authority PDA ---
   const mintKp = Keypair.generate();

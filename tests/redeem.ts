@@ -7,7 +7,7 @@
 
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Ballast } from "../target/types/ballast";
+import { Solum } from "../target/types/solum";
 import {
   TOKEN_2022_PROGRAM_ID,
   createMint,
@@ -37,7 +37,7 @@ const REDEEM = 250_000;
 describe("ballast :: redeem floor", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
-  const program = anchor.workspace.Ballast as Program<Ballast>;
+  const program = anchor.workspace.Solum as Program<Solum>;
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
 

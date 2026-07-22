@@ -40,7 +40,7 @@ async function main() {
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
   const program = new anchor.Program(
-    JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8")) as anchor.Idl, provider) as Program;
+    JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8")) as anchor.Idl, provider) as Program;
 
   const user = Keypair.generate();
   await conn.confirmTransaction(await conn.requestAirdrop(user.publicKey, 5 * LAMPORTS_PER_SOL), "confirmed");

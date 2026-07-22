@@ -37,7 +37,7 @@ async function main() {
   anchor.setProvider(provider);
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
-  const ballastIdl = JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8"));
+  const ballastIdl = JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8"));
   const mockIdl = JSON.parse(fs.readFileSync(path.resolve("target/idl/mock_venue.json"), "utf8"));
   const ballast = new anchor.Program(ballastIdl as anchor.Idl, provider);
   const mock = new anchor.Program(mockIdl as anchor.Idl, provider);

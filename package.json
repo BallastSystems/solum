@@ -1,13 +1,13 @@
 {
-  "name": "ballast",
+  "name": "solum",
   "version": "0.1.0",
   "license": "MIT",
   "scripts": {
     "lint:fix": "prettier \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier \"*/**/*{.js,.ts}\" --check",
     "test:standalone": "tsc tests/standalone-redeem.ts --rootDir . --outDir target/testbuild --module commonjs --target es2020 --esModuleInterop --resolveJsonModule --skipLibCheck --moduleResolution node && node target/testbuild/tests/standalone-redeem.js",
-    "build:cli": "tsc scripts/ballast.ts --rootDir . --outDir target/testbuild --module commonjs --target es2020 --esModuleInterop --resolveJsonModule --skipLibCheck --moduleResolution node",
-    "ballast": "node target/testbuild/scripts/ballast.js",
+    "build:cli": "tsc scripts/solum.ts --rootDir . --outDir target/testbuild --module commonjs --target es2020 --esModuleInterop --resolveJsonModule --skipLibCheck --moduleResolution node",
+    "solum": "node target/testbuild/scripts/solum.js",
     "dashboard": "tsc app/serve.ts --rootDir . --outDir target/testbuild --module commonjs --target es2020 --esModuleInterop --resolveJsonModule --skipLibCheck --moduleResolution node && node target/testbuild/app/serve.js"
   },
   "dependencies": {

@@ -21,7 +21,7 @@ async function main() {
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
   const program = new anchor.Program(
-    JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8")) as anchor.Idl, provider);
+    JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8")) as anchor.Idl, provider);
 
   // pump-style classic coin, 1000 whole supply; two Token-2022 stocks
   const coin = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, COIN);

@@ -1,12 +1,12 @@
 [package]
-name = "ballast"
+name = "solum"
 version = "0.1.0"
 description = "Solum — non-custodial redeemable-floor vault program"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "ballast"
+name = "solum"
 
 [features]
 default = []

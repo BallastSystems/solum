@@ -14,7 +14,7 @@ const PORT = parseInt(process.env.PORT || "4000");
 const RPC = process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899";
 const conn = new Connection(RPC, "confirmed");
 const provider = new anchor.AnchorProvider(conn, new anchor.Wallet(Keypair.generate()), { commitment: "confirmed" });
-const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/ballast.json"), "utf8"));
+const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8"));
 const program = new anchor.Program(idl as anchor.Idl, provider);
 const html = fs.readFileSync(path.resolve("app/dashboard.html"), "utf8");
 

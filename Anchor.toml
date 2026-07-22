@@ -6,11 +6,11 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-ballast = "A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU"
+solum = "A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU"
 mock_venue = "8ydnEbnYJgLGKhA6CoeF1xhxaxqk8a8AoDGvtXJ14Nq5"
 
 [programs.devnet]
-ballast = "A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU"
+solum = "A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU"
 
 [registry]
 url = "https://api.apr.dev"
