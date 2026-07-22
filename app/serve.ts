@@ -35,4 +35,4 @@ http.createServer(async (req, res) => {
   }
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   res.end(html);
-}).listen(PORT, () => console.log(`Ballast dashboard → http://localhost:${PORT}   (RPC ${RPC})`));
+}).listen(PORT, () => console.log(`Solum dashboard → http://localhost:${PORT}   (RPC ${RPC})`));

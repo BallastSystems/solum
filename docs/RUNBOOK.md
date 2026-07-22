@@ -9,7 +9,7 @@ Everything here either configures the vault or **adds** backing — nothing can 
 
 ## 1. Launch your coin on pump.fun
 Launch normally. It's a plain SPL coin; you remain the creator and keep **100% of creator
-fees** — Ballast never touches them. Copy the coin's **mint address**.
+fees** — Solum never touches them. Copy the coin's **mint address**.
 
 ## 2. Open a vault for the coin
 Allowlist the tokenized stocks that may ever back it (comma-separated mints):

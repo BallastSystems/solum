@@ -1,4 +1,4 @@
-# Ballast Engine
+# Solum Engine
 
 The engine is an **off-chain trigger**, nothing more. It watches for accrued backing (withheld
 transfer fees) and calls `add_backing` to route them through an allowlisted swap venue into an
