@@ -36,12 +36,16 @@ pub const MAX_FEE_BPS: u16 = 300;
 /// swap that delivers less than `oracle_fair_out * (1 - max_slippage)`.
 pub const MAX_SLIPPAGE_BPS: u16 = 500;
 
-/// Oracle price is rejected if older than this many slots (~2 min at 400ms/slot).
+/// Oracle price is rejected if older than this many slots (~2 min at 400ms/slot). devnet-oracle.
 pub const MAX_PRICE_STALENESS_SLOTS: u64 = 300;
+/// Pyth price is rejected if its publish time is older than this many seconds. pyth-oracle.
+pub const MAX_PRICE_AGE_SECONDS: u64 = 60;
 
 pub const CONFIG_SEED: &[u8] = b"config";
 pub const VAULT_SEED: &[u8] = b"vault";
 pub const PRICE_SEED: &[u8] = b"price";
+/// Per-vault, per-stock Pyth feed-id binding PDA (pyth-oracle feature).
+pub const ORACLE_SEED: &[u8] = b"oracle";
 /// Authority (a program PDA) set as BOTH the Token-2022 transfer-fee-config authority and
 /// the withdraw-withheld authority of the launched mint. Because no instruction changes the
 /// fee rate, the tax is frozen; and withheld fees can only ever be pulled to the vault.
@@ -256,9 +260,10 @@ pub mod solum {
         Ok(())
     }
 
-    /// Publish a stock price to the per-stock PriceFeed PDA. Admin-signed. This is the DEVNET
-    /// oracle stand-in — in production the min-out floor reads a Pyth price account instead;
-    /// the `add_backing` guard is identical, only the price source changes.
+    /// Publish a stock price to the per-stock PriceFeed PDA. Admin-signed. DEVNET-ONLY oracle
+    /// stand-in (compiled only under the `devnet-oracle` feature). In production the `pyth-oracle`
+    /// feature reads a Pyth PriceUpdateV2 instead — see `set_feed` + `add_backing`.
+    #[cfg(feature = "devnet-oracle")]
     pub fn set_price(ctx: Context<SetPrice>, price: u64, expo: i32) -> Result<()> {
         let cfg = &ctx.accounts.config;
         require!(
@@ -274,6 +279,23 @@ pub mod solum {
         pf.expo = expo;
         pf.publish_slot = slot;
         emit!(PriceSet { stock_mint: pf.stock_mint, price, expo, slot });
+        Ok(())
+    }
+
+    /// Bind a stock to its Pyth price-feed id (per-vault, per-stock). Admin-signed. Replaces
+    /// `set_price` in production: the admin no longer publishes a price, only points at a Pyth
+    /// feed — after which `add_backing` reads the live Pyth price directly. pyth-oracle only.
+    #[cfg(feature = "pyth-oracle")]
+    pub fn set_feed(ctx: Context<SetFeed>, feed_id: [u8; 32]) -> Result<()> {
+        let cfg = &ctx.accounts.config;
+        require!(
+            cfg.stock_allowlist[..cfg.stock_count as usize].contains(&ctx.accounts.stock_mint.key()),
+            SolumError::StockMismatch
+        );
+        let so = &mut ctx.accounts.stock_oracle;
+        so.stock_mint = ctx.accounts.stock_mint.key();
+        so.feed_id = feed_id;
+        emit!(FeedSet { stock_mint: so.stock_mint, feed_id });
         Ok(())
     }
 
@@ -319,11 +341,30 @@ pub mod solum {
             SolumError::WrongMint
         );
 
-        // Oracle freshness + sanity (price_feed PDA binding is enforced by the accounts struct).
-        let pf = &ctx.accounts.price_feed;
-        let slot = Clock::get()?.slot;
-        require!(slot.saturating_sub(pf.publish_slot) <= MAX_PRICE_STALENESS_SLOTS, SolumError::StaleOracle);
-        require!(pf.price > 0 && pf.expo <= 0, SolumError::BadOracle);
+        // Oracle read: (oracle_price, pe) come from the compiled source. This is the ONLY use of
+        // the oracle — it sets the min-out floor; the net-effect guard below does the real work.
+        #[cfg(feature = "devnet-oracle")]
+        let (oracle_price, pe): (u128, u32) = {
+            let pf = &ctx.accounts.price_feed;
+            let slot = Clock::get()?.slot;
+            require!(slot.saturating_sub(pf.publish_slot) <= MAX_PRICE_STALENESS_SLOTS, SolumError::StaleOracle);
+            require!(pf.price > 0 && pf.expo <= 0, SolumError::BadOracle);
+            (pf.price as u128, (-pf.expo) as u32)
+        };
+        #[cfg(feature = "pyth-oracle")]
+        let (oracle_price, pe): (u128, u32) = {
+            let so = &ctx.accounts.stock_oracle;
+            let pu = &ctx.accounts.price_update;
+            let p = pu
+                .get_price_no_older_than(&Clock::get()?, MAX_PRICE_AGE_SECONDS, &so.feed_id)
+                .map_err(|_| error!(SolumError::StaleOracle))?;
+            // Confidence-conservative: use the LOWER bound (price - conf) so the vault requires
+            // MORE stock out, never less, when the feed is uncertain.
+            let conservative = (p.price as i128).saturating_sub(p.conf as i128);
+            require!(conservative > 0, SolumError::BadOracle);
+            require!(p.exponent <= 0 && p.exponent >= -18, SolumError::BadOracle);
+            (conservative as u128, (-p.exponent) as u32)
+        };
 
         let pre_stock = ctx.accounts.stock_vault.amount;
         let pre_funding = ctx.accounts.funding_vault.amount;
@@ -406,11 +447,10 @@ pub mod solum {
         // fair_out_base = actual_in * 10^stock_dec * 10^(-expo) / (10^quote_dec * price)
         let sd = ctx.accounts.stock_mint.decimals as u32;
         let qd = ctx.accounts.funding_mint.decimals as u32;
-        let pe = (-pf.expo) as u32;
         let num = (actual_in as u128)
             .checked_mul(pow10(sd)?).ok_or(SolumError::MathOverflow)?
             .checked_mul(pow10(pe)?).ok_or(SolumError::MathOverflow)?;
-        let den = pow10(qd)?.checked_mul(pf.price as u128).ok_or(SolumError::MathOverflow)?;
+        let den = pow10(qd)?.checked_mul(oracle_price).ok_or(SolumError::MathOverflow)?;
         let fair_out = num.checked_div(den).ok_or(SolumError::MathOverflow)?;
         let floor = fair_out
             .checked_mul((10_000 - cfg.max_slippage_bps) as u128).ok_or(SolumError::MathOverflow)?
@@ -591,6 +631,7 @@ pub struct AdminOnly<'info> {
     pub admin: Signer<'info>,
 }
 
+#[cfg(feature = "devnet-oracle")]
 #[derive(Accounts)]
 pub struct SetPrice<'info> {
     #[account(has_one = admin @ SolumError::Unauthorized)]
@@ -606,6 +647,25 @@ pub struct SetPrice<'info> {
         bump
     )]
     pub price_feed: Account<'info, PriceFeed>,
+    pub system_program: Program<'info, System>,
+}
+
+#[cfg(feature = "pyth-oracle")]
+#[derive(Accounts)]
+pub struct SetFeed<'info> {
+    #[account(has_one = admin @ SolumError::Unauthorized)]
+    pub config: Account<'info, VaultConfig>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub stock_mint: InterfaceAccount<'info, Mint>,
+    #[account(
+        init_if_needed,
+        payer = admin,
+        space = 8 + StockOracle::INIT_SPACE,
+        seeds = [ORACLE_SEED, config.key().as_ref(), stock_mint.key().as_ref()],
+        bump
+    )]
+    pub stock_oracle: Account<'info, StockOracle>,
     pub system_program: Program<'info, System>,
 }
 
@@ -635,9 +695,16 @@ pub struct AddBacking<'info> {
     #[account(address = config.funding_mint @ SolumError::WrongMint)]
     pub funding_mint: InterfaceAccount<'info, Mint>,
 
-    /// Per-vault, per-stock price feed; binding to (config, stock_mint) enforced here.
+    /// Oracle source (feature-gated). devnet: admin-published PriceFeed. pyth: per-vault feed-id
+    /// binding (StockOracle) + the Pyth pull-oracle PriceUpdateV2.
+    #[cfg(feature = "devnet-oracle")]
     #[account(seeds = [PRICE_SEED, config.key().as_ref(), stock_mint.key().as_ref()], bump)]
     pub price_feed: Account<'info, PriceFeed>,
+    #[cfg(feature = "pyth-oracle")]
+    #[account(seeds = [ORACLE_SEED, config.key().as_ref(), stock_mint.key().as_ref()], bump)]
+    pub stock_oracle: Account<'info, StockOracle>,
+    #[cfg(feature = "pyth-oracle")]
+    pub price_update: Account<'info, pyth_solana_receiver_sdk::price_update::PriceUpdateV2>,
 
     /// CHECK: must equal config.swap_venue (checked in handler); invoked via CPI.
     pub swap_venue: UncheckedAccount<'info>,
@@ -716,6 +783,7 @@ pub struct VaultConfig {
     pub reserved: [u8; 128],
 }
 
+#[cfg(feature = "devnet-oracle")]
 #[account]
 #[derive(InitSpace)]
 pub struct PriceFeed {
@@ -724,6 +792,17 @@ pub struct PriceFeed {
     pub price: u64,
     pub expo: i32,
     pub publish_slot: u64,
+}
+
+/// Per-vault, per-stock binding to a Pyth price-feed id. The admin only points at a feed
+/// (via `set_feed`); it never publishes a price. pyth-oracle feature.
+#[cfg(feature = "pyth-oracle")]
+#[account]
+#[derive(InitSpace)]
+pub struct StockOracle {
+    pub stock_mint: Pubkey,
+    /// Pyth price-feed id for STOCK / <funding unit> (32 bytes).
+    pub feed_id: [u8; 32],
 }
 
 // ------------------------------- Events -------------------------------
@@ -752,12 +831,20 @@ pub struct ParamsUpdated {
     pub field: String,
 }
 
+#[cfg(feature = "devnet-oracle")]
 #[event]
 pub struct PriceSet {
     pub stock_mint: Pubkey,
     pub price: u64,
     pub expo: i32,
     pub slot: u64,
+}
+
+#[cfg(feature = "pyth-oracle")]
+#[event]
+pub struct FeedSet {
+    pub stock_mint: Pubkey,
+    pub feed_id: [u8; 32],
 }
 
 #[event]

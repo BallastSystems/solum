@@ -9,7 +9,11 @@ crate-type = ["cdylib", "lib"]
 name = "solum"
 
 [features]
-default = []
+default = ["devnet-oracle"]
+# devnet-oracle: admin-published PriceFeed (set_price) — for local validator tests.
+devnet-oracle = []
+# pyth-oracle: real Pyth pull-oracle (PriceUpdateV2) — for public devnet / mainnet.
+pyth-oracle = ["dep:pyth-solana-receiver-sdk"]
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
@@ -19,3 +23,4 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 [dependencies]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 anchor-spl = "0.31.1"
+pyth-solana-receiver-sdk = { version = "0.6.1", optional = true }
