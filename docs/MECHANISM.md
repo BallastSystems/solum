@@ -6,7 +6,7 @@ not creator charity — grows a redeemable vault of real assets underneath it. T
 core already exists (see `SECURITY-ARCHITECTURE.md`, `AUDIT.md`); this doc specifies the funding
 loop bolted onto it.
 
-> **Flagship backing: a basket of tokenized blue-chip stocks** (Apple, NVIDIA, Tesla, Coinbase, MicroStrategy). The program is asset-agnostic (an allowlist of mints), so "gold" here is simply which mints a vault allowlists; other real assets are a config choice, not a code change.
+> **Flagship backing: a basket of tokenized blue-chip stocks** (Apple, NVIDIA, Tesla, Coinbase, MicroStrategy). The program is asset-agnostic (an allowlist of mints), so the specific mints a vault allowlists; other real assets are a config choice, not a code change.
 
 ## 1. The loop in one picture
 
