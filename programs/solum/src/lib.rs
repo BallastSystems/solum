@@ -46,6 +46,11 @@ pub const VAULT_SEED: &[u8] = b"vault";
 pub const PRICE_SEED: &[u8] = b"price";
 /// Per-vault, per-stock Pyth feed-id binding PDA (pyth-oracle feature).
 pub const ORACLE_SEED: &[u8] = b"oracle";
+/// Stake-to-earn: pool PDA `[STAKE_SEED, coin_mint, admin]`; stake-authority PDA (owns the staked-
+/// coin custody + reward vault) `[STAKE_AUTH_SEED, pool]`; per-user stake PDA `[STAKE_ACCT_SEED, pool, owner]`.
+pub const STAKE_SEED: &[u8] = b"stakepool";
+pub const STAKE_AUTH_SEED: &[u8] = b"stakeauth";
+pub const STAKE_ACCT_SEED: &[u8] = b"stakeacct";
 /// Authority (a program PDA) set as BOTH the Token-2022 transfer-fee-config authority and
 /// the withdraw-withheld authority of the launched mint. Because no instruction changes the
 /// fee rate, the tax is frozen; and withheld fees can only ever be pulled to the vault.
@@ -542,6 +547,216 @@ pub mod solum {
         });
         Ok(())
     }
+
+    // ----------------------------- Stake-to-earn -----------------------------
+
+    /// Create a stake pool for `coin_mint`, rewarding stakers in `reward_mint` (one allowlisted
+    /// stock). Admin-signed; PDAs bound to (coin_mint, admin), mirroring the vault. The custody +
+    /// reward-vault token accounts (owned by the stake authority) are pinned here so accounting can
+    /// never be pointed at a different account later.
+    pub fn init_stake_pool(ctx: Context<InitStakePool>) -> Result<()> {
+        let p = &mut ctx.accounts.pool;
+        p.coin_mint = ctx.accounts.coin_mint.key();
+        p.reward_mint = ctx.accounts.reward_mint.key();
+        p.admin = ctx.accounts.admin.key();
+        p.staked_custody = ctx.accounts.staked_custody.key();
+        p.reward_vault = ctx.accounts.reward_vault.key();
+        p.total_staked = 0;
+        p.acc_reward_per_share = 0;
+        p.last_reward_balance = 0;
+        p.stake_authority_bump = ctx.bumps.stake_authority;
+        p.bump = ctx.bumps.pool;
+        p.reserved = [0u8; 64];
+        emit!(StakePoolInitialized {
+            coin_mint: p.coin_mint,
+            reward_mint: p.reward_mint,
+            admin: p.admin,
+        });
+        Ok(())
+    }
+
+    /// Fold newly-arrived reward stock into the accumulator. Permissionless + idempotent, so a
+    /// passive admin can never stall rewards.
+    pub fn sync_rewards(ctx: Context<SyncRewards>) -> Result<()> {
+        let bal = ctx.accounts.reward_vault.amount;
+        sync_pool(&mut ctx.accounts.pool, bal)
+    }
+
+    /// Stake `amount` coins to earn reward stock. Settles any pending reward on the existing
+    /// position first (its `reward_debt` is about to be reset), then locks the coins in custody.
+    pub fn stake(ctx: Context<Stake>, amount: u64) -> Result<()> {
+        require!(amount > 0, SolumError::ZeroAmount);
+        let bal = ctx.accounts.reward_vault.amount;
+        sync_pool(&mut ctx.accounts.pool, bal)?;
+
+        let pool_key = ctx.accounts.pool.key();
+        let auth_bump = ctx.accounts.pool.stake_authority_bump;
+        let acc = ctx.accounts.pool.acc_reward_per_share;
+        let signer: &[&[&[u8]]] = &[&[STAKE_AUTH_SEED, pool_key.as_ref(), &[auth_bump]]];
+
+        let pending = pending_reward(
+            ctx.accounts.stake_account.amount,
+            acc,
+            ctx.accounts.stake_account.reward_debt,
+        )?;
+        if pending > 0 {
+            token_interface::transfer_checked(
+                CpiContext::new_with_signer(
+                    ctx.accounts.reward_token_program.to_account_info(),
+                    TransferChecked {
+                        from: ctx.accounts.reward_vault.to_account_info(),
+                        mint: ctx.accounts.reward_mint.to_account_info(),
+                        to: ctx.accounts.owner_reward_account.to_account_info(),
+                        authority: ctx.accounts.stake_authority.to_account_info(),
+                    },
+                    signer,
+                ),
+                pending,
+                ctx.accounts.reward_mint.decimals,
+            )?;
+            ctx.accounts.pool.last_reward_balance =
+                ctx.accounts.pool.last_reward_balance.saturating_sub(pending);
+            emit!(RewardClaimed { pool: pool_key, owner: ctx.accounts.owner.key(), amount: pending });
+        }
+
+        token_interface::transfer_checked(
+            CpiContext::new(
+                ctx.accounts.coin_token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.owner_coin_account.to_account_info(),
+                    mint: ctx.accounts.coin_mint.to_account_info(),
+                    to: ctx.accounts.staked_custody.to_account_info(),
+                    authority: ctx.accounts.owner.to_account_info(),
+                },
+            ),
+            amount,
+            ctx.accounts.coin_mint.decimals,
+        )?;
+
+        let owner_key = ctx.accounts.owner.key();
+        let acc_now = ctx.accounts.pool.acc_reward_per_share;
+        let sa = &mut ctx.accounts.stake_account;
+        sa.owner = owner_key;
+        sa.pool = pool_key;
+        sa.bump = ctx.bumps.stake_account;
+        sa.amount = sa.amount.checked_add(amount).ok_or(SolumError::MathOverflow)?;
+        sa.reward_debt = reward_debt_for(sa.amount, acc_now)?;
+        let new_amount = sa.amount;
+        ctx.accounts.pool.total_staked = ctx
+            .accounts
+            .pool
+            .total_staked
+            .checked_add(amount)
+            .ok_or(SolumError::MathOverflow)?;
+        emit!(Staked { pool: pool_key, owner: owner_key, amount, total: new_amount });
+        Ok(())
+    }
+
+    /// Claim accrued reward stock for the caller's own stake. Anyone-safe: pays only the signer.
+    pub fn claim(ctx: Context<ClaimReward>) -> Result<()> {
+        let bal = ctx.accounts.reward_vault.amount;
+        sync_pool(&mut ctx.accounts.pool, bal)?;
+        let pool_key = ctx.accounts.pool.key();
+        let auth_bump = ctx.accounts.pool.stake_authority_bump;
+        let acc = ctx.accounts.pool.acc_reward_per_share;
+        let pending = pending_reward(
+            ctx.accounts.stake_account.amount,
+            acc,
+            ctx.accounts.stake_account.reward_debt,
+        )?;
+        require!(pending > 0, SolumError::ZeroAmount);
+        let signer: &[&[&[u8]]] = &[&[STAKE_AUTH_SEED, pool_key.as_ref(), &[auth_bump]]];
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.reward_token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.reward_vault.to_account_info(),
+                    mint: ctx.accounts.reward_mint.to_account_info(),
+                    to: ctx.accounts.owner_reward_account.to_account_info(),
+                    authority: ctx.accounts.stake_authority.to_account_info(),
+                },
+                signer,
+            ),
+            pending,
+            ctx.accounts.reward_mint.decimals,
+        )?;
+        ctx.accounts.pool.last_reward_balance =
+            ctx.accounts.pool.last_reward_balance.saturating_sub(pending);
+        let amt = ctx.accounts.stake_account.amount;
+        ctx.accounts.stake_account.reward_debt = reward_debt_for(amt, acc)?;
+        emit!(RewardClaimed { pool: pool_key, owner: ctx.accounts.owner.key(), amount: pending });
+        Ok(())
+    }
+
+    /// Unstake `amount` coins, settling pending reward first. Returns the coins from custody.
+    pub fn unstake(ctx: Context<Unstake>, amount: u64) -> Result<()> {
+        require!(amount > 0, SolumError::ZeroAmount);
+        require!(
+            amount <= ctx.accounts.stake_account.amount,
+            SolumError::InsufficientStake
+        );
+        let bal = ctx.accounts.reward_vault.amount;
+        sync_pool(&mut ctx.accounts.pool, bal)?;
+        let pool_key = ctx.accounts.pool.key();
+        let auth_bump = ctx.accounts.pool.stake_authority_bump;
+        let acc = ctx.accounts.pool.acc_reward_per_share;
+        let signer: &[&[&[u8]]] = &[&[STAKE_AUTH_SEED, pool_key.as_ref(), &[auth_bump]]];
+
+        let pending = pending_reward(
+            ctx.accounts.stake_account.amount,
+            acc,
+            ctx.accounts.stake_account.reward_debt,
+        )?;
+        if pending > 0 {
+            token_interface::transfer_checked(
+                CpiContext::new_with_signer(
+                    ctx.accounts.reward_token_program.to_account_info(),
+                    TransferChecked {
+                        from: ctx.accounts.reward_vault.to_account_info(),
+                        mint: ctx.accounts.reward_mint.to_account_info(),
+                        to: ctx.accounts.owner_reward_account.to_account_info(),
+                        authority: ctx.accounts.stake_authority.to_account_info(),
+                    },
+                    signer,
+                ),
+                pending,
+                ctx.accounts.reward_mint.decimals,
+            )?;
+            ctx.accounts.pool.last_reward_balance =
+                ctx.accounts.pool.last_reward_balance.saturating_sub(pending);
+            emit!(RewardClaimed { pool: pool_key, owner: ctx.accounts.owner.key(), amount: pending });
+        }
+
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.coin_token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.staked_custody.to_account_info(),
+                    mint: ctx.accounts.coin_mint.to_account_info(),
+                    to: ctx.accounts.owner_coin_account.to_account_info(),
+                    authority: ctx.accounts.stake_authority.to_account_info(),
+                },
+                signer,
+            ),
+            amount,
+            ctx.accounts.coin_mint.decimals,
+        )?;
+
+        let owner_key = ctx.accounts.stake_account.owner;
+        let acc_now = ctx.accounts.pool.acc_reward_per_share;
+        let sa = &mut ctx.accounts.stake_account;
+        sa.amount = sa.amount.checked_sub(amount).ok_or(SolumError::InsufficientStake)?;
+        sa.reward_debt = reward_debt_for(sa.amount, acc_now)?;
+        let new_amount = sa.amount;
+        ctx.accounts.pool.total_staked = ctx
+            .accounts
+            .pool
+            .total_staked
+            .checked_sub(amount)
+            .ok_or(SolumError::MathOverflow)?;
+        emit!(Unstaked { pool: pool_key, owner: owner_key, amount, total: new_amount });
+        Ok(())
+    }
 }
 
 /// 10^n as u128, checked.
@@ -629,6 +844,30 @@ fn pending_reward(amount: u64, acc: u128, reward_debt: u128) -> Result<u64> {
         .ok_or(SolumError::MathOverflow)?;
     let net = gross.saturating_sub(reward_debt);
     u64::try_from(net).map_err(|_| error!(SolumError::MathOverflow))
+}
+
+/// `amount · acc / PRECISION` — the accumulator value already credited to a stake of `amount`.
+/// Set as `reward_debt` whenever a stake's amount changes, so future `pending_reward` only counts
+/// rewards that accrue afterward.
+fn reward_debt_for(amount: u64, acc: u128) -> Result<u128> {
+    (amount as u128)
+        .checked_mul(acc)
+        .ok_or(SolumError::MathOverflow)?
+        .checked_div(REWARD_PRECISION)
+        .ok_or(error!(SolumError::MathOverflow))
+}
+
+/// Fold the reward vault's newly-arrived balance into the accumulator. Only advances when there is
+/// stake to distribute to — otherwise rewards wait in the vault for the first staker (never lost,
+/// never mis-credited). Idempotent: calling it twice with the same balance is a no-op.
+fn sync_pool(pool: &mut StakePool, reward_vault_balance: u64) -> Result<()> {
+    if pool.total_staked > 0 {
+        let reward_in = reward_vault_balance.saturating_sub(pool.last_reward_balance);
+        pool.acc_reward_per_share =
+            acc_add(pool.acc_reward_per_share, reward_in, pool.total_staked)?;
+        pool.last_reward_balance = reward_vault_balance;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1002,6 +1241,180 @@ pub struct VaultConfig {
     pub reserved: [u8; 128],
 }
 
+#[derive(Accounts)]
+pub struct InitStakePool<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub coin_mint: InterfaceAccount<'info, Mint>,
+    pub reward_mint: InterfaceAccount<'info, Mint>,
+    #[account(
+        init,
+        payer = admin,
+        space = 8 + StakePool::INIT_SPACE,
+        seeds = [STAKE_SEED, coin_mint.key().as_ref(), admin.key().as_ref()],
+        bump
+    )]
+    pub pool: Account<'info, StakePool>,
+    /// CHECK: stake-authority PDA that owns the custody + reward vault; bump captured here.
+    #[account(seeds = [STAKE_AUTH_SEED, pool.key().as_ref()], bump)]
+    pub stake_authority: UncheckedAccount<'info>,
+    #[account(
+        constraint = staked_custody.owner == stake_authority.key() @ SolumError::BadCustodyOwner,
+        constraint = staked_custody.mint == coin_mint.key() @ SolumError::WrongMint,
+    )]
+    pub staked_custody: InterfaceAccount<'info, TokenAccount>,
+    #[account(
+        constraint = reward_vault.owner == stake_authority.key() @ SolumError::BadCustodyOwner,
+        constraint = reward_vault.mint == reward_mint.key() @ SolumError::WrongRewardMint,
+    )]
+    pub reward_vault: InterfaceAccount<'info, TokenAccount>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SyncRewards<'info> {
+    #[account(
+        mut,
+        seeds = [STAKE_SEED, pool.coin_mint.as_ref(), pool.admin.as_ref()],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, StakePool>,
+    #[account(address = pool.reward_vault @ SolumError::WrongRewardMint)]
+    pub reward_vault: InterfaceAccount<'info, TokenAccount>,
+}
+
+#[derive(Accounts)]
+pub struct Stake<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [STAKE_SEED, pool.coin_mint.as_ref(), pool.admin.as_ref()],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, StakePool>,
+    /// CHECK: stake-authority PDA.
+    #[account(seeds = [STAKE_AUTH_SEED, pool.key().as_ref()], bump = pool.stake_authority_bump)]
+    pub stake_authority: UncheckedAccount<'info>,
+    #[account(
+        init_if_needed,
+        payer = owner,
+        space = 8 + StakeAccount::INIT_SPACE,
+        seeds = [STAKE_ACCT_SEED, pool.key().as_ref(), owner.key().as_ref()],
+        bump
+    )]
+    pub stake_account: Account<'info, StakeAccount>,
+    #[account(address = pool.coin_mint @ SolumError::WrongMint)]
+    pub coin_mint: InterfaceAccount<'info, Mint>,
+    #[account(address = pool.reward_mint @ SolumError::WrongRewardMint)]
+    pub reward_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut)]
+    pub owner_coin_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub owner_reward_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut, address = pool.staked_custody @ SolumError::BadCustodyOwner)]
+    pub staked_custody: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut, address = pool.reward_vault @ SolumError::WrongRewardMint)]
+    pub reward_vault: InterfaceAccount<'info, TokenAccount>,
+    pub coin_token_program: Interface<'info, TokenInterface>,
+    pub reward_token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimReward<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [STAKE_SEED, pool.coin_mint.as_ref(), pool.admin.as_ref()],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, StakePool>,
+    /// CHECK: stake-authority PDA.
+    #[account(seeds = [STAKE_AUTH_SEED, pool.key().as_ref()], bump = pool.stake_authority_bump)]
+    pub stake_authority: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds = [STAKE_ACCT_SEED, pool.key().as_ref(), owner.key().as_ref()],
+        bump = stake_account.bump,
+        has_one = owner @ SolumError::Unauthorized
+    )]
+    pub stake_account: Account<'info, StakeAccount>,
+    #[account(address = pool.reward_mint @ SolumError::WrongRewardMint)]
+    pub reward_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut)]
+    pub owner_reward_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut, address = pool.reward_vault @ SolumError::WrongRewardMint)]
+    pub reward_vault: InterfaceAccount<'info, TokenAccount>,
+    pub reward_token_program: Interface<'info, TokenInterface>,
+}
+
+#[derive(Accounts)]
+pub struct Unstake<'info> {
+    pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [STAKE_SEED, pool.coin_mint.as_ref(), pool.admin.as_ref()],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, StakePool>,
+    /// CHECK: stake-authority PDA.
+    #[account(seeds = [STAKE_AUTH_SEED, pool.key().as_ref()], bump = pool.stake_authority_bump)]
+    pub stake_authority: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds = [STAKE_ACCT_SEED, pool.key().as_ref(), owner.key().as_ref()],
+        bump = stake_account.bump,
+        has_one = owner @ SolumError::Unauthorized
+    )]
+    pub stake_account: Account<'info, StakeAccount>,
+    #[account(address = pool.coin_mint @ SolumError::WrongMint)]
+    pub coin_mint: InterfaceAccount<'info, Mint>,
+    #[account(address = pool.reward_mint @ SolumError::WrongRewardMint)]
+    pub reward_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut)]
+    pub owner_coin_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub owner_reward_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut, address = pool.staked_custody @ SolumError::BadCustodyOwner)]
+    pub staked_custody: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut, address = pool.reward_vault @ SolumError::WrongRewardMint)]
+    pub reward_vault: InterfaceAccount<'info, TokenAccount>,
+    pub coin_token_program: Interface<'info, TokenInterface>,
+    pub reward_token_program: Interface<'info, TokenInterface>,
+}
+
+/// Stake-to-earn pool for a coin, rewarding stakers in one allowlisted stock via a MasterChef
+/// reward-per-share accumulator. See docs/STAKING.md.
+#[account]
+#[derive(InitSpace)]
+pub struct StakePool {
+    pub coin_mint: Pubkey,
+    pub reward_mint: Pubkey,
+    pub admin: Pubkey,
+    /// Token account (coin_mint) owned by the stake authority — holds all staked coins.
+    pub staked_custody: Pubkey,
+    /// Token account (reward_mint) owned by the stake authority — holds reward stock to distribute.
+    pub reward_vault: Pubkey,
+    pub total_staked: u64,
+    pub acc_reward_per_share: u128,
+    pub last_reward_balance: u64,
+    pub stake_authority_bump: u8,
+    pub bump: u8,
+    pub reserved: [u8; 64],
+}
+
+/// One staker's position in a `StakePool`.
+#[account]
+#[derive(InitSpace)]
+pub struct StakeAccount {
+    pub owner: Pubkey,
+    pub pool: Pubkey,
+    pub amount: u64,
+    pub reward_debt: u128,
+    pub bump: u8,
+}
+
 #[cfg(feature = "devnet-oracle")]
 #[account]
 #[derive(InitSpace)]
@@ -1089,6 +1502,36 @@ pub struct BackingDeposited {
     pub amount: u64,
 }
 
+#[event]
+pub struct StakePoolInitialized {
+    pub coin_mint: Pubkey,
+    pub reward_mint: Pubkey,
+    pub admin: Pubkey,
+}
+
+#[event]
+pub struct Staked {
+    pub pool: Pubkey,
+    pub owner: Pubkey,
+    pub amount: u64,
+    pub total: u64,
+}
+
+#[event]
+pub struct Unstaked {
+    pub pool: Pubkey,
+    pub owner: Pubkey,
+    pub amount: u64,
+    pub total: u64,
+}
+
+#[event]
+pub struct RewardClaimed {
+    pub pool: Pubkey,
+    pub owner: Pubkey,
+    pub amount: u64,
+}
+
 // ------------------------------- Errors -------------------------------
 
 #[error_code]
@@ -1149,4 +1592,10 @@ pub enum SolumError {
     InsufficientBacking,
     #[msg("Venue tampered with a vault account (delegate/authority)")]
     VenueTampered,
+    #[msg("Stake account has insufficient staked balance")]
+    InsufficientStake,
+    #[msg("Reward vault mint does not match the pool reward mint")]
+    WrongRewardMint,
+    #[msg("Custody account is not owned by the stake authority")]
+    BadCustodyOwner,
 }
