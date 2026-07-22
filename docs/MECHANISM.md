@@ -67,9 +67,12 @@ and both only *increase* the vault. Full guard list in `AUDIT.md`.
 
 ## 5. Oracle + venue
 
-- **Oracle:** Pyth pull-oracle (`PriceUpdateV2`, confidence-conservative) sets the `add_backing`
-  min-out floor. Build de-risked — the Pyth SDK compiles clean on the pinned 1.79 SBF toolchain
-  (see `PRODUCTION-ORACLE-VENUE.md`).
+- **Oracle:** ✅ **implemented** behind the `pyth-oracle` cargo feature. `set_feed` binds a stock
+  to a Pyth feed-id (`StockOracle` PDA); `add_backing` reads a `PriceUpdateV2` via
+  `get_price_no_older_than` and uses the **confidence-conservative** lower bound (`price − conf`) for
+  the min-out floor. The `default = ["devnet-oracle"]` feature keeps the admin `set_price` path for
+  local tests. Both configs build clean on the 1.79 SBF toolchain; the 25-test suite stays green.
+  Build prod config: `cargo build-sbf -- --no-default-features --features pyth-oracle`.
 - **Venue:** a thin adapter implementing the existing Venue ABI v1, CPI'ing a real DEX (Raydium
   CPMM first). The audited core is unchanged; the net-effect guard bounds a bad adapter.
 
