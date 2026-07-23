@@ -48,11 +48,12 @@
   ::selection{background:var(--blue);color:#07101f}
   /* background field of the 5 tokenized-stock logos — subtle texture, never clutter */
   .logofield{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-  .lf{position:absolute;height:auto;fill:currentColor;opacity:.34;filter:drop-shadow(0 0 22px currentColor);will-change:transform;
-    animation:lfdrift 24s var(--ease) infinite alternate}
-  @keyframes lfdrift{from{transform:translateY(0) rotate(var(--r,0deg))}to{transform:translateY(-22px) rotate(var(--r,0deg))}}
+  .lf{position:absolute;height:auto;fill:currentColor;opacity:.34;filter:drop-shadow(0 0 18px currentColor);will-change:transform;
+    animation:lfdrift var(--dur,24s) ease-in-out infinite alternate}
+  @keyframes lfdrift{from{transform:translateY(0) rotate(var(--r,0deg)) scale(1)}
+    to{transform:translateY(var(--dy,-22px)) rotate(calc(var(--r,0deg) + var(--rd,0deg))) scale(var(--sc,1))}}
   @media (prefers-reduced-motion:reduce){.lf{animation:none}}
-  @media (max-width:640px){.lf{opacity:.24}.lf.hide-sm{display:none}}
+  @media (max-width:640px){.logofield{opacity:.72}.lf.hide-sm{display:none}}
   /* content sits above the logo field; the hero canvas sits below it */
   .tick,section,footer{position:relative;z-index:1}
   a{color:inherit;text-decoration:none} p{margin:0}
@@ -221,34 +222,7 @@
 <symbol id="lg-mstr" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l9 18h-6.3L12 15.3 9.3 21H3L12 3zm0 5.6l-3.4 6.8h6.8L12 8.6z"/></symbol>
 </svg>
 
-<div class="logofield" aria-hidden="true">
-  <svg class="lf" viewBox="0 0 24 24" style="top:5%;left:3%;width:82px;color:#E6EAF2;--r:-8deg;animation-delay:0s"><use href="#lg-apple"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:7%;left:33%;width:64px;color:#0052FF;--r:5deg;animation-delay:-15s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:9%;left:69%;width:98px;color:#76B900;--r:6deg;animation-delay:-4s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:12%;left:52%;width:60px;color:#F0512B;--r:-4deg;animation-delay:-19s"><use href="#lg-mstr"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:15%;left:88%;width:80px;color:#E82127;--r:9deg;animation-delay:-2s"><use href="#lg-tesla"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:21%;left:20%;width:72px;color:#76B900;--r:-6deg;animation-delay:-8s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:24%;left:44%;width:58px;color:#E6EAF2;--r:7deg;animation-delay:-17s"><use href="#lg-apple"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:27%;left:72%;width:70px;color:#0052FF;--r:-9deg;animation-delay:-3s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:30%;left:6%;width:88px;color:#F0512B;--r:10deg;animation-delay:-6s"><use href="#lg-mstr"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:34%;left:90%;width:76px;color:#76B900;--r:4deg;animation-delay:-13s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:37%;left:35%;width:62px;color:#E82127;--r:-5deg;animation-delay:-20s"><use href="#lg-tesla"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:41%;left:60%;width:84px;color:#E6EAF2;--r:6deg;animation-delay:-11s"><use href="#lg-apple"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:45%;left:14%;width:70px;color:#0052FF;--r:-7deg;animation-delay:-1s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:49%;left:83%;width:92px;color:#F0512B;--r:8deg;animation-delay:-9s"><use href="#lg-mstr"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:52%;left:46%;width:58px;color:#76B900;--r:-3deg;animation-delay:-16s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:56%;left:4%;width:82px;color:#E82127;--r:5deg;animation-delay:-10s"><use href="#lg-tesla"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:60%;left:68%;width:66px;color:#0052FF;--r:-8deg;animation-delay:-5s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:63%;left:28%;width:74px;color:#E6EAF2;--r:9deg;animation-delay:-14s"><use href="#lg-apple"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:66%;left:90%;width:60px;color:#F0512B;--r:-6deg;animation-delay:-18s"><use href="#lg-mstr"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:70%;left:16%;width:88px;color:#76B900;--r:7deg;animation-delay:-5s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:73%;left:52%;width:64px;color:#E82127;--r:-4deg;animation-delay:-12s"><use href="#lg-tesla"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:77%;left:82%;width:82px;color:#0052FF;--r:-7deg;animation-delay:-2s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:80%;left:36%;width:58px;color:#E6EAF2;--r:6deg;animation-delay:-21s"><use href="#lg-apple"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:84%;left:8%;width:78px;color:#F0512B;--r:-10deg;animation-delay:-8s"><use href="#lg-mstr"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:87%;left:64%;width:72px;color:#76B900;--r:5deg;animation-delay:-7s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:90%;left:90%;width:66px;color:#E82127;--r:-5deg;animation-delay:-3s"><use href="#lg-tesla"/></svg>
-</div>
+<div id="logofield" class="logofield" aria-hidden="true"></div>
 
 <nav id="nav"><div class="shell nav-in">
   <span class="wm"><svg><use href="#sol"/></svg>Solum</span>
@@ -395,6 +369,31 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
 <script>
   try{var t=localStorage.getItem("solum-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}
   var RM = matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  // ---- procedural logo field: jittered grid, wide size range, depth via opacity, playful drift ----
+  (function(){
+    var f=document.getElementById("logofield"); if(!f) return;
+    var L=[["lg-apple","#E6EAF2"],["lg-nvidia","#76B900"],["lg-tesla","#E82127"],["lg-coinbase","#0052FF"],["lg-mstr","#F0512B"]];
+    function build(){
+      var w=innerWidth, cols=w<640?4:(w<1000?6:8), rows=w<640?6:5, out="", i=0;
+      for(var r=0;r<rows;r++){for(var c=0;c<cols;c++){
+        var lg=L[(i*3+r)%L.length]; i++;
+        var left=((c+0.5+(Math.random()-0.5)*0.85)/cols)*100;
+        var top=((r+0.5+(Math.random()-0.5)*0.85)/rows)*100;
+        var t=Math.random(), sz=t<0.34?24+Math.random()*24:(t<0.72?52+Math.random()*36:94+Math.random()*48);
+        var op=sz<50?0.18+Math.random()*0.1:(sz<92?0.30+Math.random()*0.12:0.42+Math.random()*0.12);
+        var rot=(Math.random()-0.5)*26, rd=(Math.random()-0.5)*12, dy=-(10+Math.random()*30),
+            dur=15+Math.random()*20, sc=1+(Math.random()*0.16-0.05), delay=-(Math.random()*22);
+        out+='<svg class="lf" viewBox="0 0 24 24" style="top:'+top.toFixed(1)+'%;left:'+left.toFixed(1)+'%;width:'+sz.toFixed(0)+
+          'px;color:'+lg[1]+';opacity:'+op.toFixed(2)+';--r:'+rot.toFixed(1)+'deg;--rd:'+rd.toFixed(1)+'deg;--dy:'+dy.toFixed(0)+
+          'px;--sc:'+sc.toFixed(3)+';--dur:'+dur.toFixed(1)+'s;animation-delay:'+delay.toFixed(1)+'s"><use href="#'+lg[0]+'"/></svg>';
+      }}
+      f.innerHTML=out;
+    }
+    build();
+    var rt; addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(build,300);});
+  })();
+
   function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
   function hexA(hex,a){hex=(hex||"#6E9BD8").replace('#','');if(hex.length===3)hex=hex.split('').map(function(c){return c+c;}).join('');var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);return "rgba("+r+","+g+","+b+","+a+")";}
   var money=function(n){return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});};
