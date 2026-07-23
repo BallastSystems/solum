@@ -216,6 +216,17 @@
   /* partner badge */
   .partner{display:inline-flex;align-items:center;gap:9px;font-size:13.5px;color:var(--dim);border:1px solid var(--line);border-radius:100px;padding:8px 15px;background:color-mix(in srgb,var(--panel) 55%,transparent);flex-wrap:wrap}
   .partner b{color:var(--silver);font-weight:600} .partner svg{width:16px;height:16px;color:var(--blue);flex:none} .partner a{color:var(--blue)}
+  /* five stocks on rotation */
+  .stocks{margin-top:clamp(36px,5vw,56px);border-top:1px solid var(--line)}
+  .stk-row{display:flex;align-items:center;gap:13px;padding:15px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap;transition:background .4s}
+  .stk-row.now{background:color-mix(in srgb,var(--blue) 8%,transparent)}
+  .stk-lg2{width:22px;height:22px;fill:currentColor;flex:none}
+  .stk-sym{font-weight:700;font-size:15px;min-width:58px}
+  .stk-nm{color:var(--dim);font-size:14px}
+  .stk-ct{margin-left:auto;font-family:var(--code);font-size:13px;color:var(--blue)} .stk-ct:hover{text-decoration:underline}
+  .stk-now{font-size:10.5px;color:var(--blue);border:1px solid color-mix(in srgb,var(--blue) 40%,transparent);border-radius:100px;padding:3px 9px;text-transform:uppercase;letter-spacing:.06em}
+  .stk-proof{font-size:13px;color:var(--grn)} .stk-proof:hover{text-decoration:underline}
+  @media(max-width:560px){.stk-ct{margin-left:0;order:6;width:100%}}
   .why{margin-top:clamp(50px,7vw,84px);border-top:1px solid var(--line)}
   .wrow{display:grid;grid-template-columns:1fr 1fr;column-gap:40px;padding:36px 0;border-bottom:1px solid var(--line);align-items:baseline}
   .wrow h3{font-size:clamp(22px,2.6vw,32px);font-weight:600;letter-spacing:-.025em}
@@ -316,6 +327,16 @@
     <div class="strow rv"><div class="idx">2</div><div><h3>Fees buy real stock, every hour</h3><p>Each hour the accrued creator fees automatically buy real tokenized stock into the pot — the bigger the trading volume, the bigger the buy.</p></div></div>
     <div class="strow rv"><div class="idx">3</div><div><h3>A holder wins the pot</h3><p>At a random moment each hour, one holder is drawn to win the whole pot of real stock. <b>The more $SOLUM you hold, the higher your odds.</b> You keep your coins either way.</p></div></div>
   </div>
+</div></section>
+
+<!-- the five stocks on rotation -->
+<section class="s" id="stocks"><div class="shell">
+  <div class="s-head">
+    <h2 class="rv">Five blue-chips, <em>on rotation</em></h2>
+    <p class="s-sub rv" style="--i:1">Each hour buys and raffles a different one. Every purchase is on-chain — check any contract.</p>
+  </div>
+  <div class="stocks rv" id="stockList"></div>
+  <p class="cap rv">Devnet · illustrative — live Sunrise mints &amp; purchase proofs at launch.</p>
 </div></section>
 
 <!-- live pot -->
@@ -580,6 +601,28 @@ token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; win
   (function(){var st=[["AAPLx","Apple","+1.2%","lg-apple","#E6EAF2"],["NVDAx","NVIDIA","+2.4%","lg-nvidia","#76B900"],["TSLAx","Tesla","+0.8%","lg-tesla","#E82127"],["COINx","Coinbase","+3.1%","lg-coinbase","#0052FF"],["MSTRx","MicroStrategy","+1.9%","lg-mstr","#F0512B"]];
     var one=st.map(function(s){return '<span class="tk-i"><svg class="tk-lg" viewBox="0 0 24 24" style="color:'+s[4]+'"><use href="#'+s[3]+'"/></svg><span class="sym">'+s[0]+'</span><span class="nm">'+s[1]+'</span><span class="dl">'+s[2]+'</span></span>';}).join("");
     document.getElementById("tick").innerHTML=one+one;})();
+
+  // ---- five stocks on rotation: contract per stock + the hour's active one, proof on-chain ----
+  (function(){
+    var host=document.getElementById("stockList"); if(!host) return;
+    var PROG="A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU", EXPL="https://explorer.solana.com/address/";
+    function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+    function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
+    var S=[["AAPLx","Apple","lg-apple","#E6EAF2"],["NVDAx","NVIDIA","lg-nvidia","#76B900"],["TSLAx","Tesla","lg-tesla","#E82127"],["COINx","Coinbase","lg-coinbase","#0052FF"],["MSTRx","MicroStrategy","lg-mstr","#F0512B"]];
+    S.forEach(function(s,i){ s[4]=b58(m32(1009+i*131),44); }); // stable per-stock contract (devnet placeholder)
+    function paint(){
+      var cur=Math.floor(Date.now()/3600000)%S.length;
+      host.innerHTML=S.map(function(s,i){
+        var short=s[4].slice(0,4)+"…"+s[4].slice(-4);
+        return '<div class="stk-row'+(i===cur?' now':'')+'">'+
+          '<svg class="stk-lg2" viewBox="0 0 24 24" style="color:'+s[3]+'"><use href="#'+s[2]+'"/></svg>'+
+          '<span class="stk-sym">'+s[0]+'</span><span class="stk-nm">'+s[1]+'</span>'+
+          (i===cur?'<span class="stk-now">this hour</span><a class="stk-proof" href="'+EXPL+PROG+'?cluster=devnet" target="_blank" rel="noopener">bought · proof ↗</a>':'')+
+          '<a class="stk-ct" href="'+EXPL+s[4]+'?cluster=devnet" target="_blank" rel="noopener">'+short+' ↗</a></div>';
+      }).join("");
+    }
+    paint(); setInterval(paint,60000);
+  })();
 
   // --- live creator-fee counter (hero + nav) — illustrative, ticks up to feel live ---
   (function(){
