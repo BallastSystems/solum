@@ -10,7 +10,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23D6E6FA'/%3E%3Cstop offset='.5' stop-color='%237FB0EC'/%3E%3Cstop offset='1' stop-color='%233A72BE'/%3E%3C/linearGradient%3E%3CclipPath id='h'%3E%3Crect x='0' y='0' width='24' height='14.4'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect width='24' height='24' rx='5' fill='%230F1520'/%3E%3Ccircle cx='12' cy='14.4' r='5.3' fill='url(%23g)' clip-path='url(%23h)'/%3E%3Cpath d='M3.5 14.4h17' fill='none' stroke='url(%23g)' stroke-width='1.7' stroke-linecap='round'/%3E%3Cpath d='M5.7 17.5h12.6' fill='none' stroke='%236E88AE' stroke-width='1.25' stroke-linecap='round' opacity='.8'/%3E%3Cpath d='M7.8 20.2h8.4' fill='none' stroke='%236E88AE' stroke-width='1.1' stroke-linecap='round' opacity='.55'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
 <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#0F1520; --ink-2:#131A26; --raise:#172030; --panel:#10161F;
@@ -18,7 +18,7 @@
     --blue:#6E9BD8; --blue-hi:#98BEEC; --blue-deep:#4E7AB8; --blue-glow:rgba(110,155,216,.18);
     --steel:#AEB9CC; --cool:#93A2B8; --grn:#6BC79A;
     --sans:"Satoshi",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --display:"Clash Display","Satoshi",-apple-system,BlinkMacSystemFont,sans-serif;
+    --display:"Satoshi",-apple-system,BlinkMacSystemFont,sans-serif;
     --code:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
     --pad:40px; --ease:cubic-bezier(.16,1,.3,1);
   }
@@ -48,13 +48,13 @@
   ::selection{background:var(--blue);color:#07101f}
   /* background field of the 5 tokenized-stock logos — subtle texture, never clutter */
   .logofield{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-  .lf{position:absolute;height:auto;color:var(--steel);fill:currentColor;opacity:.05;will-change:transform;
+  .lf{position:absolute;height:auto;fill:currentColor;opacity:.4;filter:drop-shadow(0 0 26px currentColor);will-change:transform;
     animation:lfdrift 24s var(--ease) infinite alternate}
   @keyframes lfdrift{from{transform:translateY(0) rotate(var(--r,0deg))}to{transform:translateY(-22px) rotate(var(--r,0deg))}}
   @media (prefers-reduced-motion:reduce){.lf{animation:none}}
-  @media (max-width:640px){.lf{opacity:.04}.lf.hide-sm{display:none}}
+  @media (max-width:640px){.lf{opacity:.26}.lf.hide-sm{display:none}}
   a{color:inherit;text-decoration:none} p{margin:0}
-  h1,h2,h3{margin:0;font-family:var(--display);font-weight:700;letter-spacing:-.03em;line-height:1.02;text-wrap:balance}
+  h1,h2,h3{margin:0;font-family:var(--display);font-weight:500;letter-spacing:-.02em;line-height:1.06;text-wrap:balance}
   a:focus-visible,button:focus-visible{outline:1.5px solid var(--blue);outline-offset:4px;border-radius:3px}
   .shell{width:100%;max-width:1200px;margin:0 auto;padding:0 var(--pad)}
   @media (max-width:820px){:root{--pad:22px}}
@@ -95,7 +95,7 @@
   .live-fee .num{font-family:var(--display);font-size:clamp(30px,5vw,52px);font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1;
     background:linear-gradient(120deg,var(--blue-hi),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
   .live-fee .sub{font-size:12.5px;color:var(--faint)}
-  h1{font-size:clamp(56px,10.2vw,150px);font-weight:700;letter-spacing:-.05em;line-height:.9}
+  h1{font-size:clamp(44px,7.6vw,102px);font-weight:500;letter-spacing:-.03em;line-height:.98}
   h1 em{font-style:normal;color:var(--blue)}
   .h-sub{max-width:38ch;margin-top:26px;color:var(--dim);font-size:clamp(16px,1.75vw,21px);line-height:1.45;font-weight:400}
   .h-sub b{color:var(--silver);font-weight:600}
@@ -111,17 +111,18 @@
   .tick:hover .tick-t{animation-play-state:paused}
   @media (prefers-reduced-motion:reduce){.tick-t{animation:none}}
   @keyframes tk{to{transform:translateX(-50%)}}
-  .tk-i{display:inline-flex;align-items:baseline;gap:11px;padding:17px 34px;border-right:1px solid var(--line);white-space:nowrap}
+  .tk-i{display:inline-flex;align-items:center;gap:11px;padding:16px 34px;border-right:1px solid var(--line);white-space:nowrap}
+  .tk-lg{width:22px;height:22px;fill:currentColor;flex:none}
   .tk-i .sym{font-weight:700;font-size:15px;color:var(--silver)} .tk-i .nm{font-size:14px;color:var(--faint)} .tk-i .dl{font-size:13px;color:var(--grn);font-variant-numeric:tabular-nums}
 
   .s{padding:clamp(96px,15vh,180px) 0}
   .s-head{max-width:820px}
-  .s h2{font-size:clamp(40px,6.8vw,90px);font-weight:700;letter-spacing:-.04em;line-height:.98}
+  .s h2{font-size:clamp(32px,4.8vw,60px);font-weight:500;letter-spacing:-.03em;line-height:1.02}
   .s h2 em{font-style:normal;color:var(--blue)}
   .s-sub{margin-top:22px;color:var(--dim);font-size:clamp(17px,1.8vw,21px);line-height:1.45;max-width:46ch;font-weight:400}
 
   .stmt{padding:clamp(104px,17vh,200px) 0}
-  .stmt p{font-family:var(--display);font-size:clamp(32px,5.8vw,76px);font-weight:600;letter-spacing:-.025em;line-height:1.06;max-width:19ch}
+  .stmt p{font-family:var(--display);font-size:clamp(27px,4.4vw,54px);font-weight:500;letter-spacing:-.02em;line-height:1.12;max-width:20ch}
   .stmt em{font-style:normal;color:var(--blue)}
   .stmt .flow{margin-top:34px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:clamp(14px,1.5vw,17px);color:var(--dim);font-weight:500}
   .stmt .flow b{color:var(--silver);font-weight:600} .stmt .flow .ar{color:var(--blue)}
@@ -190,7 +191,7 @@
   .close{position:relative;padding:clamp(120px,20vh,220px) 0;overflow:hidden;border-top:1px solid var(--line)}
   #closeglow{position:absolute;inset:0;width:100%;height:100%;z-index:0;opacity:.7}
   .close .in{position:relative;z-index:1}
-  .close h2{font-size:clamp(48px,8.6vw,124px);font-weight:700;letter-spacing:-.05em;line-height:.92;max-width:14ch}
+  .close h2{font-size:clamp(38px,6.2vw,84px);font-weight:500;letter-spacing:-.03em;line-height:1;max-width:15ch}
   .close h2 em{font-style:normal;color:var(--blue)}
   .close .p{margin-top:26px;color:var(--dim);font-size:18px;max-width:38ch;line-height:1.45}
   .close .a{display:flex;gap:26px;align-items:center;margin-top:40px;flex-wrap:wrap}
@@ -219,15 +220,14 @@
 </svg>
 
 <div class="logofield" aria-hidden="true">
-  <svg class="lf" viewBox="0 0 24 24" style="top:13%;left:7%;width:94px;--r:-8deg;animation-delay:0s"><use href="#lg-apple"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:18%;left:76%;width:122px;--r:6deg;animation-delay:-4s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:8%;left:47%;width:64px;--r:0deg;animation-delay:-8s"><use href="#lg-tesla"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:42%;left:88%;width:86px;--r:-5deg;animation-delay:-2s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:35%;left:27%;width:70px;--r:10deg;animation-delay:-6s"><use href="#lg-mstr"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:64%;left:12%;width:82px;--r:5deg;animation-delay:-10s"><use href="#lg-tesla"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:72%;left:70%;width:106px;--r:-7deg;animation-delay:-3s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:84%;left:42%;width:58px;--r:8deg;animation-delay:-7s"><use href="#lg-apple"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:53%;left:48%;width:64px;--r:-4deg;animation-delay:-5s"><use href="#lg-mstr"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:12%;left:5%;width:96px;color:#E6EAF2;--r:-8deg;animation-delay:0s"><use href="#lg-apple"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:16%;left:82%;width:124px;color:#76B900;--r:6deg;animation-delay:-4s"><use href="#lg-nvidia"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:40%;left:90%;width:88px;color:#0052FF;--r:-5deg;animation-delay:-2s"><use href="#lg-coinbase"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:36%;left:3%;width:78px;color:#F0512B;--r:10deg;animation-delay:-6s"><use href="#lg-mstr"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:65%;left:8%;width:90px;color:#E82127;--r:5deg;animation-delay:-10s"><use href="#lg-tesla"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:70%;left:84%;width:104px;color:#0052FF;--r:-7deg;animation-delay:-3s"><use href="#lg-coinbase"/></svg>
+  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:87%;left:70%;width:76px;color:#76B900;--r:8deg;animation-delay:-7s"><use href="#lg-nvidia"/></svg>
+  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:60%;left:92%;width:70px;color:#E6EAF2;--r:-4deg;animation-delay:-5s"><use href="#lg-apple"/></svg>
 </div>
 
 <nav id="nav"><div class="shell nav-in">
@@ -398,8 +398,8 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     addEventListener("scroll",function(){if(tkg)return;tkg=true;requestAnimationFrame(function(){var y=scrollY;
       if(y<innerHeight){sky.style.transform="translateY("+(y*.22)+"px)";hin.style.transform="translateY("+(y*.08)+"px)";hin.style.opacity=String(Math.max(0,1-y/(innerHeight*.8)));}tkg=false;});},{passive:true});}
 
-  (function(){var st=[["AAPLx","Apple","+1.2%"],["NVDAx","NVIDIA","+2.4%"],["TSLAx","Tesla","+0.8%"],["COINx","Coinbase","+3.1%"],["MSTRx","MicroStrategy","+1.9%"]];
-    var one=st.map(function(s){return '<span class="tk-i"><span class="sym">'+s[0]+'</span><span class="nm">'+s[1]+'</span><span class="dl">'+s[2]+'</span></span>';}).join("");
+  (function(){var st=[["AAPLx","Apple","+1.2%","lg-apple","#E6EAF2"],["NVDAx","NVIDIA","+2.4%","lg-nvidia","#76B900"],["TSLAx","Tesla","+0.8%","lg-tesla","#E82127"],["COINx","Coinbase","+3.1%","lg-coinbase","#0052FF"],["MSTRx","MicroStrategy","+1.9%","lg-mstr","#F0512B"]];
+    var one=st.map(function(s){return '<span class="tk-i"><svg class="tk-lg" viewBox="0 0 24 24" style="color:'+s[4]+'"><use href="#'+s[3]+'"/></svg><span class="sym">'+s[0]+'</span><span class="nm">'+s[1]+'</span><span class="dl">'+s[2]+'</span></span>';}).join("");
     document.getElementById("tick").innerHTML=one+one;})();
 
   // --- live creator-fee counter (hero + nav) — illustrative, ticks up to feel live ---
