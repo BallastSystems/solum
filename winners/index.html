@@ -301,7 +301,7 @@
 </header>
 
 <section id="latest"><div class="shell">
-  <div class="lead"><h2>The <em>latest</em> winner</h2><p>Refreshed the moment a draw settles. The prize is held for a 24-hour quality-control review, then the winner claims it.</p></div>
+  <div class="lead"><h2>The <em>latest</em> winner</h2><p>Refreshed the moment a draw settles. The winner claims right away and is awarded their tokenized stock within 24 hours.</p></div>
   <div class="feat" id="feat"></div>
 </div></section>
 
@@ -309,8 +309,8 @@
   <div class="lead"><h2>How <em>claiming</em> works</h2><p>You never lose your coins. Winning just adds a prize you collect after a short review.</p></div>
   <div class="claim-how">
     <div class="ch"><div class="num">1</div><h3>You're drawn</h3><p>Each hour a winner is picked on-chain by Switchboard VRF from the committed holder snapshot. Anyone can verify the draw.</p></div>
-    <div class="ch"><div class="num">2</div><h3>A <span class="hold">24-hour</span> review hold</h3><p>Your prize is held in Solum's review wallet for 24 hours of quality-control checks. A live countdown shows exactly when it opens.</p></div>
-    <div class="ch"><div class="num">3</div><h3>Claim, sent straight to you</h3><p>When the clock hits zero, connect your winning wallet and claim — the stock is sent directly to you from the review wallet.</p></div>
+    <div class="ch"><div class="num">2</div><h3>Claim your prize</h3><p>Connect your winning wallet and claim right away — that's all you need to do. Claiming starts your <span class="hold">24-hour</span> countdown.</p></div>
+    <div class="ch"><div class="num">3</div><h3>Awarded within 24 hours</h3><p>Your tokenized stock is sent to your wallet within 24 hours of claiming. Watch the countdown right here until it lands.</p></div>
   </div>
 </div></section>
 
@@ -349,7 +349,7 @@
       <a href="https://x.com/SolumHQ" target="_blank" rel="noopener">X</a>
     </span>
   </div>
-  <p class="disc">Who wins is drawn on-chain from the committed holder snapshot and Switchboard VRF — anyone can verify the draw. Each prize is then held in Solum's review wallet for a 24-hour quality-control period; when the countdown ends the winner connects their wallet and the stock is sent directly to them. Odds are the winner's share of the hour's ticket pool — their time-averaged $SOLUM balance over the whole hour, so a last-second buy can't tilt a draw. Figures shown before mainnet are illustrative devnet data; once the draw bot is live this page reads the published record directly. Open-source · devnet · pre-audit.</p>
+  <p class="disc">Who wins is drawn on-chain from the committed holder snapshot and Switchboard VRF — anyone can verify the draw. The winner connects their wallet and claims to confirm it's them; their tokenized-stock prize is then delivered within 24 hours. Odds are the winner's share of the hour's ticket pool — their time-averaged $SOLUM balance over the whole hour, so a last-second buy can't tilt a draw. Figures shown before mainnet are illustrative devnet data; once live this page reads the published record directly. Open-source · devnet · pre-audit.</p>
 </div></footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -395,10 +395,10 @@
   function estDate(ts){return new Date(ts).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",year:"numeric"});}
   function estClock(ts){return new Date(ts).toLocaleString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true})+" EST";}
   function money(n){return "$"+fmt(n);}
-  var HOLD=24*3600*1000; // 24-hour QC custody hold before a prize can be claimed
-  function claimAt(w){return w.claimableAt?Date.parse(w.claimableAt):(Date.parse(w.drawAt)+HOLD);}
-  function msLeft(w){return claimAt(w)-Date.now();}
-  function statusOf(w){if(w.claimed)return "claimed";return msLeft(w)>0?"locked":"claimable";}
+  var HOLD=24*3600*1000; // delivery window: winners are awarded within 24h of claiming
+  function awardBy(w){return w.claimedAt?Date.parse(w.claimedAt)+HOLD:0;}
+  function msLeft(w){return awardBy(w)-Date.now();}
+  function statusOf(w){if(w.awarded)return "awarded";if(w.claimed)return "claimed";return "unclaimed";}
   function cdown(ms){if(ms<=0)return "00:00:00";var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;function p(n){return(n<10?"0":"")+n;}return p(h)+":"+p(m)+":"+p(ss);}
 
   // ---- build the dataset: seeded illustrative record; overwritten by winners.json when live ----
@@ -415,9 +415,11 @@
       var shares=+(prizeUsd/meta.px).toFixed(meta.px>800?4:3);
       var secs=((rng()*3600)|0); // random moment within the hour → precise time
       var addr=b58(rng,44), drawMs=h*HOUR+secs*1000;
+      var st=k<=1?"unclaimed":(k<=4?"claimed":"awarded"); // newest just won, a few mid-delivery, rest done
+      var claimedAt=st==="unclaimed"?null:new Date(Date.now()-(st==="claimed"?(rng()*20*3600*1000):(k*3600*1000+HOLD))).toISOString();
       out.push({epoch:nowH-k,drawAt:new Date(drawMs).toISOString(),addr:addr,
-        solumHeld:held,totalTickets:total,holders:holders,stock:stock,prizeShares:shares,prizeUsd:prizeUsd,payoutTx:null,
-        claimableAt:new Date(drawMs+HOLD).toISOString(),claimed:(k>26),claimTx:null});
+        solumHeld:held,totalTickets:total,holders:holders,stock:stock,prizeShares:shares,prizeUsd:prizeUsd,
+        claimed:st!=="unclaimed",claimedAt:claimedAt,awarded:st==="awarded",awardTx:null,payoutTx:null});
     }
     return out;
   }
@@ -429,7 +431,7 @@
       solumHeld:w.solumHeld!=null?w.solumHeld:(w.tickets||0),
       totalTickets:w.totalTickets!=null?w.totalTickets:0,holders:w.holders||0,
       stock:w.stock,prizeShares:shares,prizeUsd:w.prizeUsd,payoutTx:w.payoutTx||null,
-      claimableAt:w.claimableAt||null,claimed:!!w.claimed,claimTx:w.claimTx||null};
+      claimed:!!w.claimed,claimedAt:w.claimedAt||null,awarded:!!w.awarded,awardTx:w.awardTx||w.claimTx||null};
   }
 
   var DATA=demo(), LIVE=false;
@@ -465,13 +467,13 @@
   function stkSvg(stock,cls){var m=STK[stock];return '<svg class="'+(cls||"")+'" viewBox="0 0 24 24" style="fill:'+m.c+'"><use href="#'+m.lg+'"/></svg>';}
 
   function featClaim(w){var st=statusOf(w);
-    if(st==="locked")return '<div class="feat-claim"><div class="fc-lock"><span class="k">Claim opens in</span><span class="cd" data-cd data-at="'+claimAt(w)+'">'+cdown(msLeft(w))+'</span></div><span class="fc-note">Held in Solum\'s review wallet for a 24-hour quality-control check, then sent straight to the winner.</span></div>';
-    if(st==="claimable")return '<div class="feat-claim"><button class="fc-btn cl-act" data-addr="'+esc(w.addr)+'" data-ep="'+w.epoch+'">Claim your prize</button><span class="fc-note">Connect the winning wallet — the stock is sent directly to you from the review wallet.</span></div>';
-    return '<div class="feat-claim"><span class="fc-done">✓ Claimed<a href="'+(w.claimTx?txLink(w.claimTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span></div>';}
+    if(st==="unclaimed")return '<div class="feat-claim"><button class="fc-btn cl-act" data-addr="'+esc(w.addr)+'" data-ep="'+w.epoch+'">Claim your prize</button><span class="fc-note">Connect the winning wallet to claim — you\'ll be awarded within 24 hours.</span></div>';
+    if(st==="claimed")return '<div class="feat-claim"><div class="fc-lock"><span class="k">Awarded within</span><span class="cd" data-cd data-at="'+awardBy(w)+'">'+cdown(msLeft(w))+'</span></div><span class="fc-note">✓ Claimed. Your tokenized stock is on its way to your wallet.</span></div>';
+    return '<div class="feat-claim"><span class="fc-done">✓ Awarded<a href="'+(w.awardTx?txLink(w.awardTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span></div>';}
   function claimCell(w){var st=statusOf(w);
-    if(st==="locked")return '<span class="cl-lock"><b data-cd data-at="'+claimAt(w)+'">'+cdown(msLeft(w))+'</b><small>in QC review</small></span>';
-    if(st==="claimable")return '<button class="cl-btn cl-act" data-addr="'+esc(w.addr)+'" data-ep="'+w.epoch+'">Claim</button>';
-    return '<span class="cl-done">Claimed ✓<a href="'+(w.claimTx?txLink(w.claimTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span>';}
+    if(st==="unclaimed")return '<button class="cl-btn cl-act" data-addr="'+esc(w.addr)+'" data-ep="'+w.epoch+'">Claim</button>';
+    if(st==="claimed")return '<span class="cl-lock"><b data-cd data-at="'+awardBy(w)+'">'+cdown(msLeft(w))+'</b><small>awarded within 24h</small></span>';
+    return '<span class="cl-done">Awarded ✓<a href="'+(w.awardTx?txLink(w.awardTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span>';}
 
   function renderFeat(){
     var w=DATA.slice().sort(function(a,b){return b.epoch-a.epoch;})[0]; if(!w)return;
@@ -560,10 +562,7 @@
 
   // ---- claim: live countdown ticker + wallet-connect claim ----
   function toast(html){var t=document.getElementById("toast");t.innerHTML=html;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove("on");},4600);}
-  function tick(){var flip=false;
-    Array.prototype.forEach.call(document.querySelectorAll("[data-cd]"),function(el){var ms=(+el.getAttribute("data-at"))-Date.now();el.textContent=cdown(ms);if(ms<=0)flip=true;});
-    if(flip){renderFeat();renderRows();} // a hold just elapsed → re-render so it flips to claimable
-  }
+  function tick(){Array.prototype.forEach.call(document.querySelectorAll("[data-cd]"),function(el){el.textContent=cdown((+el.getAttribute("data-at"))-Date.now());});}
   setInterval(tick,1000);
   // Set this to the fulfillment service URL to make claiming live. Empty = preview (verify only).
   var CLAIM_ENDPOINT="";
@@ -571,7 +570,7 @@
     if(!bytes.length)return"";
     for(i=0;i<bytes.length;i++){var c=bytes[i];for(j=0;j<d.length;j++){c+=d[j]*256;d[j]=c%58;c=(c/58)|0;}while(c>0){d.push(c%58);c=(c/58)|0;}}
     var s="";for(i=0;i<bytes.length-1&&bytes[i]===0;i++)s+="1";for(j=d.length-1;j>=0;j--)s+=A[d[j]];return s;}
-  function markClaimed(ep,tx){for(var i=0;i<DATA.length;i++){if(DATA[i].epoch===ep){DATA[i].claimed=true;DATA[i].claimTx=tx;break;}}renderFeat();renderRows();}
+  function markClaimed(ep,claimedAt){for(var i=0;i<DATA.length;i++){if(DATA[i].epoch===ep){DATA[i].claimed=true;DATA[i].claimedAt=claimedAt;break;}}renderFeat();renderRows();}
   document.addEventListener("click",function(e){var b=e.target&&e.target.closest?e.target.closest(".cl-act"):null;if(b)onClaim(b.getAttribute("data-addr"),b.getAttribute("data-ep"));});
   function onClaim(addr,ep){
     ep=+ep;
@@ -580,15 +579,15 @@
     sol.connect().then(function(res){
       var pk=res.publicKey.toString();
       if(pk!==addr){toast("This prize belongs to <span class=\"mono\">"+shortA(addr)+"</span>. Connect that wallet to claim it.");return;}
-      if(!CLAIM_ENDPOINT){toast("Wallet verified ✓ — claiming goes live at launch. Your prize is reserved for <span class=\"mono\">"+shortA(addr)+"</span>.");return;}
       var iso=new Date().toISOString(), msg="Solum claim | epoch "+ep+" | "+iso;
       sol.signMessage(new TextEncoder().encode(msg),"utf8").then(function(r2){
+        if(!CLAIM_ENDPOINT){markClaimed(ep,iso);toast("Claim confirmed ✓ — you'll be awarded within 24 hours. <span style=\"color:var(--faint)\">(Payouts go live at launch.)</span>");return;}
         var sig=b58enc(r2.signature||r2);
-        toast("Claiming… sending your prize.");
+        toast("Confirming your claim…");
         fetch(CLAIM_ENDPOINT.replace(/\/$/,"")+"/claim",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({epoch:ep,winner:addr,message:msg,signature:sig})})
           .then(function(r){return r.json();}).then(function(j){
-            if(j&&j.ok){markClaimed(ep,j.claimTx);toast("🎉 Claimed! Sent to your wallet. <a href=\""+txLink(j.claimTx)+"\" target=\"_blank\" rel=\"noopener\" style=\"color:var(--blue-hi)\">view tx ↗</a>");}
+            if(j&&j.ok){markClaimed(ep,j.claimedAt||iso);toast("🎉 Claim confirmed! You'll be awarded within 24 hours.");}
             else toast("Couldn't claim: "+((j&&j.reason)||"please try again")+".");
           }).catch(function(){toast("Network error — try again in a moment.");});
       }).catch(function(){toast("Signature cancelled.");});
