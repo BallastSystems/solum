@@ -47,12 +47,14 @@
     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden;letter-spacing:-.006em}
   ::selection{background:var(--blue);color:#07101f}
   /* background field of the 5 tokenized-stock logos — subtle texture, never clutter */
-  .logofield{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-  .lf{position:absolute;height:auto;fill:currentColor;opacity:.4;filter:drop-shadow(0 0 26px currentColor);will-change:transform;
+  .logofield{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .lf{position:absolute;height:auto;fill:currentColor;opacity:.34;filter:drop-shadow(0 0 22px currentColor);will-change:transform;
     animation:lfdrift 24s var(--ease) infinite alternate}
   @keyframes lfdrift{from{transform:translateY(0) rotate(var(--r,0deg))}to{transform:translateY(-22px) rotate(var(--r,0deg))}}
   @media (prefers-reduced-motion:reduce){.lf{animation:none}}
-  @media (max-width:640px){.lf{opacity:.26}.lf.hide-sm{display:none}}
+  @media (max-width:640px){.lf{opacity:.24}.lf.hide-sm{display:none}}
+  /* content sits above the logo field; the hero canvas sits below it */
+  .tick,section,footer{position:relative;z-index:1}
   a{color:inherit;text-decoration:none} p{margin:0}
   h1,h2,h3{margin:0;font-family:var(--display);font-weight:500;letter-spacing:-.02em;line-height:1.06;text-wrap:balance}
   a:focus-visible,button:focus-visible{outline:1.5px solid var(--blue);outline-offset:4px;border-radius:3px}
@@ -81,7 +83,7 @@
 
   /* HERO */
   .hero{position:relative;min-height:100svh;display:flex;align-items:center;overflow:hidden}
-  #sky{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+  #sky{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
   .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
     background:linear-gradient(90deg,var(--ink) 3%,color-mix(in srgb,var(--ink) 50%,transparent) 44%,transparent 74%),linear-gradient(0deg,var(--ink) 1%,transparent 24%)}
   .hero-in{position:relative;z-index:2;width:100%;padding:118px 0 90px}
@@ -220,14 +222,21 @@
 </svg>
 
 <div class="logofield" aria-hidden="true">
-  <svg class="lf" viewBox="0 0 24 24" style="top:12%;left:5%;width:96px;color:#E6EAF2;--r:-8deg;animation-delay:0s"><use href="#lg-apple"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:16%;left:82%;width:124px;color:#76B900;--r:6deg;animation-delay:-4s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:40%;left:90%;width:88px;color:#0052FF;--r:-5deg;animation-delay:-2s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:36%;left:3%;width:78px;color:#F0512B;--r:10deg;animation-delay:-6s"><use href="#lg-mstr"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:65%;left:8%;width:90px;color:#E82127;--r:5deg;animation-delay:-10s"><use href="#lg-tesla"/></svg>
-  <svg class="lf" viewBox="0 0 24 24" style="top:70%;left:84%;width:104px;color:#0052FF;--r:-7deg;animation-delay:-3s"><use href="#lg-coinbase"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:87%;left:70%;width:76px;color:#76B900;--r:8deg;animation-delay:-7s"><use href="#lg-nvidia"/></svg>
-  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:60%;left:92%;width:70px;color:#E6EAF2;--r:-4deg;animation-delay:-5s"><use href="#lg-apple"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:6%;left:4%;width:88px;color:#E6EAF2;--r:-8deg;animation-delay:0s"><use href="#lg-apple"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:9%;left:70%;width:104px;color:#76B900;--r:6deg;animation-delay:-4s"><use href="#lg-nvidia"/></svg>
+  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:13%;left:40%;width:72px;color:#0052FF;--r:-3deg;animation-delay:-11s"><use href="#lg-coinbase"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:20%;left:89%;width:84px;color:#E82127;--r:9deg;animation-delay:-2s"><use href="#lg-tesla"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:29%;left:12%;width:92px;color:#F0512B;--r:10deg;animation-delay:-6s"><use href="#lg-mstr"/></svg>
+  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:34%;left:53%;width:66px;color:#E6EAF2;--r:-6deg;animation-delay:-9s"><use href="#lg-apple"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:41%;left:83%;width:98px;color:#76B900;--r:4deg;animation-delay:-13s"><use href="#lg-nvidia"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:47%;left:30%;width:78px;color:#0052FF;--r:-9deg;animation-delay:-3s"><use href="#lg-coinbase"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:54%;left:5%;width:88px;color:#E82127;--r:5deg;animation-delay:-10s"><use href="#lg-tesla"/></svg>
+  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:60%;left:64%;width:70px;color:#F0512B;--r:8deg;animation-delay:-7s"><use href="#lg-mstr"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:66%;left:44%;width:66px;color:#E6EAF2;--r:-4deg;animation-delay:-14s"><use href="#lg-apple"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:71%;left:16%;width:96px;color:#76B900;--r:7deg;animation-delay:-5s"><use href="#lg-nvidia"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:76%;left:85%;width:86px;color:#0052FF;--r:-7deg;animation-delay:-1s"><use href="#lg-coinbase"/></svg>
+  <svg class="lf hide-sm" viewBox="0 0 24 24" style="top:84%;left:55%;width:74px;color:#E82127;--r:6deg;animation-delay:-12s"><use href="#lg-tesla"/></svg>
+  <svg class="lf" viewBox="0 0 24 24" style="top:88%;left:26%;width:82px;color:#F0512B;--r:-10deg;animation-delay:-8s"><use href="#lg-mstr"/></svg>
 </div>
 
 <nav id="nav"><div class="shell nav-in">
