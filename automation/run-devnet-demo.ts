@@ -21,8 +21,6 @@ import { toArray } from "./merkle";
 
 const CP = TOKEN_PROGRAM_ID, RP = TOKEN_2022_PROGRAM_ID, DEC = 6, SCALE = 10n ** 6n;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const tx = (s: string) => `  → tx: https://explorer.solana.com/tx/${s}?cluster=devnet`;
-const acct = (a: string) => `https://explorer.solana.com/address/${a}?cluster=devnet`;
 
 async function main() {
   const provider = anchor.AnchorProvider.env();
@@ -30,12 +28,19 @@ async function main() {
   const conn = provider.connection;
   const ops = (provider.wallet as anchor.Wallet).payer;
   const rpc = (conn as any)._rpcEndpoint as string;
-  if (!/devnet/.test(rpc)) throw new Error(`refusing to run the demo on a non-devnet RPC: ${rpc}`);
+  const isLocal = /127\.0\.0\.1|localhost/.test(rpc);
+  if (!/devnet/.test(rpc) && !isLocal) throw new Error(`refusing to run the demo on mainnet: ${rpc}`);
+  // Explorer links: devnet cluster, or the local validator via Explorer's custom-cluster mode
+  // (works in a browser on the same machine — real, recordable transaction pages, no faucet needed).
+  const cl = isLocal ? `custom&customUrl=${encodeURIComponent(rpc)}` : "devnet";
+  const tx = (s: string) => `  → tx: https://explorer.solana.com/tx/${s}?cluster=${cl}`;
+  const acct = (a: string) => `https://explorer.solana.com/address/${a}?cluster=${cl}`;
   const idl = JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8"));
   const prog = new anchor.Program(idl as anchor.Idl, provider);
   const bal = async (a: PublicKey) => Number((await getAccount(conn, a, undefined, RP)).amount);
 
-  console.log(`\n=== SOLUM · live raffle on devnet ===`);
+  console.log(`\n=== SOLUM · live raffle · ${isLocal ? "local validator" : "devnet"} ===`);
+  console.log(`(Explorer links use ${isLocal ? "custom-cluster mode → your local validator; keep it running to open them" : "the devnet cluster"})`);
   console.log(`program: ${acct(prog.programId.toBase58())}\n`);
 
   console.log("1) mint the $SOLUM coin + the AAPLx stock");
