@@ -466,11 +466,11 @@
 
   function featClaim(w){var st=statusOf(w);
     if(st==="locked")return '<div class="feat-claim"><div class="fc-lock"><span class="k">Claim opens in</span><span class="cd" data-cd data-at="'+claimAt(w)+'">'+cdown(msLeft(w))+'</span></div><span class="fc-note">Held in Solum\'s review wallet for a 24-hour quality-control check, then sent straight to the winner.</span></div>';
-    if(st==="claimable")return '<div class="feat-claim"><button class="fc-btn cl-act" data-addr="'+esc(w.addr)+'">Claim your prize</button><span class="fc-note">Connect the winning wallet — the stock is sent directly to you from the review wallet.</span></div>';
+    if(st==="claimable")return '<div class="feat-claim"><button class="fc-btn cl-act" data-addr="'+esc(w.addr)+'" data-ep="'+w.epoch+'">Claim your prize</button><span class="fc-note">Connect the winning wallet — the stock is sent directly to you from the review wallet.</span></div>';
     return '<div class="feat-claim"><span class="fc-done">✓ Claimed<a href="'+(w.claimTx?txLink(w.claimTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span></div>';}
   function claimCell(w){var st=statusOf(w);
     if(st==="locked")return '<span class="cl-lock"><b data-cd data-at="'+claimAt(w)+'">'+cdown(msLeft(w))+'</b><small>in QC review</small></span>';
-    if(st==="claimable")return '<button class="cl-btn cl-act" data-addr="'+esc(w.addr)+'">Claim</button>';
+    if(st==="claimable")return '<button class="cl-btn cl-act" data-addr="'+esc(w.addr)+'" data-ep="'+w.epoch+'">Claim</button>';
     return '<span class="cl-done">Claimed ✓<a href="'+(w.claimTx?txLink(w.claimTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span>';}
 
   function renderFeat(){
@@ -565,14 +565,33 @@
     if(flip){renderFeat();renderRows();} // a hold just elapsed → re-render so it flips to claimable
   }
   setInterval(tick,1000);
-  document.addEventListener("click",function(e){var b=e.target&&e.target.closest?e.target.closest(".cl-act"):null;if(b)onClaim(b.getAttribute("data-addr"));});
-  function onClaim(addr){
+  // Set this to the fulfillment service URL to make claiming live. Empty = preview (verify only).
+  var CLAIM_ENDPOINT="";
+  function b58enc(bytes){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",d=[0],i,j;
+    if(!bytes.length)return"";
+    for(i=0;i<bytes.length;i++){var c=bytes[i];for(j=0;j<d.length;j++){c+=d[j]*256;d[j]=c%58;c=(c/58)|0;}while(c>0){d.push(c%58);c=(c/58)|0;}}
+    var s="";for(i=0;i<bytes.length-1&&bytes[i]===0;i++)s+="1";for(j=d.length-1;j>=0;j--)s+=A[d[j]];return s;}
+  function markClaimed(ep,tx){for(var i=0;i<DATA.length;i++){if(DATA[i].epoch===ep){DATA[i].claimed=true;DATA[i].claimTx=tx;break;}}renderFeat();renderRows();}
+  document.addEventListener("click",function(e){var b=e.target&&e.target.closest?e.target.closest(".cl-act"):null;if(b)onClaim(b.getAttribute("data-addr"),b.getAttribute("data-ep"));});
+  function onClaim(addr,ep){
+    ep=+ep;
     var sol=window.solana;
     if(!sol||!sol.isPhantom){toast("Install a Solana wallet like <b>Phantom</b> to claim your prize.");return;}
     sol.connect().then(function(res){
       var pk=res.publicKey.toString();
       if(pk!==addr){toast("This prize belongs to <span class=\"mono\">"+shortA(addr)+"</span>. Connect that wallet to claim it.");return;}
-      toast("Wallet verified ✓ — your prize will be sent to <span class=\"mono\">"+shortA(addr)+"</span> from the review wallet. Live at launch.");
+      if(!CLAIM_ENDPOINT){toast("Wallet verified ✓ — claiming goes live at launch. Your prize is reserved for <span class=\"mono\">"+shortA(addr)+"</span>.");return;}
+      var iso=new Date().toISOString(), msg="Solum claim | epoch "+ep+" | "+iso;
+      sol.signMessage(new TextEncoder().encode(msg),"utf8").then(function(r2){
+        var sig=b58enc(r2.signature||r2);
+        toast("Claiming… sending your prize.");
+        fetch(CLAIM_ENDPOINT.replace(/\/$/,"")+"/claim",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({epoch:ep,winner:addr,message:msg,signature:sig})})
+          .then(function(r){return r.json();}).then(function(j){
+            if(j&&j.ok){markClaimed(ep,j.claimTx);toast("🎉 Claimed! Sent to your wallet. <a href=\""+txLink(j.claimTx)+"\" target=\"_blank\" rel=\"noopener\" style=\"color:var(--blue-hi)\">view tx ↗</a>");}
+            else toast("Couldn't claim: "+((j&&j.reason)||"please try again")+".");
+          }).catch(function(){toast("Network error — try again in a moment.");});
+      }).catch(function(){toast("Signature cancelled.");});
     }).catch(function(){toast("Wallet connection cancelled.");});
   }
 
