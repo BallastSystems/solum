@@ -20,6 +20,9 @@ import { commitEpoch, settleDevnet, winningTicketOf, payWinner, JackpotRefs } fr
 import { fundHourly } from "./fees";
 import { writeStatus, appendWinner, iso, hourLabel } from "./status";
 
+// The five tokenized stocks, raffled one per hour on rotation. (Each has its own mint + ops account
+// in production config; the bot buys the hour's stock and funds the pot with it.)
+const ROTATION = ["AAPLx", "NVDAx", "TSLAx", "COINx", "MSTRx"];
 const now = () => Math.floor(Date.now() / 1000);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const sleepUntil = (unixSec: number) => sleep(Math.max(0, (unixSec - now()) * 1000));
@@ -76,6 +79,7 @@ export async function runForever(cfg: Cfg) {
   while (true) {
     const hourStart = now();
     const label = hourLabel(hourStart);
+    const stockLabel = ROTATION[Math.floor(hourStart / 3600) % ROTATION.length]; // this hour's stock, on rotation
     const twab = new TwabAccumulator(hourStart);
     await seedInitialBalances(conn, cfg.coinMint, twab, hourStart);
     const sub = trackBalances(conn, cfg.coinMint, twab);
@@ -123,13 +127,13 @@ export async function runForever(cfg: Cfg) {
       const wt = await winningTicketOf(cfg.prog, cfg.refs);
       const { winner, sig } = await payWinner(cfg.prog, cfg.ops, cfg.refs, snap, wt, conn);
       winnerAddr = winner.toBase58();
-      const winRow = { hourLabel: label, addr: winnerAddr, prizeUsd: potUsd, stock: cfg.stockLabel, drawAt: iso(drawAt), payoutTx: sig };
+      const winRow = { hourLabel: label, addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt), payoutTx: sig };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
-        lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: cfg.stockLabel, drawAt: iso(drawAt) },
+        lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },
       });
       appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners feed
-      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${cfg.stockLabel}`);
+      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${stockLabel}`);
     } catch (e: any) {
       console.error("[draw] failed:", e.message);
     } finally {
