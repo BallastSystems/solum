@@ -177,6 +177,17 @@
   .strow h3{font-size:clamp(23px,2.6vw,32px);font-weight:600;letter-spacing:-.025em}
   .strow p{margin-top:10px;color:var(--dim);font-size:17px;line-height:1.45;max-width:54ch}
   @media (max-width:640px){.strow{grid-template-columns:56px 1fr;column-gap:22px;padding:32px 0}}
+  /* draw flow: snapshot → winner */
+  .flow{max-width:840px;margin:clamp(40px,6vw,72px) auto 0;display:flex;flex-direction:column}
+  .fstep{display:flex;gap:22px;padding:24px 0;position:relative}
+  .fstep:not(:last-child)::after{content:"";position:absolute;left:20px;top:56px;bottom:-6px;width:2px;background:linear-gradient(var(--line-2),transparent)}
+  .fstep .fn{flex:none;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:var(--code);font-weight:600;font-size:15px;background:var(--panel);border:1px solid var(--line-2);color:var(--dim);position:relative;z-index:1}
+  .fstep.seal .fn{background:linear-gradient(180deg,var(--blue-hi),var(--blue));color:#0A1018;border-color:transparent;box-shadow:0 10px 26px -8px var(--blue-glow)}
+  .fbody h3{font-size:clamp(17px,2vw,20px);font-weight:600;letter-spacing:-.015em}
+  .fstep.seal .fbody h3{color:var(--blue-hi)}
+  .fbody p{margin-top:7px;font-size:15.5px;color:var(--dim);line-height:1.62;max-width:640px}
+  .fbody .lk{margin-top:8px;display:inline-block}
+  @media(max-width:640px){.fstep{gap:16px}.fbody p{font-size:14.5px}}
 
   /* pot / fee panel */
   .panel{margin-top:clamp(46px,6vw,72px);background:linear-gradient(180deg,var(--panel),var(--ink-2));border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 50px 130px -60px rgba(0,0,0,.7)}
@@ -352,7 +363,7 @@
   <div class="hero-in"><div class="shell hero-grid">
     <div class="hero-col">
       <div class="live-fee rv">
-        <div class="lf-top"><span class="d"></span>Creator fees → stock<span class="lf-dev">devnet</span></div>
+        <div class="lf-top"><span class="d"></span>Creator fees → prizes · all-time<span class="lf-dev">devnet</span></div>
         <div class="num" id="feeBig">$0</div>
         <div class="lf-rate" id="feeRate">+$0<span>/hr into the pot</span></div>
       </div>
@@ -418,6 +429,21 @@
   </div>
 </div></section>
 
+<!-- from snapshot to winner -->
+<section class="s" id="draw-flow"><div class="shell">
+  <div class="s-head">
+    <h2 class="rv">From snapshot to <em>winner</em></h2>
+    <p class="s-sub rv" style="--i:1">Two random moments, one sealed list, verifiable randomness. Here's exactly how each hourly draw runs — and why no one, us included, can bend it.</p>
+  </div>
+  <div class="flow rv">
+    <div class="fstep"><span class="fn">1</span><div class="fbody"><h3>Snapshot — a hidden, random moment</h3><p>Once an hour, at a time no one is told in advance, Solum freezes every holder's <b>time-averaged</b> $SOLUM balance into raffle tickets. It's your average across the whole hour that counts, so a last-second bag earns almost nothing — and you can't know when the snapshot lands.</p></div></div>
+    <div class="fstep seal"><span class="fn">2</span><div class="fbody"><h3>Sealed on-chain — entries are locked</h3><p>The full ticket list is hashed into one fingerprint (a Merkle root) and posted on-chain. From that instant the draw is <b>sealed</b> — no entry can be added, removed, or edited, and the exact list the winner is drawn from is already public. This is the clean line between <b>who's entered</b> and <b>who wins</b>.</p></div></div>
+    <div class="fstep"><span class="fn">3</span><div class="fbody"><h3>Draw time — revealed second, also random</h3><p>Only after the snapshot is sealed does Solum reveal a <b>separate</b> random time for the draw. Two unannounced moments — there's nothing to time.</p></div></div>
+    <div class="fstep"><span class="fn">4</span><div class="fbody"><h3>Draw — Switchboard VRF picks the number</h3><p>At the draw time a Switchboard verifiable-random oracle produces a number no one — not the team, a bot, or the winner — can predict or grind. The winner is simply the holder whose ticket range contains that number.</p></div></div>
+    <div class="fstep"><span class="fn">5</span><div class="fbody"><h3>Verify it yourself</h3><p>Rebuild the fingerprint from the published list and confirm the winning number lands in the winner's range. The snapshot, the seal, and the VRF draw are public on-chain transactions anyone can replay — who wins is settled on-chain before any prize moves. <a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See the draw code <span class="c">›</span></a></p></div></div>
+  </div>
+</div></section>
+
 <!-- the five stocks on rotation -->
 <section class="s" id="stocks"><div class="shell">
   <div class="s-head">
@@ -432,7 +458,7 @@
 <section class="s" id="pot"><div class="shell">
   <div class="s-head">
     <h2 class="rv">The pot, <em>live</em></h2>
-    <p class="s-sub rv" style="--i:1">Every creator fee is accounted for on-chain and converted to tokenized stock. Watch it build toward the next draw.</p>
+    <p class="s-sub rv" style="--i:1">Every creator fee is claimed on-chain, converted to tokenized stock, and raffled to a holder — accounted to the cent. Here's the full ledger: what's gone to holders, and what's building for the next draw.</p>
   </div>
   <div class="draw-status rv" id="drawStatus">
     <div class="ds-top">
@@ -450,16 +476,16 @@
   <div class="panel rv">
     <div class="pnl-top"><span class="tk">$SOLUM</span><span class="live">Live</span><span class="note">creator fees → tokenized stock → hourly raffle</span></div>
     <dl class="pnl-stat">
-      <div class="g"><dt>Creator fees (24h)</dt><dd id="s-fees">$0</dd></div>
-      <div class="c"><dt>Stock in the pot</dt><dd id="s-pot">$0</dd></div>
-      <div><dt>Holders entered</dt><dd id="s-holders">0</dd></div>
+      <div class="g"><dt>Raffled to holders · all-time</dt><dd id="s-given">$0</dd></div>
+      <div class="c"><dt>Allotted to the next draw</dt><dd id="s-pot">$0</dd></div>
+      <div><dt>Creator fees · last 24h</dt><dd id="s-fees">$0</dd></div>
       <div><dt>Next draw</dt><dd id="s-cd">--:--</dd></div>
     </dl>
     <div class="pnl-body">
       <canvas id="chart" aria-label="Simulation of the prize pot growing as creator fees buy tokenized stock"></canvas>
       <div class="tape"><div class="th">Fees → stock</div><div id="tape"></div></div>
     </div>
-    <div class="pnl-leg"><span><i style="background:var(--blue)"></i>Pot — tokenized stock, only grows until each draw</span><span style="margin-left:auto;color:var(--faint)">Devnet · illustrative — live figures at launch</span></div>
+    <div class="pnl-leg"><span><i style="background:var(--blue)"></i>The next-draw pot only grows until it's drawn — then it resets to zero and the all-time total climbs by exactly that amount</span><span style="margin-left:auto;color:var(--faint)">Devnet · illustrative — live figures at launch</span></div>
   </div>
 </div></section>
 
@@ -752,15 +778,24 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     paint(); setInterval(paint,60000);
   })();
 
-  // --- live creator-fee counter (hero + nav) — illustrative, ticks up to feel live ---
+  // --- creator-fee ledger (shared by hero, nav, and the #pot panel so no two surfaces disagree) ---
+  // total lifetime creator fees = raffled-to-holders (all-time) + allotted-to-the-next-draw.
+  // Everything derives from ONE model (or the live status.json), so the numbers always reconcile.
+  var SOLUM_FEE_RATE=280, SOLUM_FEE_BASE=12000, SOLUM_LAUNCH=Date.UTC(2026,6,19);
+  function solumLifetimeFees(){return SOLUM_FEE_BASE + Math.max(0,(Date.now()-SOLUM_LAUNCH)/3.6e6)*SOLUM_FEE_RATE;}
+  function solumHourFrac(){var d=new Date();return (d.getMinutes()*60+d.getSeconds())/3600;}
+  var SOLUM_FEES={live:false,given:0,pot:0,fees24:0};
+  function solumLedger(){
+    if(SOLUM_FEES.live)return {lifetime:SOLUM_FEES.given+SOLUM_FEES.pot,given:SOLUM_FEES.given,pot:SOLUM_FEES.pot,fees24:SOLUM_FEES.fees24};
+    var pot=SOLUM_FEE_RATE*solumHourFrac(), lifetime=solumLifetimeFees(); // pot resets to 0 each hour (each draw)
+    return {lifetime:lifetime,given:lifetime-pot,pot:pot,fees24:SOLUM_FEE_RATE*24};
+  }
   (function(){
     var big=document.getElementById("feeBig"),navf=document.getElementById("navFee"),rate=document.getElementById("feeRate");
-    var fees=12480 + Math.floor(Date.now()/3.6e6)%5000; // stable-ish base
-    function paint(){var s=money(fees);big.textContent=s;navf.textContent=s;}
-    if(rate){var r=310+Math.floor((Date.now()/3.6e6)%540);rate.innerHTML="+$"+r.toLocaleString()+"<span>/hr into the pot</span>";}
+    function paint(){var s=money(Math.round(solumLedger().lifetime));if(big)big.textContent=s;if(navf)navf.textContent=s;}
+    if(rate)rate.innerHTML="+$"+SOLUM_FEE_RATE.toLocaleString()+"<span>/hr into the pot</span>";
     paint();
-    if(RM)return;
-    setInterval(function(){fees += Math.random()*Math.random()*9;paint();},900);
+    if(!RM)setInterval(paint,1500);
   })();
 
   // ---- hero live-draw machine: a reel of holder cards spins, decelerates, lands on the winner ----
@@ -835,17 +870,18 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     var io2=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){size();if(RM)draw();else requestAnimationFrame(loop);io2.disconnect();}});},{threshold:.1});
     io2.observe(cv);addEventListener("resize",function(){size();});})();
 
-  // --- pot panel: pot grows from fees, countdown to next draw ---
+  // --- fee ledger + pot chart: raffled all-time · allotted to next draw · 24h — reconciles to status.json ---
   (function(){
     var cv=document.getElementById("chart");if(!cv||!cv.getContext)return;var ctx=cv.getContext("2d");
-    var eFees=document.getElementById("s-fees"),ePot=document.getElementById("s-pot"),eHold=document.getElementById("s-holders"),eCd=document.getElementById("s-cd"),tape=document.getElementById("tape");
-    var fees24=8200,pot=1450,holders=1280,N=120,POT=[],W,H,dpr;
-    for(var i=0;i<N;i++)POT.push(pot);
+    var eGiven=document.getElementById("s-given"),ePot=document.getElementById("s-pot"),eFees=document.getElementById("s-fees"),eCd=document.getElementById("s-cd"),tape=document.getElementById("tape");
+    var N=120,POT=[],W,H,dpr,chartPot=solumLedger().pot;
+    for(var i=0;i<N;i++)POT.push(chartPot);
     function size(){dpr=Math.max(1,Math.min(2,devicePixelRatio||1));W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
     function cd(){var now=new Date(),m=59-now.getMinutes(),s=59-now.getSeconds();return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
-    function tick(){var vol=0.15+Math.random()*Math.random()*5,fee=vol*0.03*150;fees24+=fee;pot+=fee;if(Math.random()<0.04)holders+=1;
-      POT.push(pot);if(POT.length>N)POT.shift();
-      eFees.textContent=fmtK(fees24);ePot.textContent=fmtK(pot);eHold.textContent=holders.toLocaleString();
+    function paint(){var L=solumLedger();if(eGiven)eGiven.textContent=money(Math.round(L.given));if(ePot)ePot.textContent=fmtK(L.pot);if(eFees)eFees.textContent=fmtK(L.fees24);}
+    function tick(){var vol=0.15+Math.random()*Math.random()*5,fee=vol*0.03*150;
+      chartPot=solumLedger().pot;POT.push(chartPot+(Math.random()-0.5)*3);if(POT.length>N)POT.shift();
+      paint();
       var r=document.createElement("div");r.className="trd";
       r.innerHTML='<span class="b">+'+vol.toFixed(2)+'◎ fee</span><span class="a">+'+money(fee)+' stock</span>';
       tape.insertBefore(r,tape.firstChild);while(tape.childNodes.length>7)tape.removeChild(tape.lastChild);}
@@ -864,6 +900,14 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       var io3=new IntersectionObserver(function(es){es.forEach(function(e){run=e.isIntersecting;if(run){last=0;requestAnimationFrame(loop);}});},{threshold:.05});io3.observe(cv);}
     var rt;addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){size();draw();},160);});
     if(document.readyState==="complete")start();else addEventListener("load",start);
+    // go live from status.json (published by the draw bot) — reconcile exactly to on-chain fees
+    try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+      if(j&&(j.feesLifetimeUsd!=null||j.prizesAwardedUsd!=null||j.potUsd!=null)){
+        var pot=+(j.potUsd||0),given=(j.prizesAwardedUsd!=null?+j.prizesAwardedUsd:((+(j.feesLifetimeUsd||0))-pot));
+        SOLUM_FEES.live=true;SOLUM_FEES.given=given;SOLUM_FEES.pot=pot;SOLUM_FEES.fees24=(j.fees24hUsd!=null?+j.fees24hUsd:solumLedger().fees24);
+        paint();
+      }
+    }).catch(function(){});}catch(e){}
   })();
 </script>
 </body>
