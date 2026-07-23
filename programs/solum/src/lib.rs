@@ -1766,7 +1766,12 @@ pub struct SettleDrawVrf<'info> {
 
 #[derive(Accounts)]
 pub struct ClaimPrize<'info> {
-    pub winner: Signer<'info>,
+    /// Permissionless — anyone (e.g. the draw bot) may pay out; funds can only ever reach the
+    /// proven winner's own account, so there is nothing to steal by triggering it.
+    pub caller: Signer<'info>,
+    /// CHECK: the winning holder — the `owner` in the winning leaf, and the recipient of the pot.
+    /// Not a signer; the payout address is pinned by `winner_prize_account`'s authority below.
+    pub winner: UncheckedAccount<'info>,
     #[account(
         mut,
         seeds = [JACKPOT_SEED, jackpot.coin_mint.as_ref(), jackpot.admin.as_ref()],
@@ -1783,7 +1788,8 @@ pub struct ClaimPrize<'info> {
     pub prize_mint: InterfaceAccount<'info, Mint>,
     #[account(mut, address = jackpot.pot_custody @ SolumError::BadVaultOwner)]
     pub pot_custody: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)]
+    /// The winner's own prize account — `token::authority = winner` forces the pot to the winner.
+    #[account(mut, token::authority = winner)]
     pub winner_prize_account: InterfaceAccount<'info, TokenAccount>,
     pub prize_token_program: Interface<'info, TokenInterface>,
 }

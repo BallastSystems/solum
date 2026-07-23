@@ -114,12 +114,13 @@ async function main() {
     .accounts({ snapshotter: payer.publicKey, jackpot }).rpc();
   const settle = (rand: Buffer) => prog.methods.settleDraw(arr(rand))
     .accounts({ snapshotter: payer.publicKey, jackpot }).rpc();
+  // permissionless payout: the bot (payer) triggers it; funds can only reach the proven winner.
   const claim = (who: any, start: bigint, tickets: bigint, proof: Buffer[]) =>
     prog.methods.claimPrize(new anchor.BN(start.toString()), new anchor.BN(tickets.toString()), proof.map(arr))
       .accounts({
-        winner: who.kp.publicKey, jackpot, jackpotAuthority: jAuth, prizeMint: prize,
+        caller: payer.publicKey, winner: who.kp.publicKey, jackpot, jackpotAuthority: jAuth, prizeMint: prize,
         potCustody, winnerPrizeAccount: who.prizeAta, prizeTokenProgram: RP,
-      }).signers([who.kp]).rpc();
+      }).rpc();
 
   // --- commit the epoch root ---
   await commit();
