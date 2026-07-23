@@ -15,8 +15,8 @@ import * as anchor from "@coral-xyz/anchor";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, getAccount, getMint } from "@solana/spl-token";
 import * as fs from "fs";
-import { TwabAccumulator, buildSnapshot } from "./twab";
-import { commitEpoch, settleDevnet, winningTicketOf, payWinner, JackpotRefs } from "./draw";
+import { TwabAccumulator, buildSnapshot, winnerOf } from "./twab";
+import { commitEpoch, settleDevnet, winningTicketOf, JackpotRefs } from "./draw";
 import { fundHourly } from "./fees";
 import { writeStatus, appendWinner, iso, hourLabel, WinnerEntry } from "./status";
 
@@ -122,29 +122,33 @@ export async function runForever(cfg: Cfg) {
       console.log(`[snapshot ${label}] taken · ${holders} holders · drawing at ${new Date(drawAt * 1000).toLocaleTimeString()}`);
       await sleepUntil(drawAt);
 
-      // DRAW: VRF settle → auto-pay the proven winner
+      // DRAW: VRF settle fixes the winner on-chain. We do NOT pay from here — the prize is held in
+      // the review (ops) wallet for a 24h quality-control period, then sent to the winner when they
+      // claim. So this records a *pending claim*; a separate release step fulfils it after the hold.
       await settleDevnet(cfg.prog, cfg.ops, cfg.refs); // switchboard-vrf: request_draw + settle_draw
       const wt = await winningTicketOf(cfg.prog, cfg.refs);
-      // read the exact prize (whole stock shares) before the payout empties the pot
+      // the prize (whole stock shares) currently held for review, read from the ops/review wallet
       let prizeShares = 0;
       try {
-        const potAcct = await getAccount(conn, cfg.refs.potCustody, undefined, cfg.refs.prizeTokenProgram);
+        const revAcct = await getAccount(conn, cfg.opsStockAccount, undefined, cfg.refs.prizeTokenProgram);
         const mintInfo = await getMint(conn, cfg.refs.prizeMint, undefined, cfg.refs.prizeTokenProgram);
-        prizeShares = Number(potAcct.amount) / 10 ** mintInfo.decimals;
+        prizeShares = Number(revAcct.amount) / 10 ** mintInfo.decimals;
       } catch { /* fall back to the site's price estimate if the read fails */ }
-      const { winner, tickets, sig } = await payWinner(cfg.prog, cfg.ops, cfg.refs, snap, wt, conn);
-      winnerAddr = winner.toBase58();
+      const { entry } = winnerOf(snap, wt); // who the VRF drew — proven on-chain, not yet paid
+      winnerAddr = entry.owner.toBase58();
+      const claimableAt = drawAt + 24 * 3600; // 24h QC hold before the winner can claim
       const winRow: WinnerEntry = {
         epoch: Math.floor(hourStart / 3600), hourLabel: label, addr: winnerAddr,
-        solumHeld: Number(tickets), totalTickets: Number(snap.total), holders,
-        stock: stockLabel, prizeShares, prizeUsd: potUsd, drawAt: iso(drawAt), payoutTx: sig,
+        solumHeld: Number(entry.tickets), totalTickets: Number(snap.total), holders,
+        stock: stockLabel, prizeShares, prizeUsd: potUsd, drawAt: iso(drawAt),
+        claimableAt: iso(claimableAt), claimed: false, claimTx: null, payoutTx: "",
       };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },
       });
-      appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners feed
-      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${stockLabel}`);
+      appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners register
+      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${stockLabel} · claim opens ${new Date(claimableAt * 1000).toISOString()}`);
     } catch (e: any) {
       console.error("[draw] failed:", e.message);
     } finally {

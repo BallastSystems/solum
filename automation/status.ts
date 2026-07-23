@@ -32,7 +32,10 @@ export type WinnerEntry = {
   prizeShares: number; // whole tokenized-stock shares won (the entire pot)
   prizeUsd: number;
   drawAt: string; // ISO — the precise settle time
-  payoutTx: string; // the claim_prize signature — links to an explorer for public verification
+  claimableAt: string; // ISO — drawAt + 24h; the prize is held in the review wallet until then
+  claimed: boolean; // set true once the winner has claimed and the stock has been sent to them
+  claimTx: string | null; // the transfer signature from the review wallet to the winner (once claimed)
+  payoutTx: string; // legacy alias for claimTx (kept for the site's recent-winners feed); "" until claimed
 };
 
 /** Prepend a winner to the rolling history the site reads (as solum.work/winners.json). */
