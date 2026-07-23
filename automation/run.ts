@@ -13,12 +13,12 @@
 
 import * as anchor from "@coral-xyz/anchor";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, getAccount, getMint } from "@solana/spl-token";
 import * as fs from "fs";
 import { TwabAccumulator, buildSnapshot } from "./twab";
 import { commitEpoch, settleDevnet, winningTicketOf, payWinner, JackpotRefs } from "./draw";
 import { fundHourly } from "./fees";
-import { writeStatus, appendWinner, iso, hourLabel } from "./status";
+import { writeStatus, appendWinner, iso, hourLabel, WinnerEntry } from "./status";
 
 // The five tokenized stocks, raffled one per hour on rotation. (Each has its own mint + ops account
 // in production config; the bot buys the hour's stock and funds the pot with it.)
@@ -125,9 +125,20 @@ export async function runForever(cfg: Cfg) {
       // DRAW: VRF settle → auto-pay the proven winner
       await settleDevnet(cfg.prog, cfg.ops, cfg.refs); // switchboard-vrf: request_draw + settle_draw
       const wt = await winningTicketOf(cfg.prog, cfg.refs);
-      const { winner, sig } = await payWinner(cfg.prog, cfg.ops, cfg.refs, snap, wt, conn);
+      // read the exact prize (whole stock shares) before the payout empties the pot
+      let prizeShares = 0;
+      try {
+        const potAcct = await getAccount(conn, cfg.refs.potCustody, undefined, cfg.refs.prizeTokenProgram);
+        const mintInfo = await getMint(conn, cfg.refs.prizeMint, undefined, cfg.refs.prizeTokenProgram);
+        prizeShares = Number(potAcct.amount) / 10 ** mintInfo.decimals;
+      } catch { /* fall back to the site's price estimate if the read fails */ }
+      const { winner, tickets, sig } = await payWinner(cfg.prog, cfg.ops, cfg.refs, snap, wt, conn);
       winnerAddr = winner.toBase58();
-      const winRow = { hourLabel: label, addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt), payoutTx: sig };
+      const winRow: WinnerEntry = {
+        epoch: Math.floor(hourStart / 3600), hourLabel: label, addr: winnerAddr,
+        solumHeld: Number(tickets), totalTickets: Number(snap.total), holders,
+        stock: stockLabel, prizeShares, prizeUsd: potUsd, drawAt: iso(drawAt), payoutTx: sig,
+      };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },

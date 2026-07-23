@@ -22,11 +22,16 @@ export function writeStatus(outFile: string, s: Omit<DrawStatus, "updatedAt">): 
 }
 
 export type WinnerEntry = {
+  epoch: number; // draw number (hour index) — stable id for the winner in the public register
   hourLabel: string;
   addr: string;
-  prizeUsd: number;
+  solumHeld: number; // the winner's time-averaged whole-$SOLUM balance over the hour (= their tickets)
+  totalTickets: number; // the hour's whole ticket pool — win odds = solumHeld / totalTickets
+  holders: number; // eligible holders in the draw
   stock: string;
-  drawAt: string; // ISO
+  prizeShares: number; // whole tokenized-stock shares won (the entire pot)
+  prizeUsd: number;
+  drawAt: string; // ISO — the precise settle time
   payoutTx: string; // the claim_prize signature — links to an explorer for public verification
 };
 

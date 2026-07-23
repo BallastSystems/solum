@@ -33,17 +33,17 @@ export async function buyStock(
   stockMint: string,
   slippageBps = 100,
 ): Promise<bigint> {
-  const q = await fetch(
+  const q = (await fetch(
     `${JUP}/quote?inputMint=${WSOL}&outputMint=${stockMint}&amount=${solLamports}` +
       `&slippageBps=${slippageBps}&swapMode=ExactIn`,
-  ).then((r) => r.json());
+  ).then((r) => r.json())) as { outAmount?: string };
   if (!q || !q.outAmount) throw new Error("no Jupiter route for the stock buy");
 
-  const { swapTransaction } = await fetch(`${JUP}/swap`, {
+  const { swapTransaction } = (await fetch(`${JUP}/swap`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ quoteResponse: q, userPublicKey: ops.publicKey.toBase58(), wrapAndUnwrapSol: true }),
-  }).then((r) => r.json());
+  }).then((r) => r.json())) as { swapTransaction: string };
 
   const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
   tx.sign([ops]);
