@@ -11,7 +11,10 @@ export type DrawStatus = {
   snapshotAt: string | null; // ISO — only set once the snapshot is actually taken (hidden before)
   drawAt: string | null; // ISO — the randomized draw time, revealed only after the snapshot
   holders: number;
-  potUsd: number;
+  potUsd: number; // this cycle's creator fees → the pot allotted to the NEXT draw (since the last snapshot)
+  feesLifetimeUsd: number; // total creator fees collected all-time  (= prizesAwardedUsd + potUsd)
+  prizesAwardedUsd: number; // total raffled to holders all-time (what's been given out)
+  fees24hUsd: number; // creator fees collected in the last 24 hours
   lastWinner: { addr: string; prizeUsd: number; stock: string; drawAt: string } | null;
 };
 
@@ -19,6 +22,31 @@ export function writeStatus(outFile: string, s: Omit<DrawStatus, "updatedAt">): 
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
   const full: DrawStatus = { ...s, updatedAt: new Date().toISOString() };
   fs.writeFileSync(outFile, JSON.stringify(full, null, 2));
+}
+
+/** Derive the creator-fee ledger from the published winners record + this cycle's pot. Every figure
+ * reconciles: feesLifetime = prizesAwarded (given out) + potUsd (building for the next draw). It's
+ * restart-safe and auditable because it's summed straight from the immutable winners.json. */
+export function feeLedger(
+  winnersFile: string,
+  potUsd: number,
+): { feesLifetimeUsd: number; prizesAwardedUsd: number; fees24hUsd: number } {
+  let arr: WinnerEntry[] = [];
+  try {
+    arr = JSON.parse(fs.readFileSync(winnersFile, "utf8"));
+  } catch {
+    /* first run — no winners yet */
+  }
+  const now = Date.now();
+  const awarded = arr.reduce((sum, w) => sum + (w.prizeUsd || 0), 0);
+  const last24 = arr
+    .filter((w) => now - Date.parse(w.drawAt) <= 24 * 3600 * 1000)
+    .reduce((sum, w) => sum + (w.prizeUsd || 0), 0);
+  return {
+    prizesAwardedUsd: awarded,
+    feesLifetimeUsd: awarded + potUsd,
+    fees24hUsd: last24 + potUsd,
+  };
 }
 
 export type WinnerEntry = {

@@ -18,7 +18,7 @@ import * as fs from "fs";
 import { TwabAccumulator, buildSnapshot, winnerOf } from "./twab";
 import { commitEpoch, settleDevnet, winningTicketOf, JackpotRefs } from "./draw";
 import { fundHourly } from "./fees";
-import { writeStatus, appendWinner, iso, hourLabel, WinnerEntry } from "./status";
+import { writeStatus, appendWinner, iso, hourLabel, feeLedger, WinnerEntry } from "./status";
 
 // The five tokenized stocks, raffled one per hour on rotation. (Each has its own mint + ops account
 // in production config; the bot buys the hour's stock and funds the pot with it.)
@@ -98,7 +98,7 @@ export async function runForever(cfg: Cfg) {
     // choose a RANDOM snapshot time this hour — hidden from everyone until it fires
     const snapAt = hourStart + rint(cfg.snapMinSec, cfg.snapMaxSec);
     writeStatus(cfg.statusFile, {
-      hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, lastWinner: null,
+      hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
     });
     console.log(`[hour ${label}] snapshot scheduled (hidden) · fees funding pot`);
     await sleepUntil(snapAt);
@@ -118,7 +118,7 @@ export async function runForever(cfg: Cfg) {
       // now the snapshot is locked, reveal a RANDOM draw time (>= the on-chain min elapsed)
       drawAt = now() + Math.max(cfg.epochLenSec + 15, rint(cfg.drawGapMinSec, cfg.drawGapMaxSec));
       writeStatus(cfg.statusFile, {
-        hourLabel: label, phase: "snapshot_taken", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd, lastWinner: null,
+        hourLabel: label, phase: "snapshot_taken", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd, ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
       });
       console.log(`[snapshot ${label}] taken · ${holders} holders · drawing at ${new Date(drawAt * 1000).toLocaleTimeString()}`);
       await sleepUntil(drawAt);
@@ -146,6 +146,7 @@ export async function runForever(cfg: Cfg) {
       };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
+        ...feeLedger(cfg.winnersFile, potUsd),
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },
       });
       appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners register
