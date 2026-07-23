@@ -3,7 +3,8 @@
 //   • continuously tracks every $SOLUM holder's balance over time (TWAB → un-gameable odds)
 //   • each hour: collect creator fees → buy tokenized stock → fund the pot
 //   • takes the SNAPSHOT at a RANDOM, unannounced time in the hour (commit the TWAB Merkle root)
-//   • picks a RANDOM draw time after that, and at it settles via Switchboard VRF → pays the winner
+//   • picks a RANDOM draw time after that; settles via Switchboard VRF and records the PROVEN winner —
+//     the bot NEVER pays: the operator manually delivers within 24h (hold-and-manually-deliver)
 //   • publishes status.json each phase so the site can announce it live, and the full snapshot so
 //     anyone can recompute the root from on-chain history
 //

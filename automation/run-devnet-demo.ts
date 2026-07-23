@@ -1,6 +1,9 @@
 // One full raffle on PUBLIC devnet, narrated with an explorer link for every step — the artifact
 // to screen-record. Creates the $SOLUM coin + a stock, three holders, funds the pot from "fees",
-// snapshots holders (weighted), draws a winner via randomness, and pays them — all on-chain.
+// snapshots holders (weighted), draws a winner via randomness, and pays them on-chain.
+// NOTE: this is the on-chain draw+auto-pay MECHANIC demo. Production is hold-and-manually-deliver —
+// the live bot (run.ts) records a pending claim and the operator delivers manually within 24h
+// (see automation/README.md + docs/CLAIM.md); it does NOT auto-pay winners.
 //
 //   ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=<key> \
 //     npx tsc automation/run-devnet-demo.ts --outDir target/autobuild --module commonjs \

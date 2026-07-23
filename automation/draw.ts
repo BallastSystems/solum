@@ -1,7 +1,10 @@
 // Draw orchestration — turns a TWAB snapshot into an on-chain hourly draw:
-//   commit_epoch(root, total)  →  settle (VRF)  →  claim_prize (auto-pay the proven winner).
-// The winner never has to act; the bot pays them, and the program guarantees the pot can only
-// reach the winning holder's own account.
+//   commit_epoch(root, total)  →  settle (VRF)  →  resolve the winning ticket on-chain.
+// PRODUCTION IS HOLD-AND-MANUALLY-DELIVER: the live bot (run.ts) stops at the PROVEN winner and
+// records a pending claim; the OPERATOR then manually delivers the prize within 24h (claim.ts +
+// award.ts, see docs/CLAIM.md) — custody + delivery stay fully with the operator. The
+// `payWinner`/`runDrawDevnet` helpers below drive the on-chain `claim_prize` auto-pay path — an
+// on-chain capability exercised by the mechanic tests + devnet demo, NOT used by production.
 
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey, Keypair, Connection } from "@solana/web3.js";
