@@ -16,8 +16,8 @@ devnet-oracle = []
 pyth-oracle = ["dep:pyth-solana-receiver-sdk"]
 # devnet-vrf: snapshotter-injected randomness in settle_draw — for local validator tests.
 devnet-vrf = []
-# switchboard-vrf: real Switchboard VRF (production randomness). Wiring TODO — see docs/JACKPOT.md.
-switchboard-vrf = []
+# switchboard-vrf: real Switchboard On-Demand randomness (production draws). See docs/JACKPOT.md.
+switchboard-vrf = ["dep:switchboard-on-demand"]
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
@@ -28,3 +28,4 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 anchor-spl = "0.31.1"
 pyth-solana-receiver-sdk = { version = "0.6.1", optional = true }
+switchboard-on-demand = { version = "0.13", optional = true }

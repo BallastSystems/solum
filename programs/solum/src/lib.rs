@@ -22,6 +22,8 @@ use anchor_spl::token_2022::spl_token_2022;
 use anchor_spl::token_interface::{
     self, Burn, Mint, TokenAccount, TokenInterface, TransferChecked,
 };
+#[cfg(feature = "switchboard-vrf")]
+use switchboard_on_demand::accounts::RandomnessAccountData;
 
 declare_id!("A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU");
 
@@ -60,6 +62,7 @@ pub const JACKPOT_AUTH_SEED: &[u8] = b"jackpotauth";
 pub const PHASE_OPEN: u8 = 0; // awaiting the snapshotter to commit an epoch root
 pub const PHASE_COMMITTED: u8 = 1; // root committed; draw settles once the epoch elapses
 pub const PHASE_SETTLED: u8 = 2; // winning ticket fixed; the winner may claim
+pub const PHASE_REQUESTED: u8 = 3; // [switchboard-vrf] randomness bound; awaiting oracle reveal
 /// Authority (a program PDA) set as BOTH the Token-2022 transfer-fee-config authority and
 /// the withdraw-withheld authority of the launched mint. Because no instruction changes the
 /// fee rate, the tax is frozen; and withheld fees can only ever be pulled to the vault.
@@ -792,7 +795,9 @@ pub mod solum {
         j.phase = PHASE_OPEN;
         j.jackpot_authority_bump = ctx.bumps.jackpot_authority;
         j.bump = ctx.bumps.jackpot;
-        j.reserved = [0u8; 64];
+        j.randomness_account = Pubkey::default();
+        j.commit_slot = 0;
+        j.reserved = [0u8; 24];
         emit!(JackpotInitialized {
             jackpot: j.key(),
             coin_mint: j.coin_mint,
@@ -832,9 +837,8 @@ pub mod solum {
 
     /// Fix the winning ticket for the current epoch from verifiable randomness, once the epoch has
     /// elapsed (a draw can't settle early). Under `devnet-vrf` the randomness is injected by the
-    /// snapshotter for local testing; production uses `switchboard-vrf` reading a VRF account the
-    /// caller cannot influence.
-    #[cfg(feature = "devnet-vrf")]
+    /// snapshotter for local testing; production uses `switchboard-vrf` (see request_draw/settle).
+    #[cfg(all(feature = "devnet-vrf", not(feature = "switchboard-vrf")))]
     pub fn settle_draw(ctx: Context<SettleDraw>, randomness: [u8; 32]) -> Result<()> {
         let now = Clock::get()?.unix_timestamp;
         let j = &mut ctx.accounts.jackpot;
@@ -844,6 +848,63 @@ pub mod solum {
             SolumError::EpochNotElapsed
         );
         j.winning_ticket = winning_ticket(&randomness, j.total_tickets)?;
+        j.phase = PHASE_SETTLED;
+        emit!(DrawSettled {
+            jackpot: j.key(),
+            epoch: j.current_epoch,
+            winning_ticket: j.winning_ticket
+        });
+        Ok(())
+    }
+
+    /// [switchboard-vrf] Bind a freshly-committed Switchboard On-Demand randomness account to this
+    /// epoch, once the epoch has elapsed. The value is seeded from the current slot and revealed
+    /// later by the oracle network, so no caller — including the snapshotter — can predict or grind
+    /// it. Permissionless.
+    #[cfg(feature = "switchboard-vrf")]
+    pub fn request_draw(ctx: Context<RequestDraw>) -> Result<()> {
+        let clock = Clock::get()?;
+        let rd = RandomnessAccountData::parse(ctx.accounts.randomness.data.borrow())
+            .map_err(|_| error!(SolumError::BadOracle))?;
+        // Must be committed at the current slot: guarantees the value is not yet knowable.
+        require!(rd.seed_slot == clock.slot, SolumError::BadOracle);
+        let j = &mut ctx.accounts.jackpot;
+        require!(j.phase == PHASE_COMMITTED, SolumError::JackpotNotReady);
+        require!(
+            clock.unix_timestamp >= j.epoch_start.saturating_add(j.epoch_len),
+            SolumError::EpochNotElapsed
+        );
+        j.randomness_account = ctx.accounts.randomness.key();
+        j.commit_slot = rd.seed_slot;
+        j.phase = PHASE_REQUESTED;
+        emit!(DrawRequested {
+            jackpot: j.key(),
+            epoch: j.current_epoch,
+            commit_slot: rd.seed_slot
+        });
+        Ok(())
+    }
+
+    /// [switchboard-vrf] Read the revealed randomness for the bound account and fix the winning
+    /// ticket. Reverts until the oracle has revealed (`get_value` errors), and accepts only the
+    /// exact account + commitment bound at request time — so a caller can't swap in a value they
+    /// chose. Permissionless.
+    #[cfg(feature = "switchboard-vrf")]
+    pub fn settle_draw(ctx: Context<SettleDrawVrf>) -> Result<()> {
+        let clock = Clock::get()?;
+        require!(
+            ctx.accounts.randomness.key() == ctx.accounts.jackpot.randomness_account,
+            SolumError::BadOracle
+        );
+        let rd = RandomnessAccountData::parse(ctx.accounts.randomness.data.borrow())
+            .map_err(|_| error!(SolumError::BadOracle))?;
+        let j = &mut ctx.accounts.jackpot;
+        require!(j.phase == PHASE_REQUESTED, SolumError::JackpotNotReady);
+        require!(rd.seed_slot == j.commit_slot, SolumError::BadOracle); // not re-committed
+        let value: [u8; 32] = rd
+            .get_value(clock.slot)
+            .map_err(|_| error!(SolumError::StaleOracle))?;
+        j.winning_ticket = winning_ticket(&value, j.total_tickets)?;
         j.phase = PHASE_SETTLED;
         emit!(DrawSettled {
             jackpot: j.key(),
@@ -1662,7 +1723,7 @@ pub struct CommitEpoch<'info> {
     pub jackpot: Account<'info, JackpotState>,
 }
 
-#[cfg(feature = "devnet-vrf")]
+#[cfg(all(feature = "devnet-vrf", not(feature = "switchboard-vrf")))]
 #[derive(Accounts)]
 pub struct SettleDraw<'info> {
     pub snapshotter: Signer<'info>,
@@ -1673,6 +1734,34 @@ pub struct SettleDraw<'info> {
         has_one = snapshotter @ SolumError::Unauthorized
     )]
     pub jackpot: Account<'info, JackpotState>,
+}
+
+#[cfg(feature = "switchboard-vrf")]
+#[derive(Accounts)]
+pub struct RequestDraw<'info> {
+    pub caller: Signer<'info>, // permissionless
+    #[account(
+        mut,
+        seeds = [JACKPOT_SEED, jackpot.coin_mint.as_ref(), jackpot.admin.as_ref()],
+        bump = jackpot.bump
+    )]
+    pub jackpot: Account<'info, JackpotState>,
+    /// CHECK: Switchboard On-Demand randomness account; parsed + validated by RandomnessAccountData.
+    pub randomness: UncheckedAccount<'info>,
+}
+
+#[cfg(feature = "switchboard-vrf")]
+#[derive(Accounts)]
+pub struct SettleDrawVrf<'info> {
+    pub caller: Signer<'info>, // permissionless
+    #[account(
+        mut,
+        seeds = [JACKPOT_SEED, jackpot.coin_mint.as_ref(), jackpot.admin.as_ref()],
+        bump = jackpot.bump
+    )]
+    pub jackpot: Account<'info, JackpotState>,
+    /// CHECK: must equal jackpot.randomness_account (checked in the handler).
+    pub randomness: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -1749,11 +1838,14 @@ pub struct JackpotState {
     pub twab_root: [u8; 32],
     pub total_tickets: u64,
     pub winning_ticket: u64,
-    /// 0 = Open, 1 = Committed, 2 = Settled.
+    /// 0 = Open, 1 = Committed, 2 = Settled, 3 = Requested (switchboard-vrf).
     pub phase: u8,
     pub jackpot_authority_bump: u8,
     pub bump: u8,
-    pub reserved: [u8; 64],
+    /// [switchboard-vrf] the randomness account bound at request_draw, and the slot it committed to.
+    pub randomness_account: Pubkey,
+    pub commit_slot: u64,
+    pub reserved: [u8; 24],
 }
 
 #[cfg(feature = "devnet-oracle")]
@@ -1885,6 +1977,13 @@ pub struct EpochCommitted {
     pub jackpot: Pubkey,
     pub epoch: u64,
     pub total_tickets: u64,
+}
+
+#[event]
+pub struct DrawRequested {
+    pub jackpot: Pubkey,
+    pub epoch: u64,
+    pub commit_slot: u64,
 }
 
 #[event]
