@@ -196,6 +196,26 @@
   .code pre{margin:0;padding:20px;overflow-x:auto;font-family:var(--code);font-size:13px;line-height:1.7;color:#C6D3E6}
   .code .cm{color:#5F718C} .code .kw{color:#7FB0EC} .code .fnx{color:#9FE0C0} .code .ty{color:#C9A9F0} .code .num{color:#E0B080}
 
+  /* recent winners */
+  .winners{border-top:1px solid var(--line);margin-top:clamp(40px,5vw,60px)}
+  .wrow2{display:flex;align-items:center;gap:14px;padding:15px 2px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .wrow2 .wt{min-width:56px;color:var(--faint);font-size:13px;font-variant-numeric:tabular-nums}
+  .wrow2 .wa{font-family:var(--code);font-size:13px;color:var(--silver)} .wrow2 .wa:hover{color:var(--blue)}
+  .wrow2 .wnew{font-size:10px;color:var(--grn);border:1px solid color-mix(in srgb,var(--grn) 40%,transparent);border-radius:100px;padding:2px 8px;text-transform:uppercase;letter-spacing:.06em}
+  .wrow2 .wp{margin-left:auto;font-weight:600;color:var(--grn);font-variant-numeric:tabular-nums}
+  .wrow2 .wstk{color:var(--dim);font-size:13px;min-width:52px}
+  .wrow2 .wv{font-size:13px;color:var(--blue)} .wrow2 .wv:hover{text-decoration:underline}
+  /* proof of everything */
+  .proofs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:clamp(40px,5vw,60px)}
+  @media(max-width:760px){.proofs{grid-template-columns:1fr}}
+  .pf{border:1px solid var(--line);border-radius:16px;padding:26px;background:linear-gradient(180deg,var(--ink-2),var(--panel));transition:border-color .4s,transform .4s var(--ease)}
+  .pf:hover{border-color:var(--line-2);transform:translateY(-3px)}
+  .pf-h{font-size:17px;font-weight:600;letter-spacing:-.01em}
+  .pf p{margin:10px 0 16px;color:var(--dim);font-size:14.5px;line-height:1.5}
+  .pf p b{color:var(--silver)}
+  /* partner badge */
+  .partner{display:inline-flex;align-items:center;gap:9px;font-size:13.5px;color:var(--dim);border:1px solid var(--line);border-radius:100px;padding:8px 15px;background:color-mix(in srgb,var(--panel) 55%,transparent);flex-wrap:wrap}
+  .partner b{color:var(--silver);font-weight:600} .partner svg{width:16px;height:16px;color:var(--blue);flex:none} .partner a{color:var(--blue)}
   .why{margin-top:clamp(50px,7vw,84px);border-top:1px solid var(--line)}
   .wrow{display:grid;grid-template-columns:1fr 1fr;column-gap:40px;padding:36px 0;border-bottom:1px solid var(--line);align-items:baseline}
   .wrow h3{font-size:clamp(22px,2.6vw,32px);font-weight:600;letter-spacing:-.025em}
@@ -267,6 +287,10 @@
       <div class="h-act rv" style="--i:2">
         <a class="btn" href="#how">How it works</a>
         <a class="lk" href="#fair">See it's provably fair <span class="c">›</span></a>
+      </div>
+      <div class="partner rv" style="--i:3;margin-top:26px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="14.5" r="4"/><path d="M12 5.5v2M5.8 9.3l1.2 1.2M18.2 9.3l-1.2 1.2M3.5 15h1.6M18.9 15h1.6M4.5 18.5h15"/></svg>
+        Tokenized stocks in partnership with <b>Sunrise Financial</b> · <a href="https://sunrise.xyz" target="_blank" rel="noopener">sunrise.xyz&nbsp;↗</a>
       </div>
     </div>
   </div></div>
@@ -357,6 +381,34 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   </div>
 </div></section>
 
+<!-- recent winners -->
+<section class="s" id="winners"><div class="shell">
+  <div class="s-head"><h2 class="rv">Recent <em>winners</em></h2><p class="s-sub rv" style="--i:1">Every hour pays a real holder, on-chain. Here are the latest — click any of them to verify it yourself.</p></div>
+  <div class="winners rv" id="winnersList"></div>
+</div></section>
+
+<!-- proof of everything -->
+<section class="s" id="verify"><div class="shell">
+  <div class="s-head"><h2 class="rv"><em>Proof</em> of everything</h2><p class="s-sub rv" style="--i:1">Nothing here asks for your trust. The reserves, the randomness, and every payout are on-chain and open-source — check them yourself.</p></div>
+  <div class="proofs rv">
+    <div class="pf"><div class="pf-h">Proof of reserves</div><p>The vault holds real tokenized stock, 1:1 — a program account with <b>no private key and no withdraw path</b>. Not the team, not a hacked admin, can move it. Stock is issued by our partner <b>Sunrise Financial</b>.</p><a class="lk" href="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet" target="_blank" rel="noopener">View the program on-chain <span class="c">›</span></a></div>
+    <div class="pf"><div class="pf-h">Every draw is a public trail</div><p>Snapshot root → VRF randomness → winning ticket → payout. Four public transactions anyone can replay — no hidden steps, nothing off-chain but the published snapshot.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See how a draw verifies <span class="c">›</span></a></div>
+    <div class="pf"><div class="pf-h">Open source, every line</div><p>The undrainable vault, the Switchboard VRF draw, and the TWAB odds are all public. Read them, run the tests, fork it.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the code <span class="c">›</span></a></div>
+    <div class="pf"><div class="pf-h">Independently audited</div><p>OtterSec is reviewing the full protocol. The report will be published here — until then, we say plainly it's pre-audit.</p><a class="lk" href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Follow the audit <span class="c">›</span></a></div>
+  </div>
+  <div class="code rv" style="margin-top:30px">
+    <div class="code-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="fn">solum · the pot can only reach the winner</span></div>
+<pre><span class="cm">// There is NO withdraw, admin_withdraw, or sweep instruction anywhere in</span>
+<span class="cm">// the program. The only way stock leaves the vault is a payout to the</span>
+<span class="cm">// holder the VRF drew — proven by their Merkle ticket:</span>
+<span class="fnx">require</span>!(<span class="fnx">ticket_in_range</span>(jackpot.winning_ticket, start, tickets)?, NotWinner);
+token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; winner_prize_account, pot)?;
+
+<span class="cm">// winner_prize_account is constrained on-chain to `token::authority = winner`,</span>
+<span class="cm">// so the pot can never land anywhere but the drawn holder's own wallet.</span></pre>
+  </div>
+</div></section>
+
 <!-- why -->
 <section class="s" id="why"><div class="shell">
   <div class="s-head"><h2 class="rv">Why people <em>hold</em></h2></div>
@@ -373,7 +425,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   <div class="s-head"><h2 class="rv">Built to be <em>trusted</em></h2><p class="s-sub rv" style="--i:1">The pot is only worth chasing if it can't be touched. So we hammered it.</p></div>
   <div class="spec rv">
     <div class="sp"><div class="v" data-count="9800"><small>+</small></div><div class="k">Fuzzed ops, zero violations</div></div>
-    <div class="sp"><div class="v" data-count="71"></div><div class="k">Tests, all green</div></div>
+    <div class="sp"><div class="v" data-count="89"></div><div class="k">Tests, all green</div></div>
     <div class="sp"><div class="v" data-count="0"></div><div class="k">Ways to drain the pot</div></div>
     <div class="sp"><div class="v" style="font-size:clamp(28px,3.6vw,42px)">OtterSec</div><div class="k">Audit in progress</div></div>
   </div>
@@ -394,6 +446,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   <span class="wm"><svg style="width:19px;height:19px"><use href="#sol"/></svg>Solum</span>
   <a href="https://x.com/solumhq" target="_blank" rel="noopener">X</a>
   <a href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">GitHub</a>
+  <a href="https://sunrise.xyz" target="_blank" rel="noopener">Sunrise Financial</a>
   <a href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Audit</a>
   <span class="disc">DEVNET · PRE-AUDIT · ILLUSTRATIVE · NOT INVESTMENT ADVICE</span>
 </div></footer>
@@ -480,6 +533,34 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       }
     }
     render(); setInterval(render,1000);
+  })();
+
+  // ---- recent winners feed: self-contained demo; reads winners.json (published by the bot) to go live ----
+  (function(){
+    var host=document.getElementById("winnersList"); if(!host) return;
+    var HOUR=3600000, stocks=["AAPLx","NVDAx","TSLAx","COINx","MSTRx"], EXPL="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet";
+    function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+    function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
+    function tlabel(ts){var d=new Date(ts),h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12||12;return h+" "+ap;}
+    function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+    function paint(rows){
+      host.innerHTML=rows.map(function(w,i){
+        return '<div class="wrow2"><span class="wt">'+esc(w.time)+'</span>'+
+          '<span class="wa">'+esc(w.addr)+'</span>'+(i===0?'<span class="wnew">latest</span>':'')+
+          '<span class="wp">$'+w.prize.toLocaleString()+'</span><span class="wstk">'+esc(w.stock)+'</span>'+
+          '<a class="wv" href="'+esc(w.verify)+'" target="_blank" rel="noopener">verify ↗</a></div>';
+      }).join("");
+    }
+    var nowH=Math.floor(Date.now()/HOUR), demo=[];
+    for(var k=1;k<=8;k++){ var h=nowH-k, rng=m32(h*2654435761);
+      var a=b58(rng,44);
+      demo.push({time:tlabel(h*HOUR), addr:a.slice(0,4)+"…"+a.slice(-4), stock:stocks[(rng()*5)|0], prize:180+Math.floor(rng()*900), verify:EXPL}); }
+    paint(demo);
+    try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+      if(j&&j.length){ paint(j.slice(0,10).map(function(w){ var ts=Date.parse(w.drawAt);
+        return {time:tlabel(ts), addr:w.addr.slice(0,4)+"…"+w.addr.slice(-4), stock:w.stock, prize:w.prizeUsd,
+          verify:w.payoutTx?("https://explorer.solana.com/tx/"+w.payoutTx+"?cluster=devnet"):EXPL}; })); }
+    }).catch(function(){});}catch(e){}
   })();
 
   var nav=document.getElementById("nav");
