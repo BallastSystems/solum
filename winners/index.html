@@ -11,25 +11,20 @@
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{
-    --ink:#0F1520; --ink-2:#131A26; --raise:#172030; --panel:#10161F;
-    --silver:#E6EAF2; --dim:#9AA6B8; --faint:#5C6675; --line:rgba(200,214,235,.10); --line-2:rgba(200,214,235,.18);
-    --blue:#6E9BD8; --blue-hi:#98BEEC; --blue-deep:#4E7AB8; --blue-glow:rgba(110,155,216,.18);
-    --steel:#AEB9CC; --cool:#93A2B8; --grn:#6BC79A; --gold:#E2B45A;
+    /* DEFAULT THEME = premium white. Dark is opt-in via the toggle / stored pref. */
+    --ink:#F3F6FC; --ink-2:#FAFCFE; --raise:#FFFFFF; --panel:#FFFFFF;
+    --silver:#0F1826; --dim:#535F76; --faint:#94A1B6; --line:rgba(18,42,78,.10); --line-2:rgba(18,42,78,.17);
+    --blue:#2A61CE; --blue-hi:#4A86E8; --blue-deep:#1C4AA6; --blue-glow:rgba(42,97,206,.16);
+    --steel:#5A6884; --cool:#5A6884; --grn:#18996A; --gold:#B0831F;
     --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --code:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     --ease:cubic-bezier(.16,1,.3,1);
   }
-  @media (prefers-color-scheme:light){:root{
-    --ink:#F4F6FA; --ink-2:#FAFBFD; --raise:#FFFFFF; --panel:#FFFFFF;
-    --silver:#18202C; --dim:#5A6575; --faint:#98A4B8; --line:rgba(30,45,70,.11); --line-2:rgba(30,45,70,.2);
-    --blue:#3163B0; --blue-hi:#4A82D0; --blue-deep:#244C88; --blue-glow:rgba(46,111,199,.14);
-    --steel:#5E6E88; --cool:#5E6E88; --grn:#2E9E78; --gold:#B98A2E;
-  }}
   :root[data-theme="light"]{
-    --ink:#F4F6FA; --ink-2:#FAFBFD; --raise:#FFFFFF; --panel:#FFFFFF;
-    --silver:#18202C; --dim:#5A6575; --faint:#98A4B8; --line:rgba(30,45,70,.11); --line-2:rgba(30,45,70,.2);
-    --blue:#3163B0; --blue-hi:#4A82D0; --blue-deep:#244C88; --blue-glow:rgba(46,111,199,.14);
-    --steel:#5E6E88; --cool:#5E6E88; --grn:#2E9E78; --gold:#B98A2E;
+    --ink:#F3F6FC; --ink-2:#FAFCFE; --raise:#FFFFFF; --panel:#FFFFFF;
+    --silver:#0F1826; --dim:#535F76; --faint:#94A1B6; --line:rgba(18,42,78,.10); --line-2:rgba(18,42,78,.17);
+    --blue:#2A61CE; --blue-hi:#4A86E8; --blue-deep:#1C4AA6; --blue-glow:rgba(42,97,206,.16);
+    --steel:#5A6884; --cool:#5A6884; --grn:#18996A; --gold:#B0831F;
   }
   :root[data-theme="dark"]{
     --ink:#0F1520; --ink-2:#131A26; --raise:#172030; --panel:#10161F;
@@ -64,7 +59,8 @@
   .nav-ic{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;color:var(--dim);transition:color .2s}
   .nav-ic svg{width:16px;height:16px;fill:currentColor} .nav-ic:hover{color:var(--silver)}
   .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 15px;border-radius:10px;font-size:13.5px;font-weight:600;
-    background:linear-gradient(180deg,var(--blue-hi),var(--blue));color:#0A1018;transition:transform .2s,box-shadow .2s;box-shadow:0 6px 22px -8px var(--blue-glow)}
+    background:linear-gradient(180deg,var(--blue-hi),var(--blue));color:#fff;transition:transform .2s,box-shadow .2s;box-shadow:0 6px 22px -8px var(--blue-glow)}
+  :root[data-theme="dark"] .btn{color:#0A1018}
   .btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px -10px var(--blue-glow)}
 
   /* header */
@@ -75,9 +71,10 @@
   .eyebrow .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:bp 1.6s infinite}
   @keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
   h1{font-size:clamp(42px,7vw,86px);font-weight:600;letter-spacing:-.035em;line-height:.98;
-    text-shadow:0 1px 1px rgba(0,0,0,.32),0 4px 30px rgba(0,0,0,.28)}
-  h1 em{font-style:normal;color:var(--blue);text-shadow:0 0 38px color-mix(in srgb,var(--blue) 55%,transparent)}
-  :root[data-theme="light"] h1{text-shadow:0 1px 0 rgba(255,255,255,.6),0 2px 14px rgba(30,45,70,.12)}
+    text-shadow:0 1px 0 rgba(255,255,255,.75),0 2px 16px rgba(18,42,78,.10)}
+  h1 em{font-style:normal;color:var(--blue);text-shadow:0 0 34px color-mix(in srgb,var(--blue) 22%,transparent)}
+  :root[data-theme="dark"] h1{text-shadow:0 1px 1px rgba(0,0,0,.32),0 4px 30px rgba(0,0,0,.28)}
+  :root[data-theme="dark"] h1 em{text-shadow:0 0 38px color-mix(in srgb,var(--blue) 55%,transparent)}
   .sub{max-width:620px;margin-top:20px;font-size:clamp(15px,1.7vw,18px);color:var(--dim);line-height:1.6}
 
   /* records stat band */
@@ -118,8 +115,10 @@
   .feat-verify:hover{border-color:var(--blue);background:var(--blue-glow)}
   .feat-r{position:relative;display:flex;align-items:center;justify-content:center;padding:30px;border-left:1px solid var(--line)}
   @media(max-width:760px){.feat-r{border-left:none;border-top:1px solid var(--line);min-height:200px}}
-  .feat-logo{width:clamp(120px,20vw,190px);height:clamp(120px,20vw,190px);filter:drop-shadow(0 20px 50px rgba(0,0,0,.4))}
-  .feat-halo{position:absolute;width:70%;aspect-ratio:1;border-radius:50%;filter:blur(60px);opacity:.4}
+  .feat-logo{width:clamp(120px,20vw,190px);height:clamp(120px,20vw,190px);filter:drop-shadow(0 18px 44px rgba(18,42,78,.24))}
+  :root[data-theme="dark"] .feat-logo{filter:drop-shadow(0 20px 50px rgba(0,0,0,.4))}
+  .feat-halo{position:absolute;width:66%;aspect-ratio:1;border-radius:50%;filter:blur(64px);opacity:.16}
+  :root[data-theme="dark"] .feat-halo{opacity:.4}
   .feat-tick{position:absolute;bottom:20px;right:24px;font-family:var(--code);font-size:12px;color:var(--faint)}
 
   /* records trio */
@@ -141,7 +140,7 @@
     font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.18s}
   .chip svg{width:14px;height:14px}
   .chip:hover{color:var(--silver);border-color:var(--blue)}
-  .chip.on{color:#0A1018;background:var(--silver);border-color:var(--silver);font-weight:600}
+  .chip.on{color:var(--raise);background:var(--silver);border-color:var(--silver);font-weight:600}
   .spacer{flex:1 1 auto}
   .search{position:relative;min-width:190px}
   .search input{width:100%;height:36px;padding:0 12px 0 34px;border-radius:10px;border:1px solid var(--line-2);
@@ -249,7 +248,8 @@
   /* toast */
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(18px);z-index:80;opacity:0;pointer-events:none;
     background:var(--raise);border:1px solid var(--line-2);color:var(--silver);font-size:13.5px;padding:12px 18px;border-radius:12px;
-    box-shadow:0 22px 54px -22px rgba(0,0,0,.65);transition:.28s var(--ease);max-width:min(90vw,440px);text-align:center;line-height:1.45}
+    box-shadow:0 22px 54px -22px rgba(18,42,78,.28);transition:.28s var(--ease);max-width:min(90vw,440px);text-align:center;line-height:1.45}
+  :root[data-theme="dark"] .toast{box-shadow:0 22px 54px -22px rgba(0,0,0,.65)}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast .mono{color:var(--blue-hi)}
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -290,7 +290,7 @@
   <div class="shell">
     <span class="eyebrow"><span class="d"></span>Public record</span>
     <h1>Every draw,<br/><em>on the record.</em></h1>
-    <p class="sub">One holder wins real tokenized stock every hour. This is the full ledger — who won, exactly how much $SOLUM they were holding, the precise moment they won, and a link to verify every payout on-chain. Nothing curated away.</p>
+    <p class="sub">One holder wins tokenized stock every hour. This is the full ledger — who won, exactly how much $SOLUM they were holding, the precise moment they won, and a link to verify every payout on-chain. Nothing curated away.</p>
     <div class="band">
       <div class="stat"><div class="k">Paid to holders</div><div class="v tnum" id="sTotal">$0</div><div class="cap">in tokenized stock, all-time</div></div>
       <div class="stat"><div class="k">Draws settled</div><div class="v tnum" id="sDraws">0</div><div class="cap">one every hour</div></div>
@@ -363,7 +363,7 @@
   var root=document.documentElement, tglI=document.getElementById("tglIcon");
   var SUN='<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>';
   var MOON='<path d="M20 14.5A8 8 0 019.5 4 7 7 0 1020 14.5z"/>';
-  function curTheme(){var t;try{t=localStorage.getItem("solum-theme");}catch(e){}return t||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");}
+  function curTheme(){var t;try{t=localStorage.getItem("solum-theme");}catch(e){}return t||"light";}
   function apply(t){root.setAttribute("data-theme",t);tglI.innerHTML=t==="dark"?SUN:MOON;try{localStorage.setItem("solum-theme",t);}catch(e){}}
   apply(curTheme());
   document.getElementById("tgl").addEventListener("click",function(){apply(root.getAttribute("data-theme")==="dark"?"light":"dark");});
