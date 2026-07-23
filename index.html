@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solum — hold $SOLUM, win real stock</title>
-<meta name="description" content="Every hour, $SOLUM's creator fees buy real Apple, NVIDIA & Tesla stock and raffle it to holders. More volume, bigger pot. The more you hold, the better your odds. Provably random.">
+<meta name="description" content="Every hour, $SOLUM's creator fees buy real Apple, NVIDIA & Tesla stock and raffle it to holders. More volume, bigger pot. The more you hold, the better your odds. Verifiably random.">
 <meta property="og:title" content="Solum — hold $SOLUM, win real stock">
-<meta property="og:description" content="Creator fees buy real stock every hour and raffle it to holders. Provably random. You keep your coins.">
+<meta property="og:description" content="Creator fees buy real stock every hour and raffle it to holders. Verifiably random. You keep your coins.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23D6E6FA'/%3E%3Cstop offset='.5' stop-color='%237FB0EC'/%3E%3Cstop offset='1' stop-color='%233A72BE'/%3E%3C/linearGradient%3E%3CclipPath id='h'%3E%3Crect x='0' y='0' width='24' height='14.4'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect width='24' height='24' rx='5' fill='%230F1520'/%3E%3Ccircle cx='12' cy='14.4' r='5.3' fill='url(%23g)' clip-path='url(%23h)'/%3E%3Cpath d='M3.5 14.4h17' fill='none' stroke='url(%23g)' stroke-width='1.7' stroke-linecap='round'/%3E%3Cpath d='M5.7 17.5h12.6' fill='none' stroke='%236E88AE' stroke-width='1.25' stroke-linecap='round' opacity='.8'/%3E%3Cpath d='M7.8 20.2h8.4' fill='none' stroke='%236E88AE' stroke-width='1.1' stroke-linecap='round' opacity='.55'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,7 +182,7 @@
   .pnl-leg{display:flex;gap:22px;padding:12px 22px;border-top:1px solid var(--line);font-size:13px;color:var(--dim);flex-wrap:wrap}
   .pnl-leg i{display:inline-block;width:16px;height:2px;vertical-align:middle;margin-right:7px}
 
-  /* provably fair — code */
+  /* fair by design — code */
   .fair{display:grid;grid-template-columns:1fr 1.05fr;gap:44px;align-items:center;margin-top:clamp(44px,6vw,72px)}
   @media (max-width:900px){.fair{grid-template-columns:1fr;gap:32px}}
   .fair .pts{display:flex;flex-direction:column;gap:26px}
@@ -268,7 +268,7 @@
   <span class="nav-r">
     <span class="nav-fee"><span class="d"></span>Creator fees <b id="navFee">$0</b></span>
     <a class="n" href="#how">How it works</a>
-    <a class="n" href="#fair">Provably fair</a>
+    <a class="n" href="#fair">Fair by design</a>
     <a class="btn" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">View code</a>
   </span>
 </div></nav>
@@ -286,7 +286,7 @@
       <p class="h-sub rv" style="--i:1">Every hour, $SOLUM's creator fees buy real Apple, NVIDIA &amp; Tesla and <b>raffle it to holders</b>. More volume, bigger pot. The more you hold, the better your odds.</p>
       <div class="h-act rv" style="--i:2">
         <a class="btn" href="#how">How it works</a>
-        <a class="lk" href="#fair">See it's provably fair <span class="c">›</span></a>
+        <a class="lk" href="#fair">See how it's fair <span class="c">›</span></a>
       </div>
       <div class="partner rv" style="--i:3;margin-top:26px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="14.5" r="4"/><path d="M12 5.5v2M5.8 9.3l1.2 1.2M18.2 9.3l-1.2 1.2M3.5 15h1.6M18.9 15h1.6M4.5 18.5h15"/></svg>
@@ -353,10 +353,10 @@
   </div>
 </div></section>
 
-<!-- provably fair -->
+<!-- fair by design -->
 <section class="s" id="fair"><div class="shell">
   <div class="s-head">
-    <h2 class="rv">Provably <em>fair</em></h2>
+    <h2 class="rv">Fair <em>by design</em></h2>
     <p class="s-sub rv" style="--i:1">The draw isn't a promise — it's code you can read. Randomness comes from a Switchboard oracle no one can predict or grind, and the winner is settled on-chain.</p>
   </div>
   <div class="fair">
@@ -416,7 +416,7 @@ token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; win
     <div class="wrow rv"><h3>Real stock, not a promise</h3><p>The pot is actual Apple, NVIDIA &amp; Tesla — bought on-chain and verifiable, not an IOU.</p></div>
     <div class="wrow rv"><h3>The flywheel pays you</h3><p>Every trade grows the pot. Holders have a direct reason to bring volume — and volume feeds the pot they're chasing.</p></div>
     <div class="wrow rv"><h3>You never lose your coins</h3><p>It's a raffle, not a stake. Losing a draw costs nothing; you keep every $SOLUM and roll into the next hour.</p></div>
-    <div class="wrow rv"><h3>Fair by design</h3><p>Provable randomness, average-balance odds, a random draw time, and open code. Nothing to trust — everything to verify.</p></div>
+    <div class="wrow rv"><h3>Fair by design</h3><p>Verifiable randomness, average-balance odds, a random draw time, and open code. Nothing to trust — everything to verify.</p></div>
   </div>
 </div></section>
 
