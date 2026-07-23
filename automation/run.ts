@@ -83,11 +83,12 @@ export async function runForever(cfg: Cfg) {
     const twab = new TwabAccumulator(hourStart);
     await seedInitialBalances(conn, cfg.coinMint, twab, hourStart);
     const sub = trackBalances(conn, cfg.coinMint, twab);
-    let potUsd = 0;
+    let potUsd = 0, hourStockBought = 0n;
 
-    // collect creator fees → stock → pot
+    // collect creator fees → buy tokenized stock, held in the review (ops) wallet for the winner
     try {
       const f = await fundHourly(conn, cfg.ops, cfg.stockMint, cfg.opsStockAccount, cfg.refs.potCustody, TOKEN_PROGRAM_ID);
+      hourStockBought = f.stockBought; // exact prize for this hour's winner (base units)
       potUsd = Math.round(f.solCollected * cfg.solPriceUsd);
       console.log(`[fund] +${f.solCollected} SOL → ${f.stockBought} stock (~$${potUsd})`);
     } catch (e: any) {
@@ -127,20 +128,20 @@ export async function runForever(cfg: Cfg) {
       // claim. So this records a *pending claim*; a separate release step fulfils it after the hold.
       await settleDevnet(cfg.prog, cfg.ops, cfg.refs); // switchboard-vrf: request_draw + settle_draw
       const wt = await winningTicketOf(cfg.prog, cfg.refs);
-      // the prize (whole stock shares) currently held for review, read from the ops/review wallet
+      // the prize for this epoch = the stock bought from this hour's fees, held in the review wallet
       let prizeShares = 0;
+      const prizeBaseUnits = hourStockBought.toString();
       try {
-        const revAcct = await getAccount(conn, cfg.opsStockAccount, undefined, cfg.refs.prizeTokenProgram);
-        const mintInfo = await getMint(conn, cfg.refs.prizeMint, undefined, cfg.refs.prizeTokenProgram);
-        prizeShares = Number(revAcct.amount) / 10 ** mintInfo.decimals;
-      } catch { /* fall back to the site's price estimate if the read fails */ }
+        const dec = (await getMint(conn, cfg.refs.prizeMint, undefined, cfg.refs.prizeTokenProgram)).decimals;
+        prizeShares = Number(hourStockBought) / 10 ** dec;
+      } catch { /* leave prizeShares 0; the site falls back to a price estimate */ }
       const { entry } = winnerOf(snap, wt); // who the VRF drew — proven on-chain, not yet paid
       winnerAddr = entry.owner.toBase58();
       const claimableAt = drawAt + 24 * 3600; // 24h QC hold before the winner can claim
       const winRow: WinnerEntry = {
         epoch: Math.floor(hourStart / 3600), hourLabel: label, addr: winnerAddr,
         solumHeld: Number(entry.tickets), totalTickets: Number(snap.total), holders,
-        stock: stockLabel, prizeShares, prizeUsd: potUsd, drawAt: iso(drawAt),
+        stock: stockLabel, prizeShares, prizeBaseUnits, prizeUsd: potUsd, drawAt: iso(drawAt),
         claimableAt: iso(claimableAt), claimed: false, claimTx: null, payoutTx: "",
       };
       writeStatus(cfg.statusFile, {

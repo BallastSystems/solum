@@ -30,6 +30,7 @@ export type WinnerEntry = {
   holders: number; // eligible holders in the draw
   stock: string;
   prizeShares: number; // whole tokenized-stock shares won (the entire pot)
+  prizeBaseUnits: string; // exact token base-unit amount owed — what the claim service pays out
   prizeUsd: number;
   drawAt: string; // ISO — the precise settle time
   claimableAt: string; // ISO — drawAt + 24h; the prize is held in the review wallet until then

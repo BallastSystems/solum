@@ -68,18 +68,22 @@ export async function fundPot(
   );
 }
 
-/** One hourly funding pass: fees → stock → pot. Returns SOL collected and stock added. */
+/** One hourly funding pass: fees → stock, held in the review (ops) wallet. Returns SOL collected and
+ * stock bought — the exact prize for this hour's winner, which stays in the ops wallet through the
+ * 24h quality-control hold and is sent to the winner on claim (see automation/claim.ts). `_potCustody`
+ * is retained for signature compatibility but is unused: the on-chain program is draw-only now, the
+ * prize is not moved into a program vault. */
 export async function fundHourly(
   conn: Connection,
   ops: Keypair,
   stockMint: PublicKey,
   opsStockAccount: PublicKey,
-  potCustody: PublicKey,
+  _potCustody: PublicKey,
   tokenProgram: PublicKey,
 ): Promise<{ solCollected: number; stockBought: bigint }> {
   const lamports = await collectCreatorFees(conn, ops);
   if (lamports <= 0) return { solCollected: 0, stockBought: 0n };
   const stock = await buyStock(conn, ops, lamports, stockMint.toBase58());
-  await fundPot(conn, ops, stockMint, opsStockAccount, potCustody, tokenProgram, stock);
+  // held in the ops/review wallet (opsStockAccount) — NOT moved to the pot custody.
   return { solCollected: lamports / LAMPORTS_PER_SOL, stockBought: stock };
 }
