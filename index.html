@@ -92,14 +92,19 @@
   /* live creator-fee readout */
   .live-fee{display:inline-flex;flex-direction:column;gap:4px;padding:16px 22px;margin-bottom:30px;border:1px solid var(--line-2);border-radius:16px;
     background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(8px)}
-  .live-fee .lab{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
-  .live-fee .lab .d{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:bp 1.8s infinite}
+  .lf-top{font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:9px}
+  .lf-top .d{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:bp 1.8s infinite}
+  .lf-dev{margin-left:auto;font-size:9.5px;letter-spacing:.12em;color:var(--faint);border:1px solid var(--line);border-radius:100px;padding:2px 8px}
   @keyframes bp{0%,100%{opacity:1}50%{opacity:.4}}
   .live-fee .num{font-family:var(--display);font-size:clamp(30px,5vw,52px);font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1;
     background:linear-gradient(120deg,var(--blue-hi),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .live-fee .sub{font-size:12.5px;color:var(--faint)}
-  h1{font-size:clamp(44px,7.6vw,102px);font-weight:500;letter-spacing:-.03em;line-height:.98}
-  h1 em{font-style:normal;color:var(--blue)}
+  .lf-rate{font-size:13px;font-weight:600;color:var(--grn);font-variant-numeric:tabular-nums;margin-top:2px}
+  .lf-rate span{color:var(--faint);font-weight:500}
+  h1{font-size:clamp(46px,7.9vw,108px);font-weight:600;letter-spacing:-.038em;line-height:.95;
+    text-shadow:0 1px 1px rgba(0,0,0,.4),0 4px 34px rgba(0,0,0,.34)}
+  h1 em{font-style:normal;color:var(--blue);text-shadow:0 0 40px color-mix(in srgb,var(--blue) 60%,transparent),0 1px 1px rgba(0,0,0,.3)}
+  @media (prefers-color-scheme:light){h1{text-shadow:0 1px 0 rgba(255,255,255,.6),0 2px 14px rgba(30,45,70,.14)}}
+  :root[data-theme="light"] h1{text-shadow:0 1px 0 rgba(255,255,255,.6),0 2px 14px rgba(30,45,70,.14)}
   .h-sub{max-width:38ch;margin-top:26px;color:var(--dim);font-size:clamp(16px,1.75vw,21px);line-height:1.45;font-weight:400}
   .h-sub b{color:var(--silver);font-weight:600}
   .h-act{display:flex;align-items:center;gap:26px;margin-top:38px;flex-wrap:wrap}
@@ -309,9 +314,9 @@
   <div class="hero-in"><div class="shell">
     <div class="hero-col">
       <div class="live-fee rv">
-        <span class="lab"><span class="d"></span>Live · creator fees → real stock</span>
-        <span class="num" id="feeBig">$0</span>
-        <span class="sub">collected and buying tokenized stock for the next draw · devnet illustrative</span>
+        <div class="lf-top"><span class="d"></span>Creator fees → stock<span class="lf-dev">devnet</span></div>
+        <div class="num" id="feeBig">$0</div>
+        <div class="lf-rate" id="feeRate">+$0<span>/hr into the pot</span></div>
       </div>
       <h1>Hold $SOLUM.<br>Win <em>real&nbsp;stock.</em></h1>
       <p class="h-sub rv" style="--i:1">Every hour, $SOLUM's creator fees buy real Apple, NVIDIA &amp; Tesla — then <b>raffle it to holders</b>. The more you hold, the better your odds.</p>
@@ -701,9 +706,10 @@ token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; win
 
   // --- live creator-fee counter (hero + nav) — illustrative, ticks up to feel live ---
   (function(){
-    var big=document.getElementById("feeBig"),navf=document.getElementById("navFee");
+    var big=document.getElementById("feeBig"),navf=document.getElementById("navFee"),rate=document.getElementById("feeRate");
     var fees=12480 + Math.floor(Date.now()/3.6e6)%5000; // stable-ish base
     function paint(){var s=money(fees);big.textContent=s;navf.textContent=s;}
+    if(rate){var r=310+Math.floor((Date.now()/3.6e6)%540);rate.innerHTML="+$"+r.toLocaleString()+"<span>/hr into the pot</span>";}
     paint();
     if(RM)return;
     setInterval(function(){fees += Math.random()*Math.random()*9;paint();},900);
