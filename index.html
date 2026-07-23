@@ -80,7 +80,8 @@
   .nav-fee{font-size:13px;color:var(--faint);font-weight:500;display:flex;align-items:center;gap:7px}
   .nav-fee b{color:var(--blue);font-weight:700;font-variant-numeric:tabular-nums}
   .nav-fee .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:bp 2s infinite}
-  @media (max-width:900px){.nav-r a.n{display:none}} @media (max-width:520px){.nav-fee{display:none}}
+  @media (max-width:900px){.nav-r a.n{display:none}.nav-r a.n.nav-win{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line-2);color:var(--silver);font-weight:600;font-size:14px}.nav-r a.n.nav-win:hover{border-color:var(--blue);color:var(--silver)}}
+  @media (max-width:520px){.nav-fee{display:none}.nav-r{gap:12px}}
 
   /* HERO */
   .hero{position:relative;min-height:100svh;display:flex;align-items:center;overflow:hidden}
@@ -336,7 +337,7 @@
     <span class="nav-fee"><span class="d"></span>Creator fees <b id="navFee">$0</b></span>
     <a class="n" href="#how">How it works</a>
     <a class="n" href="#fair">Fair by design</a>
-    <a class="n" href="/winners/">Winners</a>
+    <a class="n nav-win" href="/winners/">Winners</a>
     <a class="btn" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">View code</a>
   </span>
 </div></nav>
@@ -487,30 +488,29 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
 
 <!-- recent winners -->
 <section class="s" id="winners"><div class="shell">
-  <div class="s-head"><h2 class="rv">Recent <em>winners</em></h2><p class="s-sub rv" style="--i:1">Every hour pays a real holder, on-chain. Here are the latest — click any of them to verify it yourself.</p></div>
+  <div class="s-head"><h2 class="rv">Recent <em>winners</em></h2><p class="s-sub rv" style="--i:1">Every hour, a real holder wins. Here are the latest — click any of them to verify the draw yourself.</p></div>
   <div class="winners rv" id="winnersList"></div>
   <div class="rv" style="margin-top:26px;text-align:center"><a class="lk" href="/winners/">See every winner in the full register <span class="c">›</span></a></div>
 </div></section>
 
 <!-- proof of everything -->
 <section class="s" id="verify"><div class="shell">
-  <div class="s-head"><h2 class="rv"><em>Proof</em> of everything</h2><p class="s-sub rv" style="--i:1">Nothing here asks for your trust. The reserves, the randomness, and every payout are on-chain and open-source — check them yourself.</p></div>
+  <div class="s-head"><h2 class="rv"><em>Proof</em> of everything</h2><p class="s-sub rv" style="--i:1">The odds, the randomness, and who wins are all on-chain and open-source — check them yourself. Prizes are bought from real creator fees and released to winners after a 24-hour review.</p></div>
   <div class="proofs rv">
-    <div class="pf"><div class="pf-h">Proof of reserves</div><p>The vault holds real tokenized stock, 1:1 — a program account with <b>no private key and no withdraw path</b>. Not the team, not a hacked admin, can move it. Stock is issued by our partner <b>Sunrise Financial</b>.</p><a class="lk" href="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet" target="_blank" rel="noopener">View the program on-chain <span class="c">›</span></a></div>
-    <div class="pf"><div class="pf-h">Every draw is a public trail</div><p>Snapshot root → VRF randomness → winning ticket → payout. Four public transactions anyone can replay — no hidden steps, nothing off-chain but the published snapshot.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See how a draw verifies <span class="c">›</span></a></div>
-    <div class="pf"><div class="pf-h">Open source, every line</div><p>The undrainable vault, the Switchboard VRF draw, and the TWAB odds are all public. Read them, run the tests, fork it.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the code <span class="c">›</span></a></div>
+    <div class="pf"><div class="pf-h">Real stock, bought on-chain</div><p>Every prize is real tokenized stock, bought on-chain from the coin's own creator fees and held in Solum's review wallet — publicly viewable and shown here in real time. Issued by our partner <b>Sunrise Financial</b>.</p><a class="lk" href="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet" target="_blank" rel="noopener">View the program on-chain <span class="c">›</span></a></div>
+    <div class="pf"><div class="pf-h">Every draw is a public trail</div><p>Snapshot root → VRF randomness → winning ticket. Who wins is settled in public transactions anyone can replay — decided on-chain before any prize moves.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See how a draw verifies <span class="c">›</span></a></div>
+    <div class="pf"><div class="pf-h">Open source, every line</div><p>The Switchboard VRF draw, the TWAB odds, and the whole program are public. Read them, run the tests, fork it.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the code <span class="c">›</span></a></div>
     <div class="pf"><div class="pf-h">Independently audited</div><p>OtterSec is reviewing the full protocol. The report will be published here — until then, we say plainly it's pre-audit.</p><a class="lk" href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Follow the audit <span class="c">›</span></a></div>
   </div>
   <div class="code rv" style="margin-top:30px">
-    <div class="code-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="fn">solum · the pot can only reach the winner</span></div>
-<pre><span class="cm">// There is NO withdraw, admin_withdraw, or sweep instruction anywhere in</span>
-<span class="cm">// the program. The only way stock leaves the vault is a payout to the</span>
-<span class="cm">// holder the VRF drew — proven by their Merkle ticket:</span>
-<span class="fnx">require</span>!(<span class="fnx">ticket_in_range</span>(jackpot.winning_ticket, start, tickets)?, NotWinner);
-token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; winner_prize_account, pot)?;
+    <div class="code-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="fn">solum · who wins is settled on-chain, before any prize moves</span></div>
+<pre><span class="cm">// The winner is fixed on-chain from Switchboard VRF and the committed</span>
+<span class="cm">// holder snapshot — a public transaction anyone can replay:</span>
+<span class="kw">let</span> winning_ticket = <span class="ty">u64</span>::from_le_bytes(randomness[..<span class="num">8</span>]) % total;  <span class="cm">// VRF · un-riggable</span>
+<span class="fnx">require</span>!(<span class="fnx">ticket_in_range</span>(winning_ticket, start, tickets)?, NotWinner);
 
-<span class="cm">// winner_prize_account is constrained on-chain to `token::authority = winner`,</span>
-<span class="cm">// so the pot can never land anywhere but the drawn holder's own wallet.</span></pre>
+<span class="cm">// From there the prize is held for a 24-hour quality-control review,</span>
+<span class="cm">// then sent to that exact wallet when the winner claims it.</span></pre>
   </div>
 </div></section>
 
@@ -527,11 +527,11 @@ token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; win
 
 <!-- proof -->
 <section class="s" id="proof"><div class="shell">
-  <div class="s-head"><h2 class="rv">Built to be <em>trusted</em></h2><p class="s-sub rv" style="--i:1">The pot is only worth chasing if it can't be touched. So we hammered it.</p></div>
+  <div class="s-head"><h2 class="rv">Built to be <em>trusted</em></h2><p class="s-sub rv" style="--i:1">A raffle is only worth chasing if the draw can't be rigged. So we hammered it.</p></div>
   <div class="spec rv">
     <div class="sp"><div class="v" data-count="9800"><small>+</small></div><div class="k">Fuzzed ops, zero violations</div></div>
     <div class="sp"><div class="v" data-count="89"></div><div class="k">Tests, all green</div></div>
-    <div class="sp"><div class="v" data-count="0"></div><div class="k">Ways to drain the pot</div></div>
+    <div class="sp"><div class="v" data-count="0"></div><div class="k">Ways to rig a draw</div></div>
     <div class="sp"><div class="v" style="font-size:clamp(28px,3.6vw,42px)">OtterSec</div><div class="k">Audit in progress</div></div>
   </div>
   <p class="cap rv">Open-source · devnet · pre-audit. Audit tracked at <b>github.com/BallastSystems/solum-audit</b>.</p>

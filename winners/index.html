@@ -149,6 +149,7 @@
   .sort{height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel);color:var(--dim);
     font-family:var(--sans);font-size:13px;cursor:pointer;transition:.18s}
   .sort:hover{color:var(--silver);border-color:var(--blue)}
+  @media(max-width:600px){.ctrls{gap:10px}.spacer{display:none}.search{min-width:0;flex:1 1 100%;order:-1}.chips{width:100%}.chips .chip{flex:0 0 auto}.sort{flex:1 1 auto;text-align:center}}
 
   /* register */
   .reg{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel)}
@@ -184,7 +185,7 @@
   .stkchip svg{width:15px;height:15px;flex:none}
   .c-prize .amt{font-family:var(--code);font-weight:600;font-size:14px}
   .c-prize .amt small{display:block;font-size:11px;color:var(--faint);font-weight:400}
-  .c-proof{text-align:right}
+  .c-claim{display:flex;justify-content:flex-end;align-items:center}
   .vlink{font-size:12.5px;font-weight:600;color:var(--blue);white-space:nowrap;transition:color .2s}
   .vlink:hover{color:var(--blue-hi)}
   .empty{padding:44px 20px;text-align:center;color:var(--faint);font-size:14px}
@@ -203,7 +204,7 @@
     .c-idx::before,.c-win::before{display:none}
     .c-idx{order:-1;color:var(--faint)}
     .c-win{justify-content:flex-start;gap:9px;padding-bottom:10px;margin-bottom:8px;border-bottom:1px solid var(--line)}
-    .c-held,.c-odds,.c-prize,.c-proof{text-align:right}
+    .c-held,.c-odds,.c-prize,.c-claim{text-align:right}
     .c-odds .bar{display:none}
     .c-prize{gap:8px}
   }
@@ -215,6 +216,40 @@
   .foot .lks{display:flex;gap:20px;font-size:14px;color:var(--dim)}
   .foot .lks a:hover{color:var(--silver)}
   .disc{margin-top:22px;font-size:12.5px;color:var(--faint);line-height:1.6;max-width:720px}
+  /* claim lifecycle */
+  .claim-how{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  @media(max-width:680px){.claim-how{grid-template-columns:1fr}}
+  .ch{background:var(--panel);padding:22px 22px 20px;position:relative}
+  .ch .num{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--code);font-size:12px;font-weight:600;background:var(--blue-glow);color:var(--blue);margin-bottom:13px}
+  .ch h3{font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .ch p{margin-top:5px;font-size:13px;color:var(--dim);line-height:1.5}
+  .ch .hold{color:var(--gold);font-weight:600}
+  /* register claim cell */
+  .cl-lock{display:inline-flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:12px;color:var(--dim)}
+  .cl-lock b{font-family:var(--code);font-size:13px;color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+  .cl-lock small{font-size:10.5px;color:var(--faint)}
+  .cl-btn{height:32px;padding:0 15px;border-radius:9px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;
+    color:#08120C;background:linear-gradient(180deg,color-mix(in srgb,var(--grn) 92%,#fff),var(--grn));transition:transform .15s,box-shadow .2s;box-shadow:0 6px 18px -8px color-mix(in srgb,var(--grn) 55%,transparent)}
+  .cl-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px -8px color-mix(in srgb,var(--grn) 55%,transparent)}
+  .cl-done{display:inline-flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:12.5px;color:var(--grn);font-weight:600}
+  .cl-done a{font-size:11px;color:var(--faint);font-weight:400}
+  .cl-done a:hover{color:var(--blue)}
+  /* featured claim block */
+  .feat-claim{margin-top:24px;padding-top:22px;border-top:1px solid var(--line);display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .fc-lock{display:flex;flex-direction:column;gap:3px}
+  .fc-lock .k{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .fc-lock .cd{font-family:var(--code);font-size:26px;font-weight:600;color:var(--gold);letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1}
+  .fc-btn{height:46px;padding:0 24px;border-radius:12px;border:none;cursor:pointer;font-family:var(--sans);font-size:15px;font-weight:600;
+    color:#08120C;background:linear-gradient(180deg,color-mix(in srgb,var(--grn) 92%,#fff),var(--grn));box-shadow:0 10px 28px -10px color-mix(in srgb,var(--grn) 55%,transparent)}
+  .fc-note{font-size:12.5px;color:var(--faint);max-width:290px;line-height:1.5}
+  .fc-done{display:inline-flex;align-items:center;gap:9px;font-size:16px;font-weight:600;color:var(--grn)}
+  .fc-done a{font-size:13px;font-weight:500;color:var(--dim)}
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(18px);z-index:80;opacity:0;pointer-events:none;
+    background:var(--raise);border:1px solid var(--line-2);color:var(--silver);font-size:13.5px;padding:12px 18px;border-radius:12px;
+    box-shadow:0 22px 54px -22px rgba(0,0,0,.65);transition:.28s var(--ease);max-width:min(90vw,440px);text-align:center;line-height:1.45}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .mono{color:var(--blue-hi)}
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -262,8 +297,17 @@
 </header>
 
 <section id="latest"><div class="shell">
-  <div class="lead"><h2>The <em>latest</em> winner</h2><p>Refreshed the moment a draw settles. The pot is pushed straight to the winner's wallet — no claim step.</p></div>
+  <div class="lead"><h2>The <em>latest</em> winner</h2><p>Refreshed the moment a draw settles. The prize is held for a 24-hour quality-control review, then the winner claims it.</p></div>
   <div class="feat" id="feat"></div>
+</div></section>
+
+<section id="claiming"><div class="shell">
+  <div class="lead"><h2>How <em>claiming</em> works</h2><p>You never lose your coins. Winning just adds a prize you collect after a short review.</p></div>
+  <div class="claim-how">
+    <div class="ch"><div class="num">1</div><h3>You're drawn</h3><p>Each hour a winner is picked on-chain by Switchboard VRF from the committed holder snapshot. Anyone can verify the draw.</p></div>
+    <div class="ch"><div class="num">2</div><h3>A <span class="hold">24-hour</span> review hold</h3><p>Your prize is held in Solum's review wallet for 24 hours of quality-control checks. A live countdown shows exactly when it opens.</p></div>
+    <div class="ch"><div class="num">3</div><h3>Claim, sent straight to you</h3><p>When the clock hits zero, connect your winning wallet and claim — the stock is sent directly to you from the review wallet.</p></div>
+  </div>
 </div></section>
 
 <section id="records"><div class="shell">
@@ -283,7 +327,7 @@
   <div class="reg"><div class="reg-scroll"><div class="reg-in cols">
     <div class="reg-head">
       <span>#</span><span>Settled (EST)</span><span>Winner</span><span class="r">$SOLUM held</span>
-      <span class="r">Win odds</span><span class="r">Prize won</span><span class="r">Proof</span>
+      <span class="r">Win odds</span><span class="r">Prize won</span><span class="r">Claim</span>
     </div>
     <div id="rows"></div>
   </div></div>
@@ -301,8 +345,10 @@
       <a href="https://x.com/solumhq" target="_blank" rel="noopener">X</a>
     </span>
   </div>
-  <p class="disc">Every entry is reconstructed from the on-chain snapshot root and the VRF draw; the payout link is the actual <b>claim_prize</b> transaction. Odds are the winner's share of the hour's ticket pool — their time-averaged $SOLUM balance over the whole hour, so a last-second buy can't tilt a draw. Figures shown before mainnet are illustrative devnet data; once the draw bot is live this page reads the published record directly. Open-source · devnet · pre-audit.</p>
+  <p class="disc">Who wins is drawn on-chain from the committed holder snapshot and Switchboard VRF — anyone can verify the draw. Each prize is then held in Solum's review wallet for a 24-hour quality-control period; when the countdown ends the winner connects their wallet and the stock is sent directly to them. Odds are the winner's share of the hour's ticket pool — their time-averaged $SOLUM balance over the whole hour, so a last-second buy can't tilt a draw. Figures shown before mainnet are illustrative devnet data; once the draw bot is live this page reads the published record directly. Open-source · devnet · pre-audit.</p>
 </div></footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function(){
@@ -345,6 +391,11 @@
   function estDate(ts){return new Date(ts).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",year:"numeric"});}
   function estClock(ts){return new Date(ts).toLocaleString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true})+" EST";}
   function money(n){return "$"+fmt(n);}
+  var HOLD=24*3600*1000; // 24-hour QC custody hold before a prize can be claimed
+  function claimAt(w){return w.claimableAt?Date.parse(w.claimableAt):(Date.parse(w.drawAt)+HOLD);}
+  function msLeft(w){return claimAt(w)-Date.now();}
+  function statusOf(w){if(w.claimed)return "claimed";return msLeft(w)>0?"locked":"claimable";}
+  function cdown(ms){if(ms<=0)return "00:00:00";var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;function p(n){return(n<10?"0":"")+n;}return p(h)+":"+p(m)+":"+p(ss);}
 
   // ---- build the dataset: seeded illustrative record; overwritten by winners.json when live ----
   var HOUR=3600000, nowH=Math.floor(Date.now()/HOUR);
@@ -359,9 +410,10 @@
       var prizeUsd=Math.round(170+Math.pow(rng(),1.4)*1700);
       var shares=+(prizeUsd/meta.px).toFixed(meta.px>800?4:3);
       var secs=((rng()*3600)|0); // random moment within the hour → precise time
-      var addr=b58(rng,44);
-      out.push({epoch:nowH-k,drawAt:new Date(h*HOUR+secs*1000).toISOString(),addr:addr,
-        solumHeld:held,totalTickets:total,holders:holders,stock:stock,prizeShares:shares,prizeUsd:prizeUsd,payoutTx:null});
+      var addr=b58(rng,44), drawMs=h*HOUR+secs*1000;
+      out.push({epoch:nowH-k,drawAt:new Date(drawMs).toISOString(),addr:addr,
+        solumHeld:held,totalTickets:total,holders:holders,stock:stock,prizeShares:shares,prizeUsd:prizeUsd,payoutTx:null,
+        claimableAt:new Date(drawMs+HOLD).toISOString(),claimed:(k>26),claimTx:null});
     }
     return out;
   }
@@ -372,7 +424,8 @@
     return {epoch:w.epoch!=null?w.epoch:0,drawAt:w.drawAt,addr:w.addr,
       solumHeld:w.solumHeld!=null?w.solumHeld:(w.tickets||0),
       totalTickets:w.totalTickets!=null?w.totalTickets:0,holders:w.holders||0,
-      stock:w.stock,prizeShares:shares,prizeUsd:w.prizeUsd,payoutTx:w.payoutTx||null};
+      stock:w.stock,prizeShares:shares,prizeUsd:w.prizeUsd,payoutTx:w.payoutTx||null,
+      claimableAt:w.claimableAt||null,claimed:!!w.claimed,claimTx:w.claimTx||null};
   }
 
   var DATA=demo(), LIVE=false;
@@ -407,6 +460,15 @@
 
   function stkSvg(stock,cls){var m=STK[stock];return '<svg class="'+(cls||"")+'" viewBox="0 0 24 24" style="fill:'+m.c+'"><use href="#'+m.lg+'"/></svg>';}
 
+  function featClaim(w){var st=statusOf(w);
+    if(st==="locked")return '<div class="feat-claim"><div class="fc-lock"><span class="k">Claim opens in</span><span class="cd" data-cd data-at="'+claimAt(w)+'">'+cdown(msLeft(w))+'</span></div><span class="fc-note">Held in Solum\'s review wallet for a 24-hour quality-control check, then sent straight to the winner.</span></div>';
+    if(st==="claimable")return '<div class="feat-claim"><button class="fc-btn cl-act" data-addr="'+esc(w.addr)+'">Claim your prize</button><span class="fc-note">Connect the winning wallet — the stock is sent directly to you from the review wallet.</span></div>';
+    return '<div class="feat-claim"><span class="fc-done">✓ Claimed<a href="'+(w.claimTx?txLink(w.claimTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span></div>';}
+  function claimCell(w){var st=statusOf(w);
+    if(st==="locked")return '<span class="cl-lock"><b data-cd data-at="'+claimAt(w)+'">'+cdown(msLeft(w))+'</b><small>in QC review</small></span>';
+    if(st==="claimable")return '<button class="cl-btn cl-act" data-addr="'+esc(w.addr)+'">Claim</button>';
+    return '<span class="cl-done">Claimed ✓<a href="'+(w.claimTx?txLink(w.claimTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span>';}
+
   function renderFeat(){
     var w=DATA.slice().sort(function(a,b){return b.epoch-a.epoch;})[0]; if(!w)return;
     var m=STK[w.stock], odds=w.totalTickets?(w.solumHeld/w.totalTickets*100):0, oneIn=odds?Math.round(100/odds):0;
@@ -421,7 +483,7 @@
           '<div class="fm"><div class="k">Won against</div><div class="v">'+odds.toFixed(2)+'% odds · 1 in '+fmt(oneIn)+'</div></div>'+
           '<div class="fm"><div class="k">Settled</div><div class="v">'+estClock(w.drawAt)+'</div></div>'+
         '</div>'+
-        '<a class="feat-verify" href="'+(w.payoutTx?txLink(w.payoutTx):EXPL_ADDR)+'" target="_blank" rel="noopener">Verify on-chain ↗</a>'+
+        featClaim(w)+
       '</div>'+
       '<div class="feat-r"><div class="feat-halo" style="background:'+m.c+'"></div>'+stkSvg(w.stock,"feat-logo")+
         '<span class="feat-tick">'+estDate(w.drawAt)+'</span></div>'+
@@ -475,7 +537,7 @@
       '<div class="c-odds" data-l="Win odds"><div class="p">'+odds.toFixed(2)+'%</div><div class="bar"><i style="width:'+bar+'%"></i></div><div class="oneIn">1 in '+fmt(oneIn)+'</div></div>'+
       '<div class="c-prize" data-l="Prize won"><span class="stkchip" style="color:'+m.c+'">'+stkSvg(w.stock)+w.stock+'</span>'+
         '<span class="amt" style="color:var(--silver)">'+money(w.prizeUsd)+'<small>'+w.prizeShares+' sh</small></span></div>'+
-      '<div class="c-proof" data-l="Proof"><a class="vlink" href="'+(w.payoutTx?txLink(w.payoutTx):EXPL_ADDR)+'" target="_blank" rel="noopener">verify ↗</a></div>'+
+      '<div class="c-claim" data-l="Claim">'+claimCell(w)+'</div>'+
       '</div>';
   }
   function renderRows(){
@@ -491,6 +553,24 @@
 
   function renderAll(){renderBand();renderFeat();renderTrio();chipRow();renderRows();}
   renderAll();
+
+  // ---- claim: live countdown ticker + wallet-connect claim ----
+  function toast(html){var t=document.getElementById("toast");t.innerHTML=html;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove("on");},4600);}
+  function tick(){var flip=false;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-cd]"),function(el){var ms=(+el.getAttribute("data-at"))-Date.now();el.textContent=cdown(ms);if(ms<=0)flip=true;});
+    if(flip){renderFeat();renderRows();} // a hold just elapsed → re-render so it flips to claimable
+  }
+  setInterval(tick,1000);
+  document.addEventListener("click",function(e){var b=e.target&&e.target.closest?e.target.closest(".cl-act"):null;if(b)onClaim(b.getAttribute("data-addr"));});
+  function onClaim(addr){
+    var sol=window.solana;
+    if(!sol||!sol.isPhantom){toast("Install a Solana wallet like <b>Phantom</b> to claim your prize.");return;}
+    sol.connect().then(function(res){
+      var pk=res.publicKey.toString();
+      if(pk!==addr){toast("This prize belongs to <span class=\"mono\">"+shortA(addr)+"</span>. Connect that wallet to claim it.");return;}
+      toast("Wallet verified ✓ — your prize will be sent to <span class=\"mono\">"+shortA(addr)+"</span> from the review wallet. Live at launch.");
+    }).catch(function(){toast("Wallet connection cancelled.");});
+  }
 
   // go live off the published record if present
   try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
