@@ -34,7 +34,7 @@ const VAULT_A = 400_000;
 const VAULT_B = 100_000;
 const REDEEM = 250_000;
 
-describe("ballast :: redeem floor", () => {
+describe("solum :: redeem floor", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.Solum as Program<Solum>;

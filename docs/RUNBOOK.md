@@ -5,7 +5,7 @@ Everything here either configures the vault or **adds** backing — nothing can 
 
 > Devnet only for now. `export ANCHOR_PROVIDER_URL=<rpc>` and
 > `export ANCHOR_WALLET=<your-keypair.json>` first. Build the CLI once: `npm run build:cli`.
-> Then run commands as `npm run ballast -- <command> …`.
+> Then run commands as `npm run solum -- <command> …`.
 
 ## 1. Launch your coin on pump.fun
 Launch normally. It's a plain SPL coin; you remain the creator and keep **100% of creator
@@ -15,7 +15,7 @@ fees** — Solum never touches them. Copy the coin's **mint address**.
 Allowlist the tokenized stocks that may ever back it (comma-separated mints):
 
 ```sh
-npm run ballast -- init-vault <COIN_MINT> <AAPLx_MINT>,<NVDAx_MINT>,<TSLAx_MINT>
+npm run solum -- init-vault <COIN_MINT> <AAPLx_MINT>,<NVDAx_MINT>,<TSLAx_MINT>
 ```
 
 You become the vault admin. The vault is a program-derived account — **no private key for it
@@ -26,7 +26,7 @@ Used only as a *floor* when swapping SOL→stock via `add_backing`; direct depos
 it, but the dashboard uses it to value the vault. Price is whole quote units per whole share.
 
 ```sh
-npm run ballast -- set-price <COIN_MINT> <AAPLx_MINT> 150      # 1 AAPLx = $150
+npm run solum -- set-price <COIN_MINT> <AAPLx_MINT> 150      # 1 AAPLx = $150
 ```
 
 *(Devnet uses an admin-published price. Production reads a Pyth feed — same guard, different
@@ -38,7 +38,7 @@ Every deposit raises the floor and emits an on-chain event, so each buyback is p
 verifiable.
 
 ```sh
-npm run ballast -- deposit <COIN_MINT> <AAPLx_MINT> 12        # deposit 12 shares
+npm run solum -- deposit <COIN_MINT> <AAPLx_MINT> 12        # deposit 12 shares
 ```
 
 Do this whenever you want to raise the floor. There is no schedule and no obligation — but
@@ -46,7 +46,7 @@ every deposit is visible, so consistency is the reputation.
 
 ## 5. Verify — anyone can
 ```sh
-npm run ballast -- reserves <COIN_MINT>
+npm run solum -- reserves <COIN_MINT>
 ```
 Prints supply, each stock's value, total reserves, and the redeemable floor per token — all
 read straight from the chain. This is the same computation the dashboard shows.

@@ -6,7 +6,7 @@ mainnet.**
 
 ## Scope
 
-- **In scope:** `programs/ballast` — the vault program. Program id
+- **In scope:** `programs/solum` — the vault program. Program id
   `A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU`. Anchor 0.31.1, Solana SBF (rustc 1.79).
 - **Out of scope:** `programs/mock-venue` is a TEST-ONLY constant-rate AMM used to exercise
   `add_backing`; it is never deployed to mainnet. The pump.fun program itself (the coin is a
