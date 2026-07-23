@@ -63,7 +63,7 @@ async function main() {
     program.methods.setPause(true).accounts({ config: opConfig, admin: attacker.publicKey }).signers([attacker]).rpc());
 
   let failed = 0;
-  console.log("\n=== ballast :: hardening (security-review fixes) ===");
+  console.log("\n=== solum :: hardening (security-review fixes) ===");
   for (const r of results) { console.log(`  ${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  — " + r.detail : ""}`); if (!r.ok) failed++; }
   console.log(`\n${results.length - failed}/${results.length} passed`);
   process.exit(failed ? 1 : 0);

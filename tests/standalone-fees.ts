@@ -40,15 +40,15 @@ async function main() {
   anchor.setProvider(provider);
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
-  const ballast = new anchor.Program(
+  const solum = new anchor.Program(
     JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8")) as anchor.Idl, provider);
 
   // --- create a transfer-fee mint whose authorities are the fee_authority PDA ---
   const mintKp = Keypair.generate();
   const mint = mintKp.publicKey;
-  const [feeAuth] = PublicKey.findProgramAddressSync([Buffer.from("fee"), mint.toBuffer()], ballast.programId);
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), mint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
-  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), mint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
+  const [feeAuth] = PublicKey.findProgramAddressSync([Buffer.from("fee"), mint.toBuffer()], solum.programId);
+  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), mint.toBuffer(), payer.publicKey.toBuffer()], solum.programId);
+  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), mint.toBuffer(), payer.publicKey.toBuffer()], solum.programId);
 
   const mintLen = getMintLen([ExtensionType.TransferFeeConfig]);
   const lamports = await conn.getMinimumBalanceForRentExemption(mintLen);
@@ -59,7 +59,7 @@ async function main() {
   ), [payer, mintKp]);
 
   // vault for this mint (stocks/venue irrelevant to harvest — dummy values)
-  await ballast.methods
+  await solum.methods
     .initializeVault(FEE_BPS, 500, Keypair.generate().publicKey, Keypair.generate().publicKey, Keypair.generate().publicKey, [Keypair.generate().publicKey])
     .accounts({ admin: payer.publicKey, tokenMint: mint })
     .rpc();
@@ -80,19 +80,19 @@ async function main() {
   const attacker = Keypair.generate();
   const attackerAta = await createAssociatedTokenAccount(conn, payer, mint, attacker.publicKey, {}, TP);
   await expectRevert("harvest to attacker account rejected", "BadVaultOwner", () =>
-    ballast.methods.harvestFees()
+    solum.methods.harvestFees()
       .accounts({ config: configPda, tokenMint: mint, feeAuthority: feeAuth, vaultAuthority: vaultAuth, feeVault: attackerAta, tokenProgram: TP })
       .rpc());
 
   // --- HONEST: harvest into the vault fee account ---
-  await ballast.methods.harvestFees()
+  await solum.methods.harvestFees()
     .accounts({ config: configPda, tokenMint: mint, feeAuthority: feeAuth, vaultAuthority: vaultAuth, feeVault, tokenProgram: TP })
     .rpc();
   const got = Number((await getAccount(conn, feeVault, undefined, TP)).amount);
   check("withheld fees land in the vault fee account", got === EXPECTED_FEE, `got ${got}, want ${EXPECTED_FEE}`);
 
   let failed = 0;
-  console.log("\n=== ballast :: transfer-fee harvest ===");
+  console.log("\n=== solum :: transfer-fee harvest ===");
   for (const r of results) {
     console.log(`  ${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  — " + r.detail : ""}`);
     if (!r.ok) failed++;

@@ -119,7 +119,7 @@ async function main() {
   check("floor preserved", vaultLeftA / (SUPPLY - REDEEM) >= VAULT_A / SUPPLY);
 
   let failed = 0;
-  console.log("\n=== ballast :: pump.fun model (deposit + dual-program redeem) ===");
+  console.log("\n=== solum :: pump.fun model (deposit + dual-program redeem) ===");
   for (const r of results) { console.log(`  ${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  — " + r.detail : ""}`); if (!r.ok) failed++; }
   console.log(`\n${results.length - failed}/${results.length} passed`);
   process.exit(failed ? 1 : 0);
