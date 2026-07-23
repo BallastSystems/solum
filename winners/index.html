@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Winners · Solum</title>
+<meta name="description" content="Every Solum draw, on the record — who won, how much $SOLUM they held, the exact time, and a link to verify each payout on-chain."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ink:#0F1520; --ink-2:#131A26; --raise:#172030; --panel:#10161F;
+    --silver:#E6EAF2; --dim:#9AA6B8; --faint:#5C6675; --line:rgba(200,214,235,.10); --line-2:rgba(200,214,235,.18);
+    --blue:#6E9BD8; --blue-hi:#98BEEC; --blue-deep:#4E7AB8; --blue-glow:rgba(110,155,216,.18);
+    --steel:#AEB9CC; --cool:#93A2B8; --grn:#6BC79A; --gold:#E2B45A;
+    --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --code:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  @media (prefers-color-scheme:light){:root{
+    --ink:#F4F6FA; --ink-2:#FAFBFD; --raise:#FFFFFF; --panel:#FFFFFF;
+    --silver:#18202C; --dim:#5A6575; --faint:#98A4B8; --line:rgba(30,45,70,.11); --line-2:rgba(30,45,70,.2);
+    --blue:#3163B0; --blue-hi:#4A82D0; --blue-deep:#244C88; --blue-glow:rgba(46,111,199,.14);
+    --steel:#5E6E88; --cool:#5E6E88; --grn:#2E9E78; --gold:#B98A2E;
+  }}
+  :root[data-theme="light"]{
+    --ink:#F4F6FA; --ink-2:#FAFBFD; --raise:#FFFFFF; --panel:#FFFFFF;
+    --silver:#18202C; --dim:#5A6575; --faint:#98A4B8; --line:rgba(30,45,70,.11); --line-2:rgba(30,45,70,.2);
+    --blue:#3163B0; --blue-hi:#4A82D0; --blue-deep:#244C88; --blue-glow:rgba(46,111,199,.14);
+    --steel:#5E6E88; --cool:#5E6E88; --grn:#2E9E78; --gold:#B98A2E;
+  }
+  :root[data-theme="dark"]{
+    --ink:#0F1520; --ink-2:#131A26; --raise:#172030; --panel:#10161F;
+    --silver:#E6EAF2; --dim:#9AA6B8; --faint:#5C6675; --line:rgba(200,214,235,.10); --line-2:rgba(200,214,235,.18);
+    --blue:#6E9BD8; --blue-hi:#98BEEC; --blue-deep:#4E7AB8; --blue-glow:rgba(110,155,216,.18);
+    --steel:#AEB9CC; --cool:#93A2B8; --grn:#6BC79A; --gold:#E2B45A;
+  }
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--ink);color:var(--silver);font-family:var(--sans);font-size:16px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  .shell{width:100%;max-width:1180px;margin:0 auto;padding:0 clamp(18px,4vw,40px)}
+  a{color:inherit;text-decoration:none}
+  b,strong{font-weight:600}
+  .tnum{font-variant-numeric:tabular-nums}
+  .mono{font-family:var(--code)}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    background:color-mix(in srgb,var(--ink) 78%,transparent);border-bottom:1px solid transparent;transition:border-color .3s,background .3s}
+  nav.on{border-bottom-color:var(--line);background:color-mix(in srgb,var(--ink) 90%,transparent)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .wm{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.01em}
+  .wm svg{width:22px;height:22px}
+  .nav-r{display:flex;align-items:center;gap:clamp(12px,2.2vw,26px)}
+  .n{font-size:14px;color:var(--dim);transition:color .2s}
+  .n:hover{color:var(--silver)}
+  @media(max-width:640px){.n.hideS{display:none}}
+  .tgl{width:32px;height:32px;border-radius:9px;border:1px solid var(--line-2);background:transparent;color:var(--dim);
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:color .2s,border-color .2s}
+  .tgl:hover{color:var(--silver);border-color:var(--blue)}
+  .tgl svg{width:15px;height:15px}
+  .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 15px;border-radius:10px;font-size:13.5px;font-weight:600;
+    background:linear-gradient(180deg,var(--blue-hi),var(--blue));color:#0A1018;transition:transform .2s,box-shadow .2s;box-shadow:0 6px 22px -8px var(--blue-glow)}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px -10px var(--blue-glow)}
+
+  /* header */
+  header{position:relative;padding:clamp(46px,8vw,96px) 0 clamp(30px,5vw,54px);overflow:hidden}
+  .glow{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 78% -10%,var(--blue-glow),transparent 60%),radial-gradient(90% 60% at 8% 0%,color-mix(in srgb,var(--grn) 8%,transparent),transparent 55%)}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:18px}
+  .eyebrow .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:bp 1.6s infinite}
+  @keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+  h1{font-size:clamp(42px,7vw,86px);font-weight:600;letter-spacing:-.035em;line-height:.98;
+    text-shadow:0 1px 1px rgba(0,0,0,.32),0 4px 30px rgba(0,0,0,.28)}
+  h1 em{font-style:normal;color:var(--blue);text-shadow:0 0 38px color-mix(in srgb,var(--blue) 55%,transparent)}
+  :root[data-theme="light"] h1{text-shadow:0 1px 0 rgba(255,255,255,.6),0 2px 14px rgba(30,45,70,.12)}
+  .sub{max-width:620px;margin-top:20px;font-size:clamp(15px,1.7vw,18px);color:var(--dim);line-height:1.6}
+
+  /* records stat band */
+  .band{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:clamp(34px,5vw,54px);
+    background:var(--line);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+  @media(max-width:680px){.band{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--panel);padding:clamp(18px,2.4vw,26px) clamp(16px,2vw,24px)}
+  .stat .k{font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+  .stat .v{margin-top:9px;font-size:clamp(24px,3.4vw,38px);font-weight:600;letter-spacing:-.02em;line-height:1}
+  .stat .v small{font-size:.5em;font-weight:500;color:var(--dim);letter-spacing:0}
+  .stat .cap{margin-top:6px;font-size:12.5px;color:var(--dim)}
+
+  section{padding:clamp(30px,5vw,58px) 0}
+  .lead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+  h2{font-size:clamp(22px,3vw,30px);font-weight:600;letter-spacing:-.02em}
+  h2 em{font-style:normal;color:var(--blue)}
+  .lead p{font-size:14px;color:var(--dim);max-width:440px}
+
+  /* featured winner */
+  .feat{position:relative;border:1px solid var(--line-2);border-radius:22px;overflow:hidden;
+    background:linear-gradient(150deg,color-mix(in srgb,var(--blue) 9%,var(--panel)),var(--ink-2) 74%);
+    box-shadow:0 40px 120px -60px var(--blue-glow)}
+  .feat-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}
+  @media(max-width:760px){.feat-grid{grid-template-columns:1fr}}
+  .feat-l{padding:clamp(24px,3vw,38px)}
+  .feat-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--grn);margin-bottom:16px}
+  .feat-tag .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 9px var(--grn)}
+  .feat-prize{font-size:clamp(40px,6.4vw,66px);font-weight:600;letter-spacing:-.03em;line-height:1;
+    background:linear-gradient(120deg,var(--silver),var(--blue-hi));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .feat-shares{margin-top:10px;font-size:16px;color:var(--dim)}
+  .feat-shares b{color:var(--silver)}
+  .feat-meta{display:grid;grid-template-columns:1fr 1fr;gap:14px 26px;margin-top:26px;padding-top:24px;border-top:1px solid var(--line)}
+  .fm .k{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .fm .v{margin-top:4px;font-size:15px;font-weight:500}
+  .fm .v.mono{font-size:13.5px}
+  .feat-verify{margin-top:26px;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px;border-radius:11px;
+    border:1px solid var(--line-2);font-size:13.5px;font-weight:600;color:var(--silver);transition:border-color .2s,background .2s}
+  .feat-verify:hover{border-color:var(--blue);background:var(--blue-glow)}
+  .feat-r{position:relative;display:flex;align-items:center;justify-content:center;padding:30px;border-left:1px solid var(--line)}
+  @media(max-width:760px){.feat-r{border-left:none;border-top:1px solid var(--line);min-height:200px}}
+  .feat-logo{width:clamp(120px,20vw,190px);height:clamp(120px,20vw,190px);filter:drop-shadow(0 20px 50px rgba(0,0,0,.4))}
+  .feat-halo{position:absolute;width:70%;aspect-ratio:1;border-radius:50%;filter:blur(60px);opacity:.4}
+  .feat-tick{position:absolute;bottom:20px;right:24px;font-family:var(--code);font-size:12px;color:var(--faint)}
+
+  /* records trio */
+  .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.trio{grid-template-columns:1fr}}
+  .rec{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:22px 22px 20px}
+  .rec .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    background:var(--blue-glow);color:var(--blue);margin-bottom:14px}
+  .rec .ic svg{width:18px;height:18px}
+  .rec .k{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .rec .v{margin-top:6px;font-size:clamp(22px,3vw,28px);font-weight:600;letter-spacing:-.02em}
+  .rec .sub{margin-top:6px;font-size:13px;color:var(--dim)}
+  .rec .sub .mono{color:var(--steel)}
+
+  /* controls */
+  .ctrls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--line-2);background:transparent;color:var(--dim);
+    font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.18s}
+  .chip svg{width:14px;height:14px}
+  .chip:hover{color:var(--silver);border-color:var(--blue)}
+  .chip.on{color:#0A1018;background:var(--silver);border-color:var(--silver);font-weight:600}
+  .spacer{flex:1 1 auto}
+  .search{position:relative;min-width:190px}
+  .search input{width:100%;height:36px;padding:0 12px 0 34px;border-radius:10px;border:1px solid var(--line-2);
+    background:var(--panel);color:var(--silver);font-family:var(--code);font-size:13px;outline:none;transition:border-color .2s}
+  .search input:focus{border-color:var(--blue)}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
+  .sort{height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--panel);color:var(--dim);
+    font-family:var(--sans);font-size:13px;cursor:pointer;transition:.18s}
+  .sort:hover{color:var(--silver);border-color:var(--blue)}
+
+  /* register */
+  .reg{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel)}
+  .reg-scroll{overflow-x:auto}
+  .reg-in{min-width:760px}
+  .cols{--gt:60px 190px 1fr 132px 128px 196px 84px}
+  .reg-head,.wrow{display:grid;grid-template-columns:var(--gt);align-items:center;gap:12px;padding:0 20px}
+  .reg-head{height:46px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--raise) 40%,var(--panel))}
+  .reg-head span{font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .reg-head .r{text-align:right}
+  .wrow{min-height:62px;border-bottom:1px solid var(--line);transition:background .15s}
+  .wrow:last-child{border-bottom:none}
+  .wrow:hover{background:color-mix(in srgb,var(--blue) 5%,transparent)}
+  .wrow.latest{background:color-mix(in srgb,var(--grn) 6%,transparent)}
+  .c-idx{font-family:var(--code);font-size:13px;color:var(--faint)}
+  .c-time{font-size:13px;color:var(--dim);line-height:1.35}
+  .c-time b{display:block;color:var(--silver);font-weight:500}
+  .c-win{display:flex;align-items:center;gap:9px;min-width:0}
+  .av{width:26px;height:26px;border-radius:8px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.06) inset}
+  .c-win .ad{font-family:var(--code);font-size:13.5px;color:var(--silver);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .c-win .badge{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--grn);
+    border:1px solid color-mix(in srgb,var(--grn) 40%,transparent);border-radius:5px;padding:1px 5px;flex:none}
+  .c-held{font-family:var(--code);font-size:14px;font-weight:500;text-align:right}
+  .c-held small{display:block;font-size:11px;color:var(--faint);font-weight:400}
+  .c-odds{text-align:right}
+  .c-odds .p{font-family:var(--code);font-size:14px;font-weight:600;color:var(--blue-hi)}
+  .c-odds .bar{height:3px;border-radius:2px;background:var(--line-2);margin:5px 0 3px auto;max-width:96px;overflow:hidden}
+  .c-odds .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--blue-hi))}
+  .c-odds .oneIn{font-size:11px;color:var(--faint)}
+  .c-prize{display:flex;align-items:center;gap:10px;justify-content:flex-end;text-align:right}
+  .stkchip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px 0 7px;border-radius:8px;
+    border:1px solid var(--line-2);font-size:12px;font-weight:600;font-family:var(--code)}
+  .stkchip svg{width:15px;height:15px;flex:none}
+  .c-prize .amt{font-family:var(--code);font-weight:600;font-size:14px}
+  .c-prize .amt small{display:block;font-size:11px;color:var(--faint);font-weight:400}
+  .c-proof{text-align:right}
+  .vlink{font-size:12.5px;font-weight:600;color:var(--blue);white-space:nowrap;transition:color .2s}
+  .vlink:hover{color:var(--blue-hi)}
+  .empty{padding:44px 20px;text-align:center;color:var(--faint);font-size:14px}
+  .more{display:flex;justify-content:center;padding:18px}
+  .more button{height:40px;padding:0 22px;border-radius:11px;border:1px solid var(--line-2);background:transparent;color:var(--silver);
+    font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;transition:.2s}
+  .more button:hover{border-color:var(--blue);background:var(--blue-glow)}
+
+  /* mobile: rows become cards */
+  @media(max-width:720px){
+    .reg-in{min-width:0}
+    .reg-head{display:none}
+    .wrow{grid-template-columns:1fr;gap:0;padding:16px 18px;min-height:0;row-gap:0}
+    .wrow>div{display:flex;align-items:center;justify-content:space-between;padding:5px 0}
+    .wrow>div::before{content:attr(data-l);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600}
+    .c-idx::before,.c-win::before{display:none}
+    .c-idx{order:-1;color:var(--faint)}
+    .c-win{justify-content:flex-start;gap:9px;padding-bottom:10px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+    .c-held,.c-odds,.c-prize,.c-proof{text-align:right}
+    .c-odds .bar{display:none}
+    .c-prize{gap:8px}
+  }
+
+  footer{border-top:1px solid var(--line);padding:40px 0 60px;margin-top:20px}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .foot .lft{display:flex;align-items:center;gap:9px;font-weight:600}
+  .foot .lft svg{width:20px;height:20px}
+  .foot .lks{display:flex;gap:20px;font-size:14px;color:var(--dim)}
+  .foot .lks a:hover{color:var(--silver)}
+  .disc{margin-top:22px;font-size:12.5px;color:var(--faint);line-height:1.6;max-width:720px}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="solg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D6E6FA"/><stop offset=".5" stop-color="#7FB0EC"/><stop offset="1" stop-color="#3A72BE"/></linearGradient>
+  <clipPath id="solh"><rect x="0" y="0" width="24" height="14.4"/></clipPath>
+</defs><symbol id="sol" viewBox="0 0 24 24">
+  <circle cx="12" cy="14.4" r="5.3" fill="url(#solg)" clip-path="url(#solh)"/>
+  <path d="M3.5 14.4h17" fill="none" stroke="url(#solg)" stroke-width="1.7" stroke-linecap="round"/>
+  <path d="M5.7 17.5h12.6" fill="none" stroke="#6E88AE" stroke-width="1.25" stroke-linecap="round" opacity=".8"/>
+  <path d="M7.8 20.2h8.4" fill="none" stroke="#6E88AE" stroke-width="1.1" stroke-linecap="round" opacity=".55"/>
+</symbol>
+<symbol id="lg-apple" viewBox="0 0 24 24"><path d="M17.5 12.4c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.8-2.1-1.6-.2-3.1.9-3.9.9s-2.1-.9-3.5-.9C6.9 6.5 5.3 7.5 4.5 9.1c-1.9 3.2-.5 8 1.4 10.6.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.8 3.4-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.2-2.5.6-.9 1-1.9 1-2 0 0-1.9-.8-1.9-3zM15 5c.7-.9 1.2-2.1 1-3.3-1 .1-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.2 1.1.1 2.3-.6 3.1-1.5z"/></symbol>
+<symbol id="lg-nvidia" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 12C5.2 8.2 8.5 6.3 12 6.3s6.8 1.9 9.5 5.7c-2.7 3.8-6 5.7-9.5 5.7S5.2 15.8 2.5 12zm9.5 3a3 3 0 100-6 3 3 0 000 6z"/></symbol>
+<symbol id="lg-tesla" viewBox="0 0 24 24"><path d="M12 5.4c2.9 0 5.4.5 6.7 1.2l-.9 1.8c-1-.5-2.3-.8-3.6-.9v11.1h-4.4V7.5c-1.3.1-2.6.4-3.6.9L5.3 6.6C6.6 5.9 9.1 5.4 12 5.4z"/><path d="M12 3.6c2.2 0 4.3.3 5.9.8-.3.4-.6.7-1 1.1-1.5-.4-3.1-.5-4.9-.5s-3.4.1-4.9.5c-.4-.4-.7-.7-1-1.1 1.6-.5 3.7-.8 5.9-.8z"/></symbol>
+<symbol id="lg-coinbase" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6z"/></symbol>
+<symbol id="lg-mstr" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l9 18h-6.3L12 15.3 9.3 21H3L12 3zm0 5.6l-3.4 6.8h6.8L12 8.6z"/></symbol>
+</svg>
+
+<nav id="nav"><div class="shell nav-in">
+  <a class="wm" href="/"><svg><use href="#sol"/></svg>Solum</a>
+  <span class="nav-r">
+    <a class="n hideS" href="/#how">How it works</a>
+    <a class="n hideS" href="/#fair">Fair by design</a>
+    <button class="tgl" id="tgl" aria-label="Toggle theme"><svg id="tglIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+    <a class="btn" href="/">Back to Solum</a>
+  </span>
+</div></nav>
+
+<header>
+  <div class="glow"></div>
+  <div class="shell">
+    <span class="eyebrow"><span class="d"></span>Public record</span>
+    <h1>Every draw,<br/><em>on the record.</em></h1>
+    <p class="sub">One holder wins real tokenized stock every hour. This is the full ledger — who won, exactly how much $SOLUM they were holding, the precise moment they won, and a link to verify every payout on-chain. Nothing curated away.</p>
+    <div class="band">
+      <div class="stat"><div class="k">Paid to holders</div><div class="v tnum" id="sTotal">$0</div><div class="cap">in real stock, all-time</div></div>
+      <div class="stat"><div class="k">Draws settled</div><div class="v tnum" id="sDraws">0</div><div class="cap">one every hour</div></div>
+      <div class="stat"><div class="k">Holders paid</div><div class="v tnum" id="sHolders">0</div><div class="cap">unique winners</div></div>
+      <div class="stat"><div class="k">Largest single win</div><div class="v tnum" id="sBig">$0</div><div class="cap" id="sBigStk">—</div></div>
+    </div>
+  </div>
+</header>
+
+<section id="latest"><div class="shell">
+  <div class="lead"><h2>The <em>latest</em> winner</h2><p>Refreshed the moment a draw settles. The pot is pushed straight to the winner's wallet — no claim step.</p></div>
+  <div class="feat" id="feat"></div>
+</div></section>
+
+<section id="records"><div class="shell">
+  <div class="lead"><h2><em>Records</em></h2><p>The standouts across every draw so far.</p></div>
+  <div class="trio" id="trio"></div>
+</div></section>
+
+<section id="register"><div class="shell">
+  <div class="lead"><h2>The <em>register</em></h2><p>Filter by stock, search a wallet, or sort by size. Every row links to its on-chain payout.</p></div>
+  <div class="ctrls">
+    <div class="chips" id="chips"></div>
+    <span class="spacer"></span>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" placeholder="Search a wallet…" autocomplete="off" spellcheck="false"/></div>
+    <button class="sort" id="sort">Sort: Latest</button>
+  </div>
+  <div class="reg"><div class="reg-scroll"><div class="reg-in cols">
+    <div class="reg-head">
+      <span>#</span><span>Settled (EST)</span><span>Winner</span><span class="r">$SOLUM held</span>
+      <span class="r">Win odds</span><span class="r">Prize won</span><span class="r">Proof</span>
+    </div>
+    <div id="rows"></div>
+  </div></div>
+    <div class="more" id="moreWrap"><button id="more">Show more</button></div>
+  </div>
+</div></section>
+
+<footer><div class="shell">
+  <div class="foot">
+    <span class="lft"><svg><use href="#sol"/></svg>Solum</span>
+    <span class="lks">
+      <a href="/">Home</a>
+      <a href="/#fair">Fair by design</a>
+      <a href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Code</a>
+      <a href="https://x.com/solumhq" target="_blank" rel="noopener">X</a>
+    </span>
+  </div>
+  <p class="disc">Every entry is reconstructed from the on-chain snapshot root and the VRF draw; the payout link is the actual <b>claim_prize</b> transaction. Odds are the winner's share of the hour's ticket pool — their time-averaged $SOLUM balance over the whole hour, so a last-second buy can't tilt a draw. Figures shown before mainnet are illustrative devnet data; once the draw bot is live this page reads the published record directly. Open-source · devnet · pre-audit.</p>
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var RM=matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  // theme (shares the "solum-theme" key with the main site)
+  var root=document.documentElement, tglI=document.getElementById("tglIcon");
+  var SUN='<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>';
+  var MOON='<path d="M20 14.5A8 8 0 019.5 4 7 7 0 1020 14.5z"/>';
+  function curTheme(){var t;try{t=localStorage.getItem("solum-theme");}catch(e){}return t||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");}
+  function apply(t){root.setAttribute("data-theme",t);tglI.innerHTML=t==="dark"?SUN:MOON;try{localStorage.setItem("solum-theme",t);}catch(e){}}
+  apply(curTheme());
+  document.getElementById("tgl").addEventListener("click",function(){apply(root.getAttribute("data-theme")==="dark"?"light":"dark");});
+
+  var nav=document.getElementById("nav");
+  addEventListener("scroll",function(){nav.classList.toggle("on",scrollY>20);},{passive:true});
+
+  // stock metadata (name, logo symbol, brand color, ~share price for share-count)
+  var STK={
+    AAPLx:{n:"Apple",lg:"lg-apple",c:"#E6EAF2",px:232},
+    NVDAx:{n:"NVIDIA",lg:"lg-nvidia",c:"#76B900",px:178},
+    TSLAx:{n:"Tesla",lg:"lg-tesla",c:"#E82127",px:410},
+    COINx:{n:"Coinbase",lg:"lg-coinbase",c:"#0052FF",px:305},
+    MSTRx:{n:"Strategy",lg:"lg-mstr",c:"#F0512B",px:1720}
+  };
+  var ORDER=["AAPLx","NVDAx","TSLAx","COINx","MSTRx"];
+  var EXPL_ADDR="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet";
+  var txLink=function(sig){return "https://explorer.solana.com/tx/"+sig+"?cluster=devnet";};
+  var addrLink=function(a){return "https://explorer.solana.com/address/"+a+"?cluster=devnet";};
+
+  function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+  function h32(s){var x=0;for(var i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))>>>0;return x;}
+  function avatar(a){var x=h32(a),h1=x%360,h2=(x>>9)%360;return "linear-gradient(135deg,hsl("+h1+",62%,57%),hsl("+h2+",58%,43%))";}
+  function shortA(a){return a.slice(0,4)+"…"+a.slice(-4);}
+  function fmt(n){return Math.round(n).toLocaleString();}
+  function estFull(ts){return new Date(ts).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",hour12:true});}
+  function estDate(ts){return new Date(ts).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",year:"numeric"});}
+  function estClock(ts){return new Date(ts).toLocaleString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true})+" EST";}
+  function money(n){return "$"+fmt(n);}
+
+  // ---- build the dataset: seeded illustrative record; overwritten by winners.json when live ----
+  var HOUR=3600000, nowH=Math.floor(Date.now()/HOUR);
+  function demo(){
+    var out=[], N=48;
+    for(var k=1;k<=N;k++){
+      var h=nowH-k, rng=m32((h>>>0)*2654435761^0x9E37);
+      var stock=ORDER[(rng()*5)|0], meta=STK[stock];
+      var held=Math.round((40000+Math.pow(rng(),1.7)*3200000)/100)*100; // avg $SOLUM held
+      var total=Math.round(held/(0.008+rng()*0.09));                    // pool size → odds held/total
+      var holders=800+((rng()*2400)|0);
+      var prizeUsd=Math.round(170+Math.pow(rng(),1.4)*1700);
+      var shares=+(prizeUsd/meta.px).toFixed(meta.px>800?4:3);
+      var secs=((rng()*3600)|0); // random moment within the hour → precise time
+      var addr=b58(rng,44);
+      out.push({epoch:nowH-k,drawAt:new Date(h*HOUR+secs*1000).toISOString(),addr:addr,
+        solumHeld:held,totalTickets:total,holders:holders,stock:stock,prizeShares:shares,prizeUsd:prizeUsd,payoutTx:null});
+    }
+    return out;
+  }
+  // normalize a winners.json row (bot schema) into the render shape
+  function norm(w){
+    var meta=STK[w.stock]||STK.AAPLx;
+    var shares=(w.prizeShares!=null)?w.prizeShares:+((w.prizeUsd||0)/meta.px).toFixed(3);
+    return {epoch:w.epoch!=null?w.epoch:0,drawAt:w.drawAt,addr:w.addr,
+      solumHeld:w.solumHeld!=null?w.solumHeld:(w.tickets||0),
+      totalTickets:w.totalTickets!=null?w.totalTickets:0,holders:w.holders||0,
+      stock:w.stock,prizeShares:shares,prizeUsd:w.prizeUsd,payoutTx:w.payoutTx||null};
+  }
+
+  var DATA=demo(), LIVE=false;
+
+  // ---- aggregates ----
+  function aggregate(){
+    var total=0,big={prizeUsd:0},luck={odds:1},whale={solumHeld:0};
+    DATA.forEach(function(w){
+      total+=w.prizeUsd;
+      if(w.prizeUsd>big.prizeUsd)big=w;
+      var od=w.totalTickets?w.solumHeld/w.totalTickets:1;
+      if(od<luck.odds){luck=w;luck.odds=od;}
+      if(w.solumHeld>whale.solumHeld)whale=w;
+    });
+    return {total:total,draws:DATA.length,holders:DATA.length,big:big,luck:luck,whale:whale};
+  }
+  function countUp(el,tgt,pre,post){
+    pre=pre||"";post=post||"";
+    if(RM){el.innerHTML=pre+fmt(tgt)+post;return;}
+    var t0=null;function s(ts){if(t0===null)t0=ts;var p=Math.min(1,(ts-t0)/1300),e=1-Math.pow(1-p,3);
+      el.innerHTML=pre+fmt(tgt*e)+post;if(p<1)requestAnimationFrame(s);}requestAnimationFrame(s);
+  }
+
+  function renderBand(){
+    var a=aggregate();
+    countUp(document.getElementById("sTotal"),a.total,"$");
+    countUp(document.getElementById("sDraws"),a.draws);
+    countUp(document.getElementById("sHolders"),a.holders);
+    countUp(document.getElementById("sBig"),a.big.prizeUsd,"$");
+    document.getElementById("sBigStk").textContent=STK[a.big.stock].n+" · "+a.big.stock;
+  }
+
+  function stkSvg(stock,cls){var m=STK[stock];return '<svg class="'+(cls||"")+'" viewBox="0 0 24 24" style="fill:'+m.c+'"><use href="#'+m.lg+'"/></svg>';}
+
+  function renderFeat(){
+    var w=DATA.slice().sort(function(a,b){return b.epoch-a.epoch;})[0]; if(!w)return;
+    var m=STK[w.stock], odds=w.totalTickets?(w.solumHeld/w.totalTickets*100):0, oneIn=odds?Math.round(100/odds):0;
+    document.getElementById("feat").innerHTML=
+      '<div class="feat-grid"><div class="feat-l">'+
+        '<span class="feat-tag"><span class="d"></span>'+(LIVE?"Latest winner":"Latest winner · sample")+'</span>'+
+        '<div class="feat-prize">'+money(w.prizeUsd)+'</div>'+
+        '<div class="feat-shares">≈ <b>'+w.prizeShares+'</b> shares of <b>'+m.n+'</b> ('+w.stock+')</div>'+
+        '<div class="feat-meta">'+
+          '<div class="fm"><div class="k">Winner</div><div class="v mono">'+shortA(w.addr)+'</div></div>'+
+          '<div class="fm"><div class="k">$SOLUM held</div><div class="v mono">'+fmt(w.solumHeld)+'</div></div>'+
+          '<div class="fm"><div class="k">Won against</div><div class="v">'+odds.toFixed(2)+'% odds · 1 in '+fmt(oneIn)+'</div></div>'+
+          '<div class="fm"><div class="k">Settled</div><div class="v">'+estClock(w.drawAt)+'</div></div>'+
+        '</div>'+
+        '<a class="feat-verify" href="'+(w.payoutTx?txLink(w.payoutTx):EXPL_ADDR)+'" target="_blank" rel="noopener">Verify on-chain ↗</a>'+
+      '</div>'+
+      '<div class="feat-r"><div class="feat-halo" style="background:'+m.c+'"></div>'+stkSvg(w.stock,"feat-logo")+
+        '<span class="feat-tick">'+estDate(w.drawAt)+'</span></div>'+
+      '</div>';
+  }
+
+  function renderTrio(){
+    var a=aggregate();
+    var items=[
+      {ic:'<path d="M12 2l2.4 6.9H22l-6 4.4 2.3 7.1L12 16.6 5.7 20.4 8 13.3 2 8.9h7.6z"/>',k:"Biggest single win",v:money(a.big.prizeUsd),
+        sub:STK[a.big.stock].n+" · <span class=\"mono\">"+shortA(a.big.addr)+"</span>"},
+      {ic:'<path d="M12 3v18M5 8l7-5 7 5M5 8v8l7 5 7-5V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',k:"Longest odds beaten",v:(a.luck.totalTickets?(a.luck.solumHeld/a.luck.totalTickets*100).toFixed(2):"0")+"%",
+        sub:"1 in "+fmt(a.luck.totalTickets?Math.round(a.luck.totalTickets/a.luck.solumHeld):0)+" · won "+money(a.luck.prizeUsd)},
+      {ic:'<path d="M3 21V9l6-4 6 4v12M9 21v-6h4v6M21 21V4l-4 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',k:"Biggest holder to win",v:fmt(a.whale.solumHeld),
+        sub:"$SOLUM · <span class=\"mono\">"+shortA(a.whale.addr)+"</span>"}
+    ];
+    document.getElementById("trio").innerHTML=items.map(function(it){
+      return '<div class="rec"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor">'+it.ic+'</svg></div>'+
+        '<div class="k">'+it.k+'</div><div class="v tnum">'+it.v+'</div><div class="sub">'+it.sub+'</div></div>';
+    }).join("");
+  }
+
+  // ---- register with filter / search / sort / paging ----
+  var filter="ALL", sortBig=false, query="", shown=12;
+  function chipRow(){
+    var host=document.getElementById("chips"), chips=[{k:"ALL",label:"All draws"}].concat(ORDER.map(function(s){return{k:s,label:s};}));
+    host.innerHTML=chips.map(function(c){
+      var ico=c.k==="ALL"?"":stkSvg(c.k);
+      return '<button class="chip'+(c.k===filter?" on":"")+'" data-k="'+c.k+'">'+ico+esc(c.label)+'</button>';
+    }).join("");
+    Array.prototype.forEach.call(host.querySelectorAll(".chip"),function(b){
+      b.addEventListener("click",function(){filter=b.getAttribute("data-k");shown=12;chipRow();renderRows();});
+    });
+  }
+  function current(){
+    var arr=DATA.filter(function(w){return filter==="ALL"||w.stock===filter;});
+    if(query){var qq=query.toLowerCase();arr=arr.filter(function(w){return w.addr.toLowerCase().indexOf(qq)>=0;});}
+    arr.sort(sortBig?function(a,b){return b.prizeUsd-a.prizeUsd;}:function(a,b){return b.epoch-a.epoch;});
+    return arr;
+  }
+  function rowHtml(w,latest){
+    var m=STK[w.stock], odds=w.totalTickets?(w.solumHeld/w.totalTickets*100):0, oneIn=odds?Math.round(100/odds):0;
+    var bar=Math.max(3,Math.min(100,odds*7));
+    return '<div class="wrow'+(latest?" latest":"")+'">'+
+      '<div class="c-idx" data-l="Draw">#'+w.epoch+'</div>'+
+      '<div class="c-time" data-l="Settled"><b>'+estFull(w.drawAt)+'</b>'+estClock(w.drawAt)+'</div>'+
+      '<div class="c-win" data-l="Winner"><span class="av" style="background:'+avatar(w.addr)+'"></span>'+
+        '<a class="ad" href="'+addrLink(w.addr)+'" target="_blank" rel="noopener" title="'+esc(w.addr)+'">'+shortA(w.addr)+'</a>'+
+        (latest?'<span class="badge">latest</span>':'')+'</div>'+
+      '<div class="c-held" data-l="$SOLUM held">'+fmt(w.solumHeld)+'<small>average over the hour</small></div>'+
+      '<div class="c-odds" data-l="Win odds"><div class="p">'+odds.toFixed(2)+'%</div><div class="bar"><i style="width:'+bar+'%"></i></div><div class="oneIn">1 in '+fmt(oneIn)+'</div></div>'+
+      '<div class="c-prize" data-l="Prize won"><span class="stkchip" style="color:'+m.c+'">'+stkSvg(w.stock)+w.stock+'</span>'+
+        '<span class="amt" style="color:var(--silver)">'+money(w.prizeUsd)+'<small>'+w.prizeShares+' sh</small></span></div>'+
+      '<div class="c-proof" data-l="Proof"><a class="vlink" href="'+(w.payoutTx?txLink(w.payoutTx):EXPL_ADDR)+'" target="_blank" rel="noopener">verify ↗</a></div>'+
+      '</div>';
+  }
+  function renderRows(){
+    var arr=current(), latestEpoch=DATA.reduce(function(mx,w){return Math.max(mx,w.epoch);},0);
+    var host=document.getElementById("rows");
+    if(!arr.length){host.innerHTML='<div class="empty">No winners match that filter yet.</div>';document.getElementById("moreWrap").style.display="none";return;}
+    host.innerHTML=arr.slice(0,shown).map(function(w){return rowHtml(w,w.epoch===latestEpoch&&!sortBig&&filter==="ALL"&&!query);}).join("");
+    document.getElementById("moreWrap").style.display=arr.length>shown?"flex":"none";
+  }
+  document.getElementById("more").addEventListener("click",function(){shown+=12;renderRows();});
+  document.getElementById("sort").addEventListener("click",function(){sortBig=!sortBig;this.textContent="Sort: "+(sortBig?"Biggest":"Latest");shown=12;renderRows();});
+  document.getElementById("q").addEventListener("input",function(){query=this.value.trim();shown=12;renderRows();});
+
+  function renderAll(){renderBand();renderFeat();renderTrio();chipRow();renderRows();}
+  renderAll();
+
+  // go live off the published record if present
+  try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    if(j&&j.length){DATA=j.map(norm).filter(function(w){return w&&w.stock&&STK[w.stock];});LIVE=true;renderAll();}
+  }).catch(function(){});}catch(e){}
+})();
+</script>
+</body>
+</html>
