@@ -45,6 +45,18 @@ async function main() {
   }).rpc();
   const refs: JackpotRefs = { jackpot, jackpotAuthority: jAuth, prizeMint: stock, potCustody: pot, prizeTokenProgram: RP };
 
+  // resilience against a busy local validator: retry timed-out txs, but check on-chain state first
+  // so a tx that actually landed is never re-executed (keeps conservation exact).
+  const phaseOf = async () => Number((await (prog.account as any).jackpotState.fetch(jackpot)).phase);
+  const isTimeout = (e: any) => { const s = String((e && e.message) || e); return s.includes("was not confirmed") || s.includes("TransactionExpired") || s.includes("block height exceeded"); };
+  async function robust(doTx: () => Promise<any>, landed: () => Promise<boolean>, label: string) {
+    for (let a = 0; a < 10; a++) {
+      try { await doTx(); return; }
+      catch (e) { if (isTimeout(e)) { await sleep(900); if (await landed()) return; continue; } throw e; }
+    }
+    throw new Error(`${label} failed after retries`);
+  }
+
   // the full holder pool (all $SOLUM holders considered every draw); pre-make each one's stock ATA
   const holders = [] as { kp: Keypair; ata: PublicKey }[];
   for (let i = 0; i < HOLDERS; i++) {
@@ -64,7 +76,7 @@ async function main() {
     const solFee = 0.05 + Math.random() * Math.random() * 8; // this hour's creator fees
     const potAmt = 60 + Math.floor(solFee * (40 + Math.random() * 60)); // stock bought with them
     feesSol += solFee;
-    await mintTo(conn, ops, stock, pot, ops, potAmt, [], undefined, RP);
+    await robust(() => mintTo(conn, ops, stock, pot, ops, potAmt, [], undefined, RP), async () => (await bal(conn, pot)) >= potAmt, "fund");
 
     // 2. snapshot ALL holders, weighted by holdings (TWAB); some hold 0 this hour → no tickets
     const twab = new Map<string, bigint>();
@@ -76,13 +88,17 @@ async function main() {
     for (const e of snap.entries) ticketTotals[e.owner.toBase58()] += e.tickets;
 
     // 3. commit → 4. VRF draw → 5. auto-pay the winner
-    await commitEpoch(prog, ops, refs, snap);
+    await robust(() => commitEpoch(prog, ops, refs, snap), async () => (await phaseOf()) === 1, "commit");
     // settle once the on-chain epoch has elapsed; the local validator's clock can lag wall time,
     // so retry rather than trust a fixed sleep (fresh CSPRNG randomness each attempt = the VRF value)
     for (let attempt = 0; ; attempt++) {
       await sleep(600);
       try { await settleDevnet(prog, ops, refs); break; }
-      catch (e: any) { if (String(e).includes("EpochNotElapsed") && attempt < 40) continue; throw e; }
+      catch (e: any) {
+        if (String(e).includes("EpochNotElapsed") && attempt < 40) continue;
+        if (isTimeout(e)) { if ((await phaseOf()) === 2) break; continue; }
+        throw e;
+      }
     }
     const wt = await winningTicketOf(prog, refs);
 
@@ -90,12 +106,11 @@ async function main() {
     const wKey = winnerEntry.owner.toBase58();
     const wAta = getAssociatedTokenAddressSync(stock, winnerEntry.owner, false, RP);
     const before = await bal(conn, wAta);
-    const { winner } = await payWinner(prog, ops, refs, snap, wt, conn);
+    await robust(() => payWinner(prog, ops, refs, snap, wt, conn), async () => (await phaseOf()) === 0, "claim");
 
     // 6. verify: the winner is a real holder with tickets, got the whole pot, pot drained to zero
     const after = await bal(conn, wAta), potLeft = await bal(conn, pot);
-    const ok = winner.equals(winnerEntry.owner)
-      && twab.has(wKey) && winnerEntry.tickets > 0n
+    const ok = twab.has(wKey) && winnerEntry.tickets > 0n
       && after === before + potAmt && potLeft === 0;
     if (ok) { pass++; wins[wKey]++; potPaid += potAmt; }
     else fails.push(`run ${r}: winner=${wKey.slice(0, 6)} tkt=${wt} pot=${potAmt} paid=${after - before} left=${potLeft}`);
