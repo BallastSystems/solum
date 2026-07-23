@@ -33,10 +33,11 @@ export type WinnerEntry = {
   prizeBaseUnits: string; // exact token base-unit amount owed — what the claim service pays out
   prizeUsd: number;
   drawAt: string; // ISO — the precise settle time
-  claimableAt: string; // ISO — drawAt + 24h; the prize is held in the review wallet until then
-  claimed: boolean; // set true once the winner has claimed and the stock has been sent to them
-  claimTx: string | null; // the transfer signature from the review wallet to the winner (once claimed)
-  payoutTx: string; // legacy alias for claimTx (kept for the site's recent-winners feed); "" until claimed
+  claimed: boolean; // the winner clicked Claim (acknowledged) — claiming is required to be paid
+  claimedAt: string | null; // ISO — when they claimed; the 24h delivery window runs from here
+  awarded: boolean; // the operator has manually sent the prize to the winner
+  awardTx: string | null; // the delivery transfer signature (review wallet -> winner)
+  payoutTx: string; // legacy alias for awardTx (kept for the site's recent-winners feed); "" until awarded
 };
 
 /** Prepend a winner to the rolling history the site reads (as solum.work/winners.json). */

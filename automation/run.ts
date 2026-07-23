@@ -135,21 +135,21 @@ export async function runForever(cfg: Cfg) {
         const dec = (await getMint(conn, cfg.refs.prizeMint, undefined, cfg.refs.prizeTokenProgram)).decimals;
         prizeShares = Number(hourStockBought) / 10 ** dec;
       } catch { /* leave prizeShares 0; the site falls back to a price estimate */ }
-      const { entry } = winnerOf(snap, wt); // who the VRF drew — proven on-chain, not yet paid
+      const { entry } = winnerOf(snap, wt); // who the VRF drew — proven on-chain
       winnerAddr = entry.owner.toBase58();
-      const claimableAt = drawAt + 24 * 3600; // 24h QC hold before the winner can claim
+      // The winner can Claim right away; claiming starts a 24h window in which the operator delivers.
       const winRow: WinnerEntry = {
         epoch: Math.floor(hourStart / 3600), hourLabel: label, addr: winnerAddr,
         solumHeld: Number(entry.tickets), totalTickets: Number(snap.total), holders,
         stock: stockLabel, prizeShares, prizeBaseUnits, prizeUsd: potUsd, drawAt: iso(drawAt),
-        claimableAt: iso(claimableAt), claimed: false, claimTx: null, payoutTx: "",
+        claimed: false, claimedAt: null, awarded: false, awardTx: null, payoutTx: "",
       };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },
       });
       appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners register
-      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${stockLabel} · claim opens ${new Date(claimableAt * 1000).toISOString()}`);
+      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${stockLabel} · claimable now, deliver within 24h`);
     } catch (e: any) {
       console.error("[draw] failed:", e.message);
     } finally {

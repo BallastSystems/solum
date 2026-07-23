@@ -1,6 +1,7 @@
-// Claim fulfillment service — a tiny HTTP endpoint the site calls when a winner claims after the
-// 24-hour hold. It holds the review/custody wallet key (from the environment, never the repo) and
-// runs fulfillClaim(), which pays only the on-chain-proven winner, only after the hold, only once.
+// Claim service — a tiny HTTP endpoint the site calls when a winner clicks Claim. It records the
+// (signature-verified) claim via registerClaim() and starts the 24h delivery window. It does NOT
+// send funds — the operator delivers manually with the award CLI (automation/award.ts). It still
+// loads the ops wallet (to know the custody pubkey / share config); the key never leaves the env.
 //
 //   SOLUM_RPC=https://api.mainnet-beta.solana.com \
 //   SOLUM_OPS_KEY=/secure/ops-wallet.json \        # SECRET — the custody wallet keypair
@@ -12,7 +13,7 @@
 import * as http from "http";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import * as fs from "fs";
-import { fulfillClaim, ClaimConfig, ClaimRequest } from "./claim";
+import { registerClaim, ClaimConfig, ClaimRequest } from "./claim";
 
 const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 
@@ -64,9 +65,9 @@ async function main() {
         return send(rs, 400, { ok: false, reason: "invalid JSON" });
       }
       try {
-        const out = await fulfillClaim(cfg, req);
+        const out = registerClaim(cfg, req);
         send(rs, out.ok ? 200 : 400, out);
-        console.log(`[claim] epoch ${req?.epoch} winner ${req?.winner} -> ${out.ok ? "PAID " + (out as any).claimTx : "REJECT " + (out as any).reason}`);
+        console.log(`[claim] epoch ${req?.epoch} winner ${req?.winner} -> ${out.ok ? "CLAIM RECORDED (deliver by " + (out as any).awardWithin + ")" : "REJECT " + (out as any).reason}`);
       } catch (e: any) {
         send(rs, 500, { ok: false, reason: "server error" });
         console.error("[claim] error:", e?.message || e);
