@@ -37,28 +37,28 @@ async function main() {
   anchor.setProvider(provider);
   const conn = provider.connection;
   const payer = (provider.wallet as anchor.Wallet).payer;
-  const ballastIdl = JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8"));
+  const solumIdl = JSON.parse(fs.readFileSync(path.resolve("target/idl/solum.json"), "utf8"));
   const mockIdl = JSON.parse(fs.readFileSync(path.resolve("target/idl/mock_venue.json"), "utf8"));
-  const ballast = new anchor.Program(ballastIdl as anchor.Idl, provider);
+  const solum = new anchor.Program(solumIdl as anchor.Idl, provider);
   const mock = new anchor.Program(mockIdl as anchor.Idl, provider);
 
   const engine = Keypair.generate();
   await conn.confirmTransaction(await conn.requestAirdrop(engine.publicKey, 2 * LAMPORTS_PER_SOL), "confirmed");
 
-  const ballastMint = await createMint(conn, payer, payer.publicKey, null, 9, undefined, undefined, TP);
+  const solumMint = await createMint(conn, payer, payer.publicKey, null, 9, undefined, undefined, TP);
   const stock = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, TP);
   const funding = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, TP);
 
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), ballastMint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
-  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), ballastMint.toBuffer(), payer.publicKey.toBuffer()], ballast.programId);
-  const [priceFeed] = PublicKey.findProgramAddressSync([Buffer.from("price"), configPda.toBuffer(), stock.toBuffer()], ballast.programId);
+  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config"), solumMint.toBuffer(), payer.publicKey.toBuffer()], solum.programId);
+  const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from("vault"), solumMint.toBuffer(), payer.publicKey.toBuffer()], solum.programId);
+  const [priceFeed] = PublicKey.findProgramAddressSync([Buffer.from("price"), configPda.toBuffer(), stock.toBuffer()], solum.programId);
 
-  await ballast.methods
+  await solum.methods
     .initializeVault(100, 500, engine.publicKey, mock.programId, funding, [stock])
-    .accounts({ admin: payer.publicKey, tokenMint: ballastMint })
+    .accounts({ admin: payer.publicKey, tokenMint: solumMint })
     .rpc();
 
-  await ballast.methods.setPrice(new anchor.BN(2), 0)
+  await solum.methods.setPrice(new anchor.BN(2), 0)
     .accounts({ config: configPda, admin: payer.publicKey, stockMint: stock })
     .rpc();
 
@@ -83,7 +83,7 @@ async function main() {
     m(funding, false), m(stock, false), m(TP, false),
   ];
   const backing = (venue: PublicKey, signer: Keypair, enginePk: PublicKey) =>
-    ballast.methods.addBacking(new anchor.BN(AMOUNT_IN))
+    solum.methods.addBacking(new anchor.BN(AMOUNT_IN))
       .accounts({
         config: configPda, engine: enginePk, vaultAuthority: vaultAuth,
         fundingVault, stockVault, stockMint: stock, fundingMint: funding,
@@ -113,9 +113,9 @@ async function main() {
   await conn.confirmTransaction(await conn.requestAirdrop(notEngine.publicKey, LAMPORTS_PER_SOL), "confirmed");
   await expectRevert("non-engine caller rejected", "Unauthorized", () => backing(mock.programId, notEngine, notEngine.publicKey));
 
-  await ballast.methods.setPause(true).accounts({ config: configPda, admin: payer.publicKey }).rpc();
+  await solum.methods.setPause(true).accounts({ config: configPda, admin: payer.publicKey }).rpc();
   await expectRevert("paused backing rejected", "Paused", () => backing(mock.programId, engine, engine.publicKey));
-  await ballast.methods.setPause(false).accounts({ config: configPda, admin: payer.publicKey }).rpc();
+  await solum.methods.setPause(false).accounts({ config: configPda, admin: payer.publicKey }).rpc();
 
   // flip the pool to a shortchange rate 1/3 -> out 333 < floor 475
   await mock.methods.setRate(new anchor.BN(1), new anchor.BN(3)).accounts({ pool: poolPda }).rpc();
@@ -127,7 +127,7 @@ async function main() {
   await expectRevert("venue delegate tampering rejected", "VenueTampered", () => backing(mock.programId, engine, engine.publicKey));
 
   let failed = 0;
-  console.log("\n=== ballast :: add_backing ===");
+  console.log("\n=== solum :: add_backing ===");
   for (const r of results) {
     console.log(`  ${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? "  — " + r.detail : ""}`);
     if (!r.ok) failed++;

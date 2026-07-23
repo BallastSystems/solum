@@ -45,14 +45,14 @@ describe("solum :: redeem floor", () => {
   const engine = Keypair.generate().publicKey;
   const swapVenue = Keypair.generate().publicKey;
 
-  let ballastMint: PublicKey;
+  let solumMint: PublicKey;
   let stockA: PublicKey;
   let stockB: PublicKey;
   let configPda: PublicKey;
   let vaultAuth: PublicKey;
   let vaultAtaA: PublicKey;
   let vaultAtaB: PublicKey;
-  let userBallastAta: PublicKey;
+  let userSolumAta: PublicKey;
   let userStockAtaA: PublicKey;
   let userStockAtaB: PublicKey;
 
@@ -68,17 +68,17 @@ describe("solum :: redeem floor", () => {
       "confirmed"
     );
 
-    // Ballast token (Token-2022) and two "stock" mints, all with payer as mint authority.
-    ballastMint = await createMint(conn, payer, payer.publicKey, null, 9, undefined, undefined, TP);
+    // Solum token (Token-2022) and two "stock" mints, all with payer as mint authority.
+    solumMint = await createMint(conn, payer, payer.publicKey, null, 9, undefined, undefined, TP);
     stockA = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, TP);
     stockB = await createMint(conn, payer, payer.publicKey, null, 6, undefined, undefined, TP);
 
     [configPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("config"), ballastMint.toBuffer()],
+      [Buffer.from("config"), solumMint.toBuffer()],
       program.programId
     );
     [vaultAuth] = PublicKey.findProgramAddressSync(
-      [Buffer.from("vault"), ballastMint.toBuffer()],
+      [Buffer.from("vault"), solumMint.toBuffer()],
       program.programId
     );
 
@@ -88,9 +88,9 @@ describe("solum :: redeem floor", () => {
     await mintTo(conn, payer, stockA, vaultAtaA, payer, VAULT_A, [], undefined, TP);
     await mintTo(conn, payer, stockB, vaultAtaB, payer, VAULT_B, [], undefined, TP);
 
-    // User holds the full Ballast supply and has receiving accounts for each stock.
-    userBallastAta = await createAssociatedTokenAccount(conn, payer, ballastMint, user.publicKey, {}, TP);
-    await mintTo(conn, payer, ballastMint, userBallastAta, payer, SUPPLY, [], undefined, TP);
+    // User holds the full Solum supply and has receiving accounts for each stock.
+    userSolumAta = await createAssociatedTokenAccount(conn, payer, solumMint, user.publicKey, {}, TP);
+    await mintTo(conn, payer, solumMint, userSolumAta, payer, SUPPLY, [], undefined, TP);
     userStockAtaA = await createAssociatedTokenAccount(conn, payer, stockA, user.publicKey, {}, TP);
     userStockAtaB = await createAssociatedTokenAccount(conn, payer, stockB, user.publicKey, {}, TP);
 
@@ -98,7 +98,7 @@ describe("solum :: redeem floor", () => {
       .initializeVault(100, engine, swapVenue, [stockA, stockB])
       .accounts({
         admin: payer.publicKey,
-        tokenMint: ballastMint,
+        tokenMint: solumMint,
       })
       .rpc();
   });
@@ -114,10 +114,10 @@ describe("solum :: redeem floor", () => {
       .redeem(new anchor.BN(amount))
       .accounts({
         config: configPda,
-        tokenMint: ballastMint,
+        tokenMint: solumMint,
         vaultAuthority: vaultAuth,
         redeemer: user.publicKey,
-        redeemerTokenAccount: userBallastAta,
+        redeemerTokenAccount: userSolumAta,
         tokenProgram: TP,
       })
       .remainingAccounts(remaining)
@@ -179,21 +179,21 @@ describe("solum :: redeem floor", () => {
   });
 
   it("HONEST: redeems exactly the pro-rata share and preserves the floor", async () => {
-    const before = await getAccount(conn, userBallastAta, undefined, TP);
+    const before = await getAccount(conn, userSolumAta, undefined, TP);
     assert.equal(Number(before.amount), SUPPLY);
 
     await doRedeem(REDEEM, honestRemaining());
 
     const gotA = Number((await getAccount(conn, userStockAtaA, undefined, TP)).amount);
     const gotB = Number((await getAccount(conn, userStockAtaB, undefined, TP)).amount);
-    const leftBallast = Number((await getAccount(conn, userBallastAta, undefined, TP)).amount);
+    const leftSolum = Number((await getAccount(conn, userSolumAta, undefined, TP)).amount);
     const vaultLeftA = Number((await getAccount(conn, vaultAtaA, undefined, TP)).amount);
     const vaultLeftB = Number((await getAccount(conn, vaultAtaB, undefined, TP)).amount);
 
     // payout = amount * vaultBalance / supply, rounded down
     assert.equal(gotA, (REDEEM * VAULT_A) / SUPPLY, "stockA payout");
     assert.equal(gotB, (REDEEM * VAULT_B) / SUPPLY, "stockB payout");
-    assert.equal(leftBallast, SUPPLY - REDEEM, "burned exactly the redeemed amount");
+    assert.equal(leftSolum, SUPPLY - REDEEM, "burned exactly the redeemed amount");
 
     // Floor invariant: vault/supply per token must not fall.
     const floorBeforeA = VAULT_A / SUPPLY;
