@@ -66,5 +66,5 @@ It publishes `status.json` / `winners.json`; point the site's fetch at that host
 
 - Solum's cluster is **devnet** via explicit flags + the isolated wallet. The global CLI config is
   mainnet + a different key — never used here.
-- Solum GitHub is the **SSH key (BallastSystems)** only. The `gh` CLI on this machine is a different
+- Solum GitHub is the isolated **SSH key** only (the `github-ballast` alias). The `gh` CLI on this machine is a different
   identity — never use it for Solum.
