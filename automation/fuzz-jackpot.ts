@@ -93,10 +93,17 @@ async function main() {
     } else { // SETTLED
       const roll = ri(10);
       if (roll < 6) { // CLAIM
+        // a draw can reach settle with an unfunded pot; the program rightly refuses to pay an empty
+        // pot (ZeroAmount), so make sure there's a prize before claiming.
+        let potNow = await bal(conn, pot);
+        if (potNow === 0n) {
+          const amt = BigInt(50 + ri(3000));
+          await mintTo(conn, ops, stock, pot, ops, Number(amt), [], undefined, RP);
+          minted += amt; potNow = amt;
+        }
         const wt = await winningTicketOf(prog, refs);
-        const potNow = await bal(conn, pot);
         const { entry } = winnerOf(snap!, wt);
-        const before = await bal(conn, entry.owner ? getAssociatedTokenAddressSync(stock, entry.owner, false, RP) : pot);
+        const before = await bal(conn, getAssociatedTokenAddressSync(stock, entry.owner, false, RP));
         await payWinner(prog, ops, refs, snap!, wt, conn);
         const after = await bal(conn, getAssociatedTokenAddressSync(stock, entry.owner, false, RP));
         const potLeft = await bal(conn, pot);
