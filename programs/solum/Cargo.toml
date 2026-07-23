@@ -9,11 +9,15 @@ crate-type = ["cdylib", "lib"]
 name = "solum"
 
 [features]
-default = ["devnet-oracle"]
+default = ["devnet-oracle", "devnet-vrf"]
 # devnet-oracle: admin-published PriceFeed (set_price) — for local validator tests.
 devnet-oracle = []
 # pyth-oracle: real Pyth pull-oracle (PriceUpdateV2) — for public devnet / mainnet.
 pyth-oracle = ["dep:pyth-solana-receiver-sdk"]
+# devnet-vrf: snapshotter-injected randomness in settle_draw — for local validator tests.
+devnet-vrf = []
+# switchboard-vrf: real Switchboard VRF (production randomness). Wiring TODO — see docs/JACKPOT.md.
+switchboard-vrf = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []

@@ -15,6 +15,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
     instruction::{AccountMeta, Instruction},
+    keccak,
     program::invoke_signed,
 };
 use anchor_spl::token_2022::spl_token_2022;
@@ -51,6 +52,14 @@ pub const ORACLE_SEED: &[u8] = b"oracle";
 pub const STAKE_SEED: &[u8] = b"stakepool";
 pub const STAKE_AUTH_SEED: &[u8] = b"stakeauth";
 pub const STAKE_ACCT_SEED: &[u8] = b"stakeacct";
+/// No-loss jackpot: state PDA `[JACKPOT_SEED, coin_mint, admin]`; authority PDA (owns the prize
+/// pot custody, no private key) `[JACKPOT_AUTH_SEED, jackpot]`. See docs/JACKPOT.md.
+pub const JACKPOT_SEED: &[u8] = b"jackpot";
+pub const JACKPOT_AUTH_SEED: &[u8] = b"jackpotauth";
+/// Jackpot draw phases.
+pub const PHASE_OPEN: u8 = 0; // awaiting the snapshotter to commit an epoch root
+pub const PHASE_COMMITTED: u8 = 1; // root committed; draw settles once the epoch elapses
+pub const PHASE_SETTLED: u8 = 2; // winning ticket fixed; the winner may claim
 /// Authority (a program PDA) set as BOTH the Token-2022 transfer-fee-config authority and
 /// the withdraw-withheld authority of the launched mint. Because no instruction changes the
 /// fee rate, the tax is frozen; and withheld fees can only ever be pulled to the vault.
@@ -757,6 +766,145 @@ pub mod solum {
         emit!(Unstaked { pool: pool_key, owner: owner_key, amount, total: new_amount });
         Ok(())
     }
+
+    // ===================== No-loss real-stock jackpot =====================
+    // Fees fund a prize pot of real stock; each epoch a TWAB-weighted holder is drawn from a
+    // snapshotter-committed Merkle root using verifiable randomness, and claims the whole pot.
+    // No-loss: a holder's coins are never touched. See docs/JACKPOT.md.
+
+    /// One-time: create the jackpot for a coin. Binds the prize mint, the snapshotter allowed to
+    /// commit epoch roots, the epoch length, and the pot custody (a prize-mint token account owned
+    /// by the jackpot authority PDA — no private key, no withdraw path).
+    pub fn init_jackpot(ctx: Context<InitJackpot>, epoch_len: i64) -> Result<()> {
+        require!(epoch_len > 0, SolumError::ZeroAmount);
+        let j = &mut ctx.accounts.jackpot;
+        j.coin_mint = ctx.accounts.coin_mint.key();
+        j.prize_mint = ctx.accounts.prize_mint.key();
+        j.admin = ctx.accounts.admin.key();
+        j.snapshotter = ctx.accounts.snapshotter.key();
+        j.pot_custody = ctx.accounts.pot_custody.key();
+        j.epoch_len = epoch_len;
+        j.current_epoch = 0;
+        j.epoch_start = 0;
+        j.twab_root = [0u8; 32];
+        j.total_tickets = 0;
+        j.winning_ticket = 0;
+        j.phase = PHASE_OPEN;
+        j.jackpot_authority_bump = ctx.bumps.jackpot_authority;
+        j.bump = ctx.bumps.jackpot;
+        j.reserved = [0u8; 64];
+        emit!(JackpotInitialized {
+            jackpot: j.key(),
+            coin_mint: j.coin_mint,
+            prize_mint: j.prize_mint
+        });
+        Ok(())
+    }
+
+    /// Snapshotter posts the epoch's TWAB Merkle root + total ticket count, opening a draw. The
+    /// full per-holder snapshot is published off-chain and is recomputable from on-chain transfer
+    /// history, so a wrong root is provable fraud.
+    pub fn commit_epoch(
+        ctx: Context<CommitEpoch>,
+        root: [u8; 32],
+        total_tickets: u64,
+    ) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        let j = &mut ctx.accounts.jackpot;
+        require!(j.phase == PHASE_OPEN, SolumError::JackpotBusy);
+        require!(total_tickets > 0, SolumError::ZeroAmount);
+        j.current_epoch = j
+            .current_epoch
+            .checked_add(1)
+            .ok_or(SolumError::MathOverflow)?;
+        j.epoch_start = now;
+        j.twab_root = root;
+        j.total_tickets = total_tickets;
+        j.winning_ticket = 0;
+        j.phase = PHASE_COMMITTED;
+        emit!(EpochCommitted {
+            jackpot: j.key(),
+            epoch: j.current_epoch,
+            total_tickets
+        });
+        Ok(())
+    }
+
+    /// Fix the winning ticket for the current epoch from verifiable randomness, once the epoch has
+    /// elapsed (a draw can't settle early). Under `devnet-vrf` the randomness is injected by the
+    /// snapshotter for local testing; production uses `switchboard-vrf` reading a VRF account the
+    /// caller cannot influence.
+    #[cfg(feature = "devnet-vrf")]
+    pub fn settle_draw(ctx: Context<SettleDraw>, randomness: [u8; 32]) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        let j = &mut ctx.accounts.jackpot;
+        require!(j.phase == PHASE_COMMITTED, SolumError::JackpotNotReady);
+        require!(
+            now >= j.epoch_start.saturating_add(j.epoch_len),
+            SolumError::EpochNotElapsed
+        );
+        j.winning_ticket = winning_ticket(&randomness, j.total_tickets)?;
+        j.phase = PHASE_SETTLED;
+        emit!(DrawSettled {
+            jackpot: j.key(),
+            epoch: j.current_epoch,
+            winning_ticket: j.winning_ticket
+        });
+        Ok(())
+    }
+
+    /// The holder whose ticket range contains the winning ticket claims the entire pot. Proves
+    /// inclusion of their `(owner, ticket_start, tickets)` leaf in the committed root and that
+    /// `ticket_start ≤ winning_ticket < ticket_start + tickets`. The leaf binds to the signer's
+    /// pubkey, so no one can claim on another holder's behalf. No-loss: only the pot moves.
+    pub fn claim_prize(
+        ctx: Context<ClaimPrize>,
+        ticket_start: u64,
+        tickets: u64,
+        proof: Vec<[u8; 32]>,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.jackpot.phase == PHASE_SETTLED,
+            SolumError::JackpotNotReady
+        );
+        let leaf = hash_leaf(&ctx.accounts.winner.key(), ticket_start, tickets);
+        require!(
+            verify_merkle(&proof, &ctx.accounts.jackpot.twab_root, leaf),
+            SolumError::BadProof
+        );
+        require!(
+            ticket_in_range(ctx.accounts.jackpot.winning_ticket, ticket_start, tickets)?,
+            SolumError::NotWinner
+        );
+        let pot = ctx.accounts.pot_custody.amount;
+        require!(pot > 0, SolumError::ZeroAmount);
+        let jkey = ctx.accounts.jackpot.key();
+        let auth_bump = ctx.accounts.jackpot.jackpot_authority_bump;
+        let signer: &[&[&[u8]]] = &[&[JACKPOT_AUTH_SEED, jkey.as_ref(), &[auth_bump]]];
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.prize_token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.pot_custody.to_account_info(),
+                    mint: ctx.accounts.prize_mint.to_account_info(),
+                    to: ctx.accounts.winner_prize_account.to_account_info(),
+                    authority: ctx.accounts.jackpot_authority.to_account_info(),
+                },
+                signer,
+            ),
+            pot,
+            ctx.accounts.prize_mint.decimals,
+        )?;
+        let epoch = ctx.accounts.jackpot.current_epoch;
+        ctx.accounts.jackpot.phase = PHASE_OPEN; // ready for the next epoch; blocks double-claim
+        emit!(PrizeClaimed {
+            jackpot: jkey,
+            epoch,
+            winner: ctx.accounts.winner.key(),
+            amount: pot
+        });
+        Ok(())
+    }
 }
 
 /// 10^n as u128, checked.
@@ -870,9 +1018,60 @@ fn sync_pool(pool: &mut StakePool, reward_vault_balance: u64) -> Result<()> {
     Ok(())
 }
 
+// --------------------- jackpot pure functions (unit-tested) ---------------------
+
+/// The winning ticket index: the first 8 bytes of the VRF randomness as a little-endian u64,
+/// reduced modulo `total`. (A tiny modulo bias across a u64 range is negligible for ticket counts.)
+fn winning_ticket(randomness: &[u8; 32], total: u64) -> Result<u64> {
+    require!(total > 0, SolumError::ZeroAmount);
+    let mut b = [0u8; 8];
+    b.copy_from_slice(&randomness[..8]);
+    Ok(u64::from_le_bytes(b) % total)
+}
+
+/// keccak leaf for a holder's ticket range: `H(0x00 || owner || start_le || tickets_le)`. The
+/// 0x00 domain tag separates leaves from internal nodes, so no proof can pass an internal node off
+/// as a leaf (second-preimage protection).
+fn hash_leaf(owner: &Pubkey, start: u64, tickets: u64) -> [u8; 32] {
+    keccak::hashv(&[
+        &[0x00u8],
+        owner.as_ref(),
+        &start.to_le_bytes(),
+        &tickets.to_le_bytes(),
+    ])
+    .0
+}
+
+/// Internal Merkle node: `H(0x01 || sorted(a, b))`. Sorted pairs make proofs index-free.
+fn hash_node(a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
+    let (x, y) = if a <= b { (a, b) } else { (b, a) };
+    keccak::hashv(&[&[0x01u8], &x, &y]).0
+}
+
+/// Sorted-pair Merkle verify (OpenZeppelin-style): fold the proof into the leaf and compare to root.
+fn verify_merkle(proof: &[[u8; 32]], root: &[u8; 32], leaf: [u8; 32]) -> bool {
+    let mut computed = leaf;
+    for p in proof {
+        computed = hash_node(computed, *p);
+    }
+    &computed == root
+}
+
+/// `start ≤ winning < start + tickets`, with the end addition checked against overflow.
+fn ticket_in_range(winning: u64, start: u64, tickets: u64) -> Result<bool> {
+    let end = start
+        .checked_add(tickets)
+        .ok_or(SolumError::MathOverflow)?;
+    Ok(winning >= start && winning < end)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{acc_add, min_out_floor, pending_reward, redeem_payout};
+    use super::{
+        acc_add, hash_leaf, hash_node, min_out_floor, pending_reward, redeem_payout,
+        ticket_in_range, verify_merkle, winning_ticket,
+    };
+    use anchor_lang::prelude::Pubkey;
 
     #[test]
     fn basic_one_to_one() {
@@ -1019,6 +1218,48 @@ mod tests {
     #[test]
     fn pending_overflow_guarded() {
         assert!(pending_reward(u64::MAX, u128::MAX, 0).is_err());
+    }
+
+    // ---- jackpot ----
+    #[test]
+    fn winning_ticket_reduces_mod_total() {
+        let mut r = [0u8; 32];
+        r[..8].copy_from_slice(&1005u64.to_le_bytes());
+        assert_eq!(winning_ticket(&r, 1000).unwrap(), 5);
+        assert_eq!(winning_ticket(&r, 1006).unwrap(), 1005);
+        assert!(winning_ticket(&r, 0).is_err());
+    }
+
+    #[test]
+    fn ticket_range_boundaries() {
+        assert!(ticket_in_range(10, 10, 5).unwrap()); // start inclusive
+        assert!(ticket_in_range(14, 10, 5).unwrap()); // end - 1
+        assert!(!ticket_in_range(15, 10, 5).unwrap()); // end exclusive
+        assert!(!ticket_in_range(9, 10, 5).unwrap()); // below range
+        assert!(ticket_in_range(u64::MAX, u64::MAX, u64::MAX).is_err()); // overflow guarded
+    }
+
+    #[test]
+    fn merkle_verify_three_leaves_and_rejections() {
+        let a = Pubkey::new_from_array([1u8; 32]);
+        let b = Pubkey::new_from_array([2u8; 32]);
+        let c = Pubkey::new_from_array([3u8; 32]);
+        let la = hash_leaf(&a, 0, 10);
+        let lb = hash_leaf(&b, 10, 20);
+        let lc = hash_leaf(&c, 30, 5);
+        let ab = hash_node(la, lb);
+        let root = hash_node(ab, lc);
+        // valid proofs for each leaf
+        assert!(verify_merkle(&[lb, lc], &root, la));
+        assert!(verify_merkle(&[la, lc], &root, lb));
+        assert!(verify_merkle(&[ab], &root, lc));
+        // wrong proof for a real leaf fails
+        assert!(!verify_merkle(&[la, lc], &root, la));
+        // tampered leaf (different tickets) fails
+        assert!(!verify_merkle(&[lb, lc], &root, hash_leaf(&a, 0, 11)));
+        // empty proof only verifies a single-leaf root
+        assert!(verify_merkle(&[], &la, la));
+        assert!(!verify_merkle(&[], &root, la));
     }
 }
 
@@ -1384,6 +1625,80 @@ pub struct Unstake<'info> {
     pub reward_token_program: Interface<'info, TokenInterface>,
 }
 
+#[derive(Accounts)]
+pub struct InitJackpot<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub coin_mint: InterfaceAccount<'info, Mint>,
+    pub prize_mint: InterfaceAccount<'info, Mint>,
+    /// CHECK: address allowed to commit epoch roots (the off-chain snapshotter).
+    pub snapshotter: UncheckedAccount<'info>,
+    #[account(
+        init,
+        payer = admin,
+        space = 8 + JackpotState::INIT_SPACE,
+        seeds = [JACKPOT_SEED, coin_mint.key().as_ref(), admin.key().as_ref()],
+        bump
+    )]
+    pub jackpot: Account<'info, JackpotState>,
+    /// CHECK: jackpot authority PDA that owns the pot custody (no private key).
+    #[account(seeds = [JACKPOT_AUTH_SEED, jackpot.key().as_ref()], bump)]
+    pub jackpot_authority: UncheckedAccount<'info>,
+    /// Prize pot: a prize_mint token account owned by the jackpot authority PDA.
+    #[account(token::mint = prize_mint, token::authority = jackpot_authority)]
+    pub pot_custody: InterfaceAccount<'info, TokenAccount>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CommitEpoch<'info> {
+    pub snapshotter: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [JACKPOT_SEED, jackpot.coin_mint.as_ref(), jackpot.admin.as_ref()],
+        bump = jackpot.bump,
+        has_one = snapshotter @ SolumError::Unauthorized
+    )]
+    pub jackpot: Account<'info, JackpotState>,
+}
+
+#[cfg(feature = "devnet-vrf")]
+#[derive(Accounts)]
+pub struct SettleDraw<'info> {
+    pub snapshotter: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [JACKPOT_SEED, jackpot.coin_mint.as_ref(), jackpot.admin.as_ref()],
+        bump = jackpot.bump,
+        has_one = snapshotter @ SolumError::Unauthorized
+    )]
+    pub jackpot: Account<'info, JackpotState>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimPrize<'info> {
+    pub winner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [JACKPOT_SEED, jackpot.coin_mint.as_ref(), jackpot.admin.as_ref()],
+        bump = jackpot.bump
+    )]
+    pub jackpot: Account<'info, JackpotState>,
+    /// CHECK: jackpot authority PDA (owns the pot custody).
+    #[account(
+        seeds = [JACKPOT_AUTH_SEED, jackpot.key().as_ref()],
+        bump = jackpot.jackpot_authority_bump
+    )]
+    pub jackpot_authority: UncheckedAccount<'info>,
+    #[account(address = jackpot.prize_mint @ SolumError::WrongMint)]
+    pub prize_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut, address = jackpot.pot_custody @ SolumError::BadVaultOwner)]
+    pub pot_custody: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub winner_prize_account: InterfaceAccount<'info, TokenAccount>,
+    pub prize_token_program: Interface<'info, TokenInterface>,
+}
+
 /// Stake-to-earn pool for a coin, rewarding stakers in one allowlisted stock via a MasterChef
 /// reward-per-share accumulator. See docs/STAKING.md.
 #[account]
@@ -1413,6 +1728,32 @@ pub struct StakeAccount {
     pub amount: u64,
     pub reward_debt: u128,
     pub bump: u8,
+}
+
+/// No-loss real-stock jackpot for a coin. Fees fund a prize pot; each epoch a TWAB-weighted holder
+/// is drawn from a snapshotter-committed Merkle root using verifiable randomness. See docs/JACKPOT.md.
+#[account]
+#[derive(InitSpace)]
+pub struct JackpotState {
+    pub coin_mint: Pubkey,
+    pub prize_mint: Pubkey,
+    pub admin: Pubkey,
+    /// Address allowed to commit epoch TWAB roots (the off-chain snapshotter).
+    pub snapshotter: Pubkey,
+    /// prize_mint token account owned by the jackpot authority PDA — holds the pot. No withdraw path.
+    pub pot_custody: Pubkey,
+    pub epoch_len: i64,
+    pub current_epoch: u64,
+    pub epoch_start: i64,
+    /// Merkle root of the committed epoch's `(owner, ticket_start, tickets)` leaves.
+    pub twab_root: [u8; 32],
+    pub total_tickets: u64,
+    pub winning_ticket: u64,
+    /// 0 = Open, 1 = Committed, 2 = Settled.
+    pub phase: u8,
+    pub jackpot_authority_bump: u8,
+    pub bump: u8,
+    pub reserved: [u8; 64],
 }
 
 #[cfg(feature = "devnet-oracle")]
@@ -1532,6 +1873,35 @@ pub struct RewardClaimed {
     pub amount: u64,
 }
 
+#[event]
+pub struct JackpotInitialized {
+    pub jackpot: Pubkey,
+    pub coin_mint: Pubkey,
+    pub prize_mint: Pubkey,
+}
+
+#[event]
+pub struct EpochCommitted {
+    pub jackpot: Pubkey,
+    pub epoch: u64,
+    pub total_tickets: u64,
+}
+
+#[event]
+pub struct DrawSettled {
+    pub jackpot: Pubkey,
+    pub epoch: u64,
+    pub winning_ticket: u64,
+}
+
+#[event]
+pub struct PrizeClaimed {
+    pub jackpot: Pubkey,
+    pub epoch: u64,
+    pub winner: Pubkey,
+    pub amount: u64,
+}
+
 // ------------------------------- Errors -------------------------------
 
 #[error_code]
@@ -1598,4 +1968,14 @@ pub enum SolumError {
     WrongRewardMint,
     #[msg("Custody account is not owned by the stake authority")]
     BadCustodyOwner,
+    #[msg("Jackpot is not in the open phase")]
+    JackpotBusy,
+    #[msg("Jackpot draw is not in the required phase")]
+    JackpotNotReady,
+    #[msg("The epoch has not elapsed yet")]
+    EpochNotElapsed,
+    #[msg("Merkle proof is invalid")]
+    BadProof,
+    #[msg("Signer does not hold the winning ticket")]
+    NotWinner,
 }
