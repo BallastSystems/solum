@@ -61,7 +61,7 @@
   a:focus-visible,button:focus-visible{outline:1.5px solid var(--blue);outline-offset:4px;border-radius:3px}
   .shell{width:100%;max-width:1200px;margin:0 auto;padding:0 var(--pad)}
   @media (max-width:820px){:root{--pad:22px}}
-  .rv{opacity:0;transform:translateY(20px);transition:opacity 1s var(--ease),transform 1s var(--ease);transition-delay:calc(var(--i,0)*80ms)}
+  .rv{opacity:1;transform:none} /* content is ALWAYS visible — no blank-then-fade flash on scroll */
   .rv.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
   .lk{color:var(--blue);font-weight:500;font-size:16px;display:inline-flex;align-items:center;gap:5px}
@@ -91,13 +91,14 @@
   .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
     background:linear-gradient(90deg,var(--ink) 3%,color-mix(in srgb,var(--ink) 50%,transparent) 44%,transparent 74%),linear-gradient(0deg,var(--ink) 1%,transparent 24%)}
   .hero-in{position:relative;z-index:2;width:100%;padding:118px 0 90px}
-  .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,400px);gap:clamp(32px,4.5vw,64px);align-items:center}
-  @media(max-width:960px){.hero-grid{grid-template-columns:1fr;gap:44px}}
-  .hero-col{max-width:640px;min-width:0}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,400px);grid-template-areas:"head machine" "body machine";column-gap:clamp(32px,4.5vw,64px);row-gap:clamp(18px,3vw,30px);align-items:start}
+  .hero-head{grid-area:head;max-width:640px;min-width:0}
+  .hero-body{grid-area:body;max-width:640px;min-width:0}
+  @media(max-width:960px){.hero-grid{grid-template-columns:1fr;grid-template-areas:"head" "machine" "body";row-gap:26px}}
   /* live draw machine */
-  .raffle-col{display:flex;justify-content:flex-end;min-width:0}
-  @media(max-width:960px){.raffle-col{justify-content:center;max-width:420px;margin:0 auto}}
-  @media(max-width:520px){.raffle-col{max-width:100%}}
+  .raffle-col{grid-area:machine;align-self:center;display:flex;justify-content:flex-end;min-width:0}
+  @media(max-width:960px){.raffle-col{justify-content:center;max-width:420px;margin:0 auto}.hero{min-height:auto;align-items:flex-start}.hero-in{padding:88px 0 56px}}
+  @media(max-width:520px){.raffle-col{max-width:100%}.hero-in{padding:76px 0 44px}}
   .rm{width:100%;max-width:400px;position:relative;border:1px solid var(--line-2);border-radius:22px;overflow:hidden;
     background:linear-gradient(168deg,color-mix(in srgb,var(--blue) 11%,var(--panel)),var(--ink-2) 72%);
     box-shadow:0 46px 130px -55px var(--blue-glow),0 1px 0 rgba(255,255,255,.04) inset}
@@ -349,8 +350,8 @@
 <nav id="nav"><div class="shell nav-in">
   <span class="wm"><svg><use href="#sol"/></svg>Solum</span>
   <span class="nav-r">
-    <span class="nav-fee"><span class="d"></span>Creator fees <b id="navFee">$0</b></span>
-    <a class="n" href="#how">How it works</a>
+    <span class="nav-fee"><span class="d"></span>Next draw <b id="navFee">$0</b></span>
+    <a class="n" href="#draw-flow">How it works</a>
     <a class="n" href="#fair">Fair by design</a>
     <a class="n nav-win" href="/winners/">Winners</a>
     <a class="nav-ic" href="https://x.com/SolumHQ" target="_blank" rel="noopener" aria-label="Solum on X"><svg><use href="#x"/></svg></a>
@@ -361,16 +362,18 @@
 <header class="hero" id="top">
   <canvas id="sky" aria-hidden="true"></canvas>
   <div class="hero-in"><div class="shell hero-grid">
-    <div class="hero-col">
+    <div class="hero-head">
       <div class="live-fee rv">
-        <div class="lf-top"><span class="d"></span>Creator fees → prizes · all-time<span class="lf-dev">devnet</span></div>
-        <div class="num" id="feeBig">$0</div>
-        <div class="lf-rate" id="feeRate">+$0<span>/hr into the pot</span></div>
+        <div class="lf-top"><span class="d"></span>Allotted to the next draw · live<span class="lf-dev">devnet</span></div>
+        <div class="num" id="feeAllot">$0</div>
+        <div class="lf-rate"><b id="feeBig">$0</b> in creator fees, all-time</div>
       </div>
       <h1>Hold $SOLUM.<br>Win <em>tokenized stock.</em></h1>
+    </div>
+    <div class="hero-body">
       <p class="h-sub rv" style="--i:1">Every hour, $SOLUM's creator fees buy tokenized Apple, NVIDIA, Tesla, Coinbase &amp; Strategy — then <b>raffle it to holders</b>. The more you hold, the better your odds.</p>
       <div class="h-act rv" style="--i:2">
-        <a class="btn" href="#how">How it works</a>
+        <a class="btn" href="#draw-flow">How it works</a>
         <a class="lk" href="#fair">See how it's fair <span class="c">›</span></a>
       </div>
       <div class="partner rv" style="--i:3;margin-top:26px">
@@ -416,19 +419,6 @@
   <div class="flow rv" style="--i:1"><b>More volume</b> <span class="ar">→</span> more creator fees <span class="ar">→</span> bigger stock buy <span class="ar">→</span> <b>bigger pot</b> <span class="ar">→</span> more volume</div>
 </div></section>
 
-<!-- how -->
-<section class="s" id="how"><div class="shell">
-  <div class="s-head">
-    <h2 class="rv">How it <em>works</em></h2>
-    <p class="s-sub rv" style="--i:1">$SOLUM launches on pump.fun. pump.fun pays creator fees on every trade — and we wire those fees straight into an hourly stock raffle for holders.</p>
-  </div>
-  <div class="steps">
-    <div class="strow rv"><div class="idx">1</div><div><h3>Hold $SOLUM</h3><p>Buy and hold like any Solana memecoin. Your <b>average balance over the hour</b> is your entry — no staking, no lock-up.</p></div></div>
-    <div class="strow rv"><div class="idx">2</div><div><h3>Fees buy tokenized stock, every hour</h3><p>Each hour the accrued creator fees automatically buy tokenized stock into the pot — the bigger the trading volume, the bigger the buy.</p></div></div>
-    <div class="strow rv"><div class="idx">3</div><div><h3>A holder wins the pot</h3><p>At a random moment each hour, one holder is drawn to win the whole pot of tokenized stock. <b>The more $SOLUM you hold, the higher your odds.</b> You keep your coins either way.</p></div></div>
-  </div>
-</div></section>
-
 <!-- from snapshot to winner -->
 <section class="s" id="draw-flow"><div class="shell">
   <div class="s-head">
@@ -436,11 +426,9 @@
     <p class="s-sub rv" style="--i:1">Two random moments, one sealed list, verifiable randomness. Here's exactly how each hourly draw runs — and why no one, us included, can bend it.</p>
   </div>
   <div class="flow rv">
-    <div class="fstep"><span class="fn">1</span><div class="fbody"><h3>Snapshot — a hidden, random moment</h3><p>Once an hour, at a time no one is told in advance, Solum freezes every holder's <b>time-averaged</b> $SOLUM balance into raffle tickets. It's your average across the whole hour that counts, so a last-second bag earns almost nothing — and you can't know when the snapshot lands.</p></div></div>
-    <div class="fstep seal"><span class="fn">2</span><div class="fbody"><h3>Sealed on-chain — entries are locked</h3><p>The full ticket list is hashed into one fingerprint (a Merkle root) and posted on-chain. From that instant the draw is <b>sealed</b> — no entry can be added, removed, or edited, and the exact list the winner is drawn from is already public. This is the clean line between <b>who's entered</b> and <b>who wins</b>.</p></div></div>
-    <div class="fstep"><span class="fn">3</span><div class="fbody"><h3>Draw time — revealed second, also random</h3><p>Only after the snapshot is sealed does Solum reveal a <b>separate</b> random time for the draw. Two unannounced moments — there's nothing to time.</p></div></div>
-    <div class="fstep"><span class="fn">4</span><div class="fbody"><h3>Draw — Switchboard VRF picks the number</h3><p>At the draw time a Switchboard verifiable-random oracle produces a number no one — not the team, a bot, or the winner — can predict or grind. The winner is simply the holder whose ticket range contains that number.</p></div></div>
-    <div class="fstep"><span class="fn">5</span><div class="fbody"><h3>Verify it yourself</h3><p>Rebuild the fingerprint from the published list and confirm the winning number lands in the winner's range. The snapshot, the seal, and the VRF draw are public on-chain transactions anyone can replay — who wins is settled on-chain before any prize moves. <a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See the draw code <span class="c">›</span></a></p></div></div>
+    <div class="fstep seal"><span class="fn">1</span><div class="fbody"><h3>Snapshot, sealed on-chain</h3><p>At a hidden, random moment each hour, your <b>time-averaged</b> $SOLUM balance becomes tickets and the full list is locked on-chain. A last-second bag earns almost nothing — and once sealed, entries can't change.</p></div></div>
+    <div class="fstep"><span class="fn">2</span><div class="fbody"><h3>Drawn by Switchboard VRF</h3><p>At a <b>second</b> random time, a verifiable-random oracle produces a number no one — team, bot, or winner — can predict or grind. The winner is whoever holds that ticket.</p></div></div>
+    <div class="fstep"><span class="fn">3</span><div class="fbody"><h3>Verify it yourself</h3><p>Recompute the list, check the number lands in the winner's range, replay the on-chain draw. <a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See the draw code <span class="c">›</span></a></p></div></div>
   </div>
 </div></section>
 
@@ -462,8 +450,8 @@
   </div>
   <div class="draw-status rv" id="drawStatus">
     <div class="ds-top">
-      <span class="ds-hour"><span class="ds-dot"></span>This hour's draw · <b id="dsHour">—</b></span>
-      <span class="ds-note">Snapshot &amp; draw times are randomized every hour · winner drawn by on-chain VRF</span>
+      <span class="ds-hour"><span class="ds-dot"></span>Draw <b id="dsHour">—</b></span>
+      <span class="ds-note">The snapshot time stays hidden · the draw time is revealed with a countdown · winner by on-chain VRF</span>
     </div>
     <div class="ds-steps">
       <div class="ds-step" id="dsSnap"><span class="ds-ico">◷</span><div class="ds-body"><div class="ds-t">Snapshot</div><div class="ds-v" id="dsSnapV">pending — a random moment this hour</div></div></div>
@@ -522,38 +510,6 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   <div class="s-head"><h2 class="rv">Recent <em>winners</em></h2><p class="s-sub rv" style="--i:1">Every hour, a real holder wins. Here are the latest — click any of them to verify the draw yourself.</p></div>
   <div class="winners rv" id="winnersList"></div>
   <div class="rv" style="margin-top:26px;text-align:center"><a class="lk" href="/winners/">See every winner in the full register <span class="c">›</span></a></div>
-</div></section>
-
-<!-- proof of everything -->
-<section class="s" id="verify"><div class="shell">
-  <div class="s-head"><h2 class="rv"><em>Proof</em> of everything</h2><p class="s-sub rv" style="--i:1">The odds, the randomness, and who wins are all on-chain and open-source — check them yourself. Prizes are bought from real creator fees and released to winners after a 24-hour review.</p></div>
-  <div class="proofs rv">
-    <div class="pf"><div class="pf-h">Tokenized stock, bought on-chain</div><p>Every prize is tokenized stock, bought on-chain from the coin's own creator fees and held in Solum's review wallet — publicly viewable and shown here in real time. Issued by our partner <b>Sunrise Financial</b>.</p><a class="lk" href="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet" target="_blank" rel="noopener">View the program on-chain <span class="c">›</span></a></div>
-    <div class="pf"><div class="pf-h">Every draw is a public trail</div><p>Snapshot root → VRF randomness → winning ticket. Who wins is settled in public transactions anyone can replay — decided on-chain before any prize moves.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See how a draw verifies <span class="c">›</span></a></div>
-    <div class="pf"><div class="pf-h">Open source, every line</div><p>The Switchboard VRF draw, the TWAB odds, and the whole program are public. Read them, run the tests, fork it.</p><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the code <span class="c">›</span></a></div>
-    <div class="pf"><div class="pf-h">Independently audited</div><p>OtterSec is reviewing the full protocol. The report will be published here — until then, we say plainly it's pre-audit.</p><a class="lk" href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Follow the audit <span class="c">›</span></a></div>
-  </div>
-  <div class="code rv" style="margin-top:30px">
-    <div class="code-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="fn">solum · who wins is settled on-chain, before any prize moves</span></div>
-<pre><span class="cm">// The winner is fixed on-chain from Switchboard VRF and the committed</span>
-<span class="cm">// holder snapshot — a public transaction anyone can replay:</span>
-<span class="kw">let</span> winning_ticket = <span class="ty">u64</span>::from_le_bytes(randomness[..<span class="num">8</span>]) % total;  <span class="cm">// VRF · un-riggable</span>
-<span class="fnx">require</span>!(<span class="fnx">ticket_in_range</span>(winning_ticket, start, tickets)?, NotWinner);
-
-<span class="cm">// From there the prize is held for a 24-hour quality-control review,</span>
-<span class="cm">// then sent to that exact wallet when the winner claims it.</span></pre>
-  </div>
-</div></section>
-
-<!-- why -->
-<section class="s" id="why"><div class="shell">
-  <div class="s-head"><h2 class="rv">Why people <em>hold</em></h2></div>
-  <div class="why">
-    <div class="wrow rv"><h3>Tokenized stock, not a promise</h3><p>The pot is tokenized Apple, NVIDIA, Tesla, Coinbase &amp; Strategy — bought on-chain and verifiable, not an IOU.</p></div>
-    <div class="wrow rv"><h3>The flywheel pays you</h3><p>Every trade grows the pot. Holders have a direct reason to bring volume — and volume feeds the pot they're chasing.</p></div>
-    <div class="wrow rv"><h3>You never lose your coins</h3><p>It's a raffle, not a stake. Losing a draw costs nothing; you keep every $SOLUM and roll into the next hour.</p></div>
-    <div class="wrow rv"><h3>Fair by design</h3><p>Verifiable randomness, average-balance odds, a random draw time, and open code. Nothing to trust — everything to verify.</p></div>
-  </div>
 </div></section>
 
 <!-- proof -->
@@ -648,22 +604,22 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       if(real){ if(real.snapshotAt)snapAt=Date.parse(real.snapshotAt); if(real.drawAt)drawAt=Date.parse(real.drawAt);
         if(typeof real.holders==="number")holders=real.holders;
         if(real.lastWinner){wAddr=real.lastWinner.addr;wPrize=real.lastWinner.prizeUsd;wStock=real.lastWinner.stock;} }
-      hV.textContent=lbl(hs);
+      hV.textContent="#"+(Math.floor(hs/HOUR)-Math.floor(Date.UTC(2026,6,19)/HOUR));
       [S,D,W].forEach(function(x){x.classList.remove("active","done");});
       var shortAddr=wAddr.slice(0,4)+"…"+wAddr.slice(-4);
       if(now<snapAt){
         S.classList.add("active");
-        sV.textContent="pending — a random moment this hour";
-        dV.textContent="randomized — revealed once the snapshot is taken";
+        sV.textContent="pending — taken at a hidden moment this hour";
+        dV.textContent="revealed once the snapshot is sealed";
         wV.textContent="—";
       } else if(now<drawAt){
         S.classList.add("done"); D.classList.add("active");
-        sV.textContent="✓ taken "+fmt(snapAt)+" · "+holders.toLocaleString()+" holders locked in";
+        sV.textContent="✓ sealed for this draw · "+holders.toLocaleString()+" holders locked in · time hidden";
         dV.textContent="at "+fmt(drawAt)+" · in "+cd(drawAt-now);
         wV.textContent="drawing soon…";
       } else {
         S.classList.add("done"); D.classList.add("done"); W.classList.add("done");
-        sV.textContent="✓ "+fmt(snapAt);
+        sV.textContent="✓ sealed · time kept hidden";
         dV.textContent="✓ "+fmt(drawAt);
         wV.textContent=shortAddr+" · won $"+wPrize.toLocaleString()+" "+wStock;
       }
@@ -778,25 +734,37 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     paint(); setInterval(paint,60000);
   })();
 
-  // --- creator-fee ledger (shared by hero, nav, and the #pot panel so no two surfaces disagree) ---
-  // total lifetime creator fees = raffled-to-holders (all-time) + allotted-to-the-next-draw.
-  // Everything derives from ONE model (or the live status.json), so the numbers always reconcile.
-  var SOLUM_FEE_RATE=280, SOLUM_FEE_BASE=12000, SOLUM_LAUNCH=Date.UTC(2026,6,19);
-  function solumLifetimeFees(){return SOLUM_FEE_BASE + Math.max(0,(Date.now()-SOLUM_LAUNCH)/3.6e6)*SOLUM_FEE_RATE;}
+  // --- creator-fee ledger: ONE shared, live-ticking, reconciled source ---
+  // total lifetime creator fees = raffled-to-holders (all-time, stocks awarded out) + allotted-to-the-next-draw.
+  // Every surface (hero total, nav, hero "allotted", #pot ledger) reads SOLUM_FEES, so they can never disagree.
+  // Illustrative on devnet; snaps to status.json (real on-chain fees) the moment the bot publishes it.
+  var SOLUM_FEE_RATE=1800, SOLUM_FEE_BASE=8000, SOLUM_LAUNCH=Date.UTC(2026,6,23);
   function solumHourFrac(){var d=new Date();return (d.getMinutes()*60+d.getSeconds())/3600;}
-  var SOLUM_FEES={live:false,given:0,pot:0,fees24:0};
-  function solumLedger(){
-    if(SOLUM_FEES.live)return {lifetime:SOLUM_FEES.given+SOLUM_FEES.pot,given:SOLUM_FEES.given,pot:SOLUM_FEES.pot,fees24:SOLUM_FEES.fees24};
-    var pot=SOLUM_FEE_RATE*solumHourFrac(), lifetime=solumLifetimeFees(); // pot resets to 0 each hour (each draw)
-    return {lifetime:lifetime,given:lifetime-pot,pot:pot,fees24:SOLUM_FEE_RATE*24};
+  var SOLUM_FEES={live:false,hr:Math.floor(Date.now()/3.6e6)};
+  SOLUM_FEES.lifetime=SOLUM_FEE_BASE+Math.max(0,(Date.now()-SOLUM_LAUNCH)/3.6e6)*SOLUM_FEE_RATE;
+  SOLUM_FEES.pot=SOLUM_FEE_RATE*solumHourFrac();
+  SOLUM_FEES.fees24=SOLUM_FEE_RATE*24;
+  SOLUM_FEES.given=SOLUM_FEES.lifetime-SOLUM_FEES.pot;
+  function solumPaintFees(){
+    var f=SOLUM_FEES, life=money(Math.round(f.lifetime)), pot=money(Math.round(f.pot));
+    var big=document.getElementById("feeBig"),navf=document.getElementById("navFee"),allot=document.getElementById("feeAllot"),
+        eGiven=document.getElementById("s-given"),ePot=document.getElementById("s-pot"),eFees=document.getElementById("s-fees");
+    if(allot)allot.textContent=pot; if(navf)navf.textContent=pot; // next-draw pot leads
+    if(big)big.textContent=life; // all-time creator fees, secondary
+    if(eGiven)eGiven.textContent=money(Math.round(f.given));
+    if(ePot)ePot.textContent=fmtK(f.pot);
+    if(eFees)eFees.textContent=fmtK(f.fees24);
   }
-  (function(){
-    var big=document.getElementById("feeBig"),navf=document.getElementById("navFee"),rate=document.getElementById("feeRate");
-    function paint(){var s=money(Math.round(solumLedger().lifetime));if(big)big.textContent=s;if(navf)navf.textContent=s;}
-    if(rate)rate.innerHTML="+$"+SOLUM_FEE_RATE.toLocaleString()+"<span>/hr into the pot</span>";
-    paint();
-    if(!RM)setInterval(paint,1500);
-  })();
+  solumPaintFees();
+  if(!RM)setInterval(function(){
+    if(SOLUM_FEES.live){solumPaintFees();return;} // live status.json drives it instead
+    var h=Math.floor(Date.now()/3.6e6);
+    if(h!==SOLUM_FEES.hr){SOLUM_FEES.hr=h;SOLUM_FEES.pot=0;} // a draw fired → pot resets to 0, all-time climbs by it
+    var fee=SOLUM_FEE_RATE/3600*0.9*(0.3+Math.random()*2.2); // creator fees arriving, jittered like real trades
+    SOLUM_FEES.lifetime+=fee; SOLUM_FEES.pot+=fee; SOLUM_FEES.given=SOLUM_FEES.lifetime-SOLUM_FEES.pot;
+    SOLUM_FEES.fees24=Math.max(SOLUM_FEE_RATE*20, SOLUM_FEES.fees24+fee-SOLUM_FEE_RATE/3600*0.9);
+    solumPaintFees();
+  },900);
 
   // ---- hero live-draw machine: a reel of holder cards spins, decelerates, lands on the winner ----
   (function(){
@@ -873,15 +841,13 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   // --- fee ledger + pot chart: raffled all-time · allotted to next draw · 24h — reconciles to status.json ---
   (function(){
     var cv=document.getElementById("chart");if(!cv||!cv.getContext)return;var ctx=cv.getContext("2d");
-    var eGiven=document.getElementById("s-given"),ePot=document.getElementById("s-pot"),eFees=document.getElementById("s-fees"),eCd=document.getElementById("s-cd"),tape=document.getElementById("tape");
-    var N=120,POT=[],W,H,dpr,chartPot=solumLedger().pot;
+    var eCd=document.getElementById("s-cd"),tape=document.getElementById("tape");
+    var N=120,POT=[],W,H,dpr,chartPot=SOLUM_FEES.pot;
     for(var i=0;i<N;i++)POT.push(chartPot);
     function size(){dpr=Math.max(1,Math.min(2,devicePixelRatio||1));W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
     function cd(){var now=new Date(),m=59-now.getMinutes(),s=59-now.getSeconds();return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
-    function paint(){var L=solumLedger();if(eGiven)eGiven.textContent=money(Math.round(L.given));if(ePot)ePot.textContent=fmtK(L.pot);if(eFees)eFees.textContent=fmtK(L.fees24);}
     function tick(){var vol=0.15+Math.random()*Math.random()*5,fee=vol*0.03*150;
-      chartPot=solumLedger().pot;POT.push(chartPot+(Math.random()-0.5)*3);if(POT.length>N)POT.shift();
-      paint();
+      chartPot=SOLUM_FEES.pot;POT.push(chartPot+(Math.random()-0.5)*3);if(POT.length>N)POT.shift();
       var r=document.createElement("div");r.className="trd";
       r.innerHTML='<span class="b">+'+vol.toFixed(2)+'◎ fee</span><span class="a">+'+money(fee)+' stock</span>';
       tape.insertBefore(r,tape.firstChild);while(tape.childNodes.length>7)tape.removeChild(tape.lastChild);}
@@ -904,8 +870,8 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
       if(j&&(j.feesLifetimeUsd!=null||j.prizesAwardedUsd!=null||j.potUsd!=null)){
         var pot=+(j.potUsd||0),given=(j.prizesAwardedUsd!=null?+j.prizesAwardedUsd:((+(j.feesLifetimeUsd||0))-pot));
-        SOLUM_FEES.live=true;SOLUM_FEES.given=given;SOLUM_FEES.pot=pot;SOLUM_FEES.fees24=(j.fees24hUsd!=null?+j.fees24hUsd:solumLedger().fees24);
-        paint();
+        SOLUM_FEES.live=true;SOLUM_FEES.given=given;SOLUM_FEES.pot=pot;SOLUM_FEES.lifetime=given+pot;SOLUM_FEES.fees24=(j.fees24hUsd!=null?+j.fees24hUsd:SOLUM_FEES.fees24);
+        solumPaintFees();
       }
     }).catch(function(){});}catch(e){}
   })();
