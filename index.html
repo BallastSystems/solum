@@ -91,14 +91,14 @@
   .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
     background:linear-gradient(90deg,var(--ink) 3%,color-mix(in srgb,var(--ink) 50%,transparent) 44%,transparent 74%),linear-gradient(0deg,var(--ink) 1%,transparent 24%)}
   .hero-in{position:relative;z-index:2;width:100%;padding:118px 0 90px}
-  .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,430px);gap:clamp(28px,4vw,58px);align-items:center}
-  @media(max-width:900px){.hero-grid{grid-template-columns:1fr;gap:40px}}
-  .hero-col{max-width:620px}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,400px);gap:clamp(32px,4.5vw,64px);align-items:center}
+  @media(max-width:960px){.hero-grid{grid-template-columns:1fr;gap:44px}}
+  .hero-col{max-width:640px;min-width:0}
   /* live draw machine */
-  .raffle-col{display:flex;justify-content:flex-end}
-  @media(max-width:900px){.raffle-col{justify-content:flex-start;max-width:440px}}
+  .raffle-col{display:flex;justify-content:flex-end;min-width:0}
+  @media(max-width:960px){.raffle-col{justify-content:center;max-width:420px;margin:0 auto}}
   @media(max-width:520px){.raffle-col{display:none}}
-  .rm{width:100%;max-width:440px;position:relative;border:1px solid var(--line-2);border-radius:22px;overflow:hidden;
+  .rm{width:100%;max-width:400px;position:relative;border:1px solid var(--line-2);border-radius:22px;overflow:hidden;
     background:linear-gradient(168deg,color-mix(in srgb,var(--blue) 11%,var(--panel)),var(--ink-2) 72%);
     box-shadow:0 46px 130px -55px var(--blue-glow),0 1px 0 rgba(255,255,255,.04) inset}
   .rm-head{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--line)}
@@ -134,7 +134,8 @@
     background:linear-gradient(120deg,var(--blue-hi),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
   .lf-rate{font-size:13px;font-weight:600;color:var(--grn);font-variant-numeric:tabular-nums;margin-top:2px}
   .lf-rate span{color:var(--faint);font-weight:500}
-  h1{font-size:clamp(46px,7.9vw,108px);font-weight:600;letter-spacing:-.038em;line-height:.95;
+  h1{font-size:clamp(38px,5.4vw,66px);font-weight:600;letter-spacing:-.033em;line-height:1.01;
+    text-wrap:balance;overflow-wrap:break-word;
     text-shadow:0 1px 1px rgba(0,0,0,.4),0 4px 34px rgba(0,0,0,.34)}
   h1 em{font-style:normal;color:var(--blue);text-shadow:0 0 40px color-mix(in srgb,var(--blue) 60%,transparent),0 1px 1px rgba(0,0,0,.3)}
   @media (prefers-color-scheme:light){h1{text-shadow:0 1px 0 rgba(255,255,255,.6),0 2px 14px rgba(30,45,70,.14)}}
@@ -355,7 +356,7 @@
         <div class="num" id="feeBig">$0</div>
         <div class="lf-rate" id="feeRate">+$0<span>/hr into the pot</span></div>
       </div>
-      <h1>Hold $SOLUM.<br>Win <em>tokenized&nbsp;stock.</em></h1>
+      <h1>Hold $SOLUM.<br>Win <em>tokenized stock.</em></h1>
       <p class="h-sub rv" style="--i:1">Every hour, $SOLUM's creator fees buy tokenized Apple, NVIDIA, Tesla, Coinbase &amp; Strategy — then <b>raffle it to holders</b>. The more you hold, the better your odds.</p>
       <div class="h-act rv" style="--i:2">
         <a class="btn" href="#how">How it works</a>
