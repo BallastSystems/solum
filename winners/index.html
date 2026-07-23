@@ -1,8 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script>try{var _t=localStorage.getItem("solum-theme");document.documentElement.setAttribute("data-theme",_t||"dark");}catch(e){}</script>
 <title>Winners · Solum</title>
 <meta name="description" content="Every Solum draw, on the record — who won, how much $SOLUM they held, the exact time, and a link to verify each payout on-chain."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -363,7 +364,7 @@
   var root=document.documentElement, tglI=document.getElementById("tglIcon");
   var SUN='<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>';
   var MOON='<path d="M20 14.5A8 8 0 019.5 4 7 7 0 1020 14.5z"/>';
-  function curTheme(){var t;try{t=localStorage.getItem("solum-theme");}catch(e){}return t||"light";}
+  function curTheme(){var t;try{t=localStorage.getItem("solum-theme");}catch(e){}return t||"dark";}
   function apply(t){root.setAttribute("data-theme",t);tglI.innerHTML=t==="dark"?SUN:MOON;try{localStorage.setItem("solum-theme",t);}catch(e){}}
   apply(curTheme());
   document.getElementById("tgl").addEventListener("click",function(){apply(root.getAttribute("data-theme")==="dark"?"light":"dark");});
