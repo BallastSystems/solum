@@ -79,6 +79,8 @@
   .nav-r a.n{font-size:15px;font-weight:500;color:var(--dim);transition:color .3s} .nav-r a.n:hover{color:var(--silver)}
   .nav-fee{font-size:13px;color:var(--faint);font-weight:500;display:flex;align-items:center;gap:7px}
   .nav-fee b{color:var(--blue);font-weight:700;font-variant-numeric:tabular-nums}
+  .nav-ic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--dim);transition:color .2s}
+  .nav-ic svg{width:17px;height:17px;fill:currentColor} .nav-ic:hover{color:var(--silver)}
   .nav-fee .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:bp 2s infinite}
   @media (max-width:900px){.nav-r a.n{display:none}.nav-r a.n.nav-win{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line-2);color:var(--silver);font-weight:600;font-size:14px}.nav-r a.n.nav-win:hover{border-color:var(--blue);color:var(--silver)}}
   @media (max-width:520px){.nav-fee{display:none}.nav-r{gap:12px}}
@@ -327,6 +329,7 @@
 <symbol id="lg-tesla" viewBox="0 0 24 24"><path d="M12 5.4c2.9 0 5.4.5 6.7 1.2l-.9 1.8c-1-.5-2.3-.8-3.6-.9v11.1h-4.4V7.5c-1.3.1-2.6.4-3.6.9L5.3 6.6C6.6 5.9 9.1 5.4 12 5.4z"/><path d="M12 3.6c2.2 0 4.3.3 5.9.8-.3.4-.6.7-1 1.1-1.5-.4-3.1-.5-4.9-.5s-3.4.1-4.9.5c-.4-.4-.7-.7-1-1.1 1.6-.5 3.7-.8 5.9-.8z"/></symbol>
 <symbol id="lg-coinbase" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6z"/></symbol>
 <symbol id="lg-mstr" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l9 18h-6.3L12 15.3 9.3 21H3L12 3zm0 5.6l-3.4 6.8h6.8L12 8.6z"/></symbol>
+<symbol id="x" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></symbol>
 </svg>
 
 <div id="logofield" class="logofield" aria-hidden="true"></div>
@@ -338,6 +341,7 @@
     <a class="n" href="#how">How it works</a>
     <a class="n" href="#fair">Fair by design</a>
     <a class="n nav-win" href="/winners/">Winners</a>
+    <a class="nav-ic" href="https://x.com/SolumHQ" target="_blank" rel="noopener" aria-label="Solum on X"><svg><use href="#x"/></svg></a>
     <a class="btn" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">View code</a>
   </span>
 </div></nav>
@@ -543,13 +547,13 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   <p class="p rv" style="--i:1">Hold the coin, win the stock. Every hour, $SOLUM raffles tokenized Apple, NVIDIA, Tesla, Coinbase &amp; Strategy to holders — funded by trading fees, drawn on-chain, zero risk to your bag.</p>
   <div class="a rv" style="--i:2">
     <a class="btn" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the code</a>
-    <a class="lk" href="https://x.com/solumhq" target="_blank" rel="noopener">Follow @solumhq <span class="c">›</span></a>
+    <a class="lk" href="https://x.com/SolumHQ" target="_blank" rel="noopener">Follow @SolumHQ <span class="c">›</span></a>
   </div>
 </div></section>
 
 <footer><div class="shell ft">
   <span class="wm"><svg style="width:19px;height:19px"><use href="#sol"/></svg>Solum</span>
-  <a href="https://x.com/solumhq" target="_blank" rel="noopener">X</a>
+  <a href="https://x.com/SolumHQ" target="_blank" rel="noopener">X</a>
   <a href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">GitHub</a>
   <a href="https://sunrise.xyz" target="_blank" rel="noopener">Sunrise Financial</a>
   <a href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Audit</a>

@@ -61,6 +61,8 @@
     display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:color .2s,border-color .2s}
   .tgl:hover{color:var(--silver);border-color:var(--blue)}
   .tgl svg{width:15px;height:15px}
+  .nav-ic{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;color:var(--dim);transition:color .2s}
+  .nav-ic svg{width:16px;height:16px;fill:currentColor} .nav-ic:hover{color:var(--silver)}
   .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 15px;border-radius:10px;font-size:13.5px;font-weight:600;
     background:linear-gradient(180deg,var(--blue-hi),var(--blue));color:#0A1018;transition:transform .2s,box-shadow .2s;box-shadow:0 6px 22px -8px var(--blue-glow)}
   .btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px -10px var(--blue-glow)}
@@ -269,6 +271,7 @@
 <symbol id="lg-tesla" viewBox="0 0 24 24"><path d="M12 5.4c2.9 0 5.4.5 6.7 1.2l-.9 1.8c-1-.5-2.3-.8-3.6-.9v11.1h-4.4V7.5c-1.3.1-2.6.4-3.6.9L5.3 6.6C6.6 5.9 9.1 5.4 12 5.4z"/><path d="M12 3.6c2.2 0 4.3.3 5.9.8-.3.4-.6.7-1 1.1-1.5-.4-3.1-.5-4.9-.5s-3.4.1-4.9.5c-.4-.4-.7-.7-1-1.1 1.6-.5 3.7-.8 5.9-.8z"/></symbol>
 <symbol id="lg-coinbase" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6z"/></symbol>
 <symbol id="lg-mstr" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3l9 18h-6.3L12 15.3 9.3 21H3L12 3zm0 5.6l-3.4 6.8h6.8L12 8.6z"/></symbol>
+<symbol id="x" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></symbol>
 </svg>
 
 <nav id="nav"><div class="shell nav-in">
@@ -276,6 +279,7 @@
   <span class="nav-r">
     <a class="n hideS" href="/#how">How it works</a>
     <a class="n hideS" href="/#fair">Fair by design</a>
+    <a class="nav-ic" href="https://x.com/SolumHQ" target="_blank" rel="noopener" aria-label="Solum on X"><svg><use href="#x"/></svg></a>
     <button class="tgl" id="tgl" aria-label="Toggle theme"><svg id="tglIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
     <a class="btn" href="/">Back to Solum</a>
   </span>
@@ -342,7 +346,7 @@
       <a href="/">Home</a>
       <a href="/#fair">Fair by design</a>
       <a href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Code</a>
-      <a href="https://x.com/solumhq" target="_blank" rel="noopener">X</a>
+      <a href="https://x.com/SolumHQ" target="_blank" rel="noopener">X</a>
     </span>
   </div>
   <p class="disc">Who wins is drawn on-chain from the committed holder snapshot and Switchboard VRF — anyone can verify the draw. Each prize is then held in Solum's review wallet for a 24-hour quality-control period; when the countdown ends the winner connects their wallet and the stock is sent directly to them. Odds are the winner's share of the hour's ticket pool — their time-averaged $SOLUM balance over the whole hour, so a last-second buy can't tilt a draw. Figures shown before mainnet are illustrative devnet data; once the draw bot is live this page reads the published record directly. Open-source · devnet · pre-audit.</p>
