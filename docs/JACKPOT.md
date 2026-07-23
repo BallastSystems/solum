@@ -54,7 +54,7 @@ verification** — the standard, safe airdrop/lottery pattern:
   sorted, so each holder owns a contiguous ticket range `[start, start+tickets)`.
 - Publishes the **full snapshot** (every leaf) publicly + commits only the **root + total_tickets**
   on-chain. Anyone can recompute the tree from public chain data and verify the root — a wrong root
-  is provable fraud. (Roadmap: rotating/permissionless snapshotters + a challenge window.)
+  is verifiable fraud. (Roadmap: rotating/permissionless snapshotters + a challenge window.)
 
 ### On-chain draw (trustless where it counts)
 1. `commit_epoch(root, total_tickets)` — snapshotter posts the epoch's Merkle root + ticket count.

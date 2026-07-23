@@ -35,7 +35,7 @@ source.)*
 ## 4. Fund the floor — buybacks
 Buy the tokenized stock in your own wallet (Jupiter, an exchange, wherever), then deposit it.
 Every deposit raises the floor and emits an on-chain event, so each buyback is publicly
-provable.
+verifiable.
 
 ```sh
 npm run ballast -- deposit <COIN_MINT> <AAPLx_MINT> 12        # deposit 12 shares
