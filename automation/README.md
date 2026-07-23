@@ -33,6 +33,9 @@ Each hour:
 | `run.ts` | the hourly scheduler (entry point) |
 | `twab.test.ts` | pure unit tests (8/8) |
 | `cycle.test.ts` | full draw cycle on a validator (7/7) |
+| `stress-500.ts` | 500 independent fee-funded draws + fairness report (win rate vs ticket share) |
+| `verify-draw.ts` | independent draw verifier — re-derive the root, confirm the winner (7/7 unit) |
+| `status.ts` | publishes status.json + winners.json for the site |
 
 ## Run
 
