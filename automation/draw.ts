@@ -56,12 +56,12 @@ export async function payWinner(
   snap: Snapshot,
   winningTicket: bigint,
   conn: Connection,
-): Promise<{ winner: PublicKey; tickets: bigint }> {
+): Promise<{ winner: PublicKey; tickets: bigint; sig: string }> {
   const { entry, proof } = winnerOf(snap, winningTicket);
   const ata = await getOrCreateAssociatedTokenAccount(
     conn, caller, refs.prizeMint, entry.owner, false, undefined, undefined, refs.prizeTokenProgram,
   );
-  await prog.methods
+  const sig = await prog.methods
     .claimPrize(new anchor.BN(entry.start.toString()), new anchor.BN(entry.tickets.toString()), proof.map(toArray))
     .accounts({
       caller: caller.publicKey,
@@ -75,7 +75,7 @@ export async function payWinner(
     })
     .signers([caller])
     .rpc();
-  return { winner: entry.owner, tickets: entry.tickets };
+  return { winner: entry.owner, tickets: entry.tickets, sig };
 }
 
 /** One full devnet draw: commit → settle → pay. Assumes the epoch has already elapsed on-chain. */

@@ -18,7 +18,7 @@ import * as fs from "fs";
 import { TwabAccumulator, buildSnapshot } from "./twab";
 import { commitEpoch, settleDevnet, winningTicketOf, payWinner, JackpotRefs } from "./draw";
 import { fundHourly } from "./fees";
-import { writeStatus, iso, hourLabel } from "./status";
+import { writeStatus, appendWinner, iso, hourLabel } from "./status";
 
 const now = () => Math.floor(Date.now() / 1000);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -36,6 +36,7 @@ type Cfg = {
   refs: JackpotRefs;
   prog: any;
   statusFile: string; // published as solum.work/status.json
+  winnersFile: string; // published as solum.work/winners.json
   snapshotDir: string;
   epochLenSec: number; // on-chain min elapsed before a draw may settle
   snapMinSec: number;
@@ -120,12 +121,14 @@ export async function runForever(cfg: Cfg) {
       // DRAW: VRF settle → auto-pay the proven winner
       await settleDevnet(cfg.prog, cfg.ops, cfg.refs); // switchboard-vrf: request_draw + settle_draw
       const wt = await winningTicketOf(cfg.prog, cfg.refs);
-      const { winner } = await payWinner(cfg.prog, cfg.ops, cfg.refs, snap, wt, conn);
+      const { winner, sig } = await payWinner(cfg.prog, cfg.ops, cfg.refs, snap, wt, conn);
       winnerAddr = winner.toBase58();
+      const winRow = { hourLabel: label, addr: winnerAddr, prizeUsd: potUsd, stock: cfg.stockLabel, drawAt: iso(drawAt), payoutTx: sig };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: cfg.stockLabel, drawAt: iso(drawAt) },
       });
+      appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners feed
       console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${cfg.stockLabel}`);
     } catch (e: any) {
       console.error("[draw] failed:", e.message);
@@ -153,6 +156,7 @@ if (require.main === module) {
     opsStockAccount: new PublicKey(process.env.SOLUM_OPS_STOCK_ACCT!), ops, prog,
     refs: { jackpot, jackpotAuthority, prizeMint: stockMint, potCustody: new PublicKey(process.env.SOLUM_POT_CUSTODY!), prizeTokenProgram: new PublicKey(process.env.SOLUM_STOCK_PROGRAM!) },
     statusFile: process.env.SOLUM_STATUS_FILE || "public/status.json",
+    winnersFile: process.env.SOLUM_WINNERS_FILE || "public/winners.json",
     snapshotDir: process.env.SOLUM_SNAPSHOT_DIR || "snapshots",
     epochLenSec: Number(process.env.SOLUM_EPOCH_LEN || 60),
     snapMinSec: Number(process.env.SOLUM_SNAP_MIN || 8 * 60),

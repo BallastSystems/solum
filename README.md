@@ -1,8 +1,15 @@
 # Solum
 
 **Give your memecoin a floor.** Keep **100% of your creator fees** — Solum bolts a
-non-custodial vault of real tokenized stock (AAPLx, TSLAx, NVDAx…) onto your coin, one every
-holder can redeem against, on-chain, anytime. Backing only goes up. The floor only rises.
+non-custodial vault of real tokenized stock (AAPLx, TSLAx, NVDAx…), issued by our partner
+**[Sunrise Financial](https://sunrise.xyz)**, onto your coin — one every holder can redeem
+against, on-chain, anytime. Backing only goes up. The floor only rises.
+
+## Partners
+
+- **[Sunrise Financial](https://sunrise.xyz)** — tokenized-stock issuance. The real Apple,
+  NVIDIA, Tesla, Coinbase, and MicroStrategy shares that back the vault and fund the draws are
+  issued through Sunrise.
 
 Solum is a backing layer, not a launchpad: launch your coin wherever you like, then give it a
 floor.
