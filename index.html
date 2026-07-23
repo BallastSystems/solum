@@ -91,27 +91,35 @@
   .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,430px);gap:clamp(28px,4vw,58px);align-items:center}
   @media(max-width:900px){.hero-grid{grid-template-columns:1fr;gap:40px}}
   .hero-col{max-width:620px}
-  /* live draw machine (random.org-style picker) */
+  /* live draw machine */
   .raffle-col{display:flex;justify-content:flex-end}
-  @media(max-width:900px){.raffle-col{justify-content:flex-start;max-width:430px}}
+  @media(max-width:900px){.raffle-col{justify-content:flex-start;max-width:440px}}
   @media(max-width:520px){.raffle-col{display:none}}
-  .rm{width:100%;max-width:430px;position:relative;border:1px solid var(--line-2);border-radius:20px;overflow:hidden;
-    background:linear-gradient(165deg,color-mix(in srgb,var(--blue) 9%,var(--panel)),var(--ink-2));box-shadow:0 44px 120px -55px var(--blue-glow);backdrop-filter:blur(6px)}
-  .rm-head{display:flex;align-items:center;gap:9px;padding:15px 18px;border-bottom:1px solid var(--line)}
-  .rm-live{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--blue)}
-  .rm-live .d{width:7px;height:7px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px var(--blue);animation:bp 1.5s infinite}
-  .rm-dev{font-size:9.5px;letter-spacing:.11em;color:var(--faint);border:1px solid var(--line);border-radius:100px;padding:2px 7px;text-transform:uppercase}
-  .rm-pot{margin-left:auto;font-family:var(--display);font-weight:600;font-size:21px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  .rm{width:100%;max-width:440px;position:relative;border:1px solid var(--line-2);border-radius:22px;overflow:hidden;
+    background:linear-gradient(168deg,color-mix(in srgb,var(--blue) 11%,var(--panel)),var(--ink-2) 72%);
+    box-shadow:0 46px 130px -55px var(--blue-glow),0 1px 0 rgba(255,255,255,.04) inset}
+  .rm-head{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--line)}
+  .rm-live{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--blue)}
+  .rm-live .d{width:7px;height:7px;border-radius:50%;background:var(--blue);box-shadow:0 0 11px var(--blue);animation:bp 1.5s infinite}
+  .rm-prize{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--faint)}
+  .rm-prize svg{width:19px;height:19px;fill:currentColor;flex:none}
+  .rm-prize b{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
     background:linear-gradient(120deg,var(--blue-hi),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .rm-reel-wrap{position:relative;height:250px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent,#000 24%,#000 76%,transparent);mask-image:linear-gradient(180deg,transparent,#000 24%,#000 76%,transparent)}
+  .rm-reel-wrap{position:relative;height:264px;overflow:hidden;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 19%,#000 81%,transparent);mask-image:linear-gradient(180deg,transparent,#000 19%,#000 81%,transparent)}
   .rm-reel{will-change:transform}
-  .rm-row{height:42px;display:flex;align-items:center;justify-content:center;font-family:var(--code);font-size:14px;color:var(--dim)}
-  .rm-row.win{color:var(--grn);font-weight:600}
-  .rm-marker{position:absolute;left:12px;right:12px;top:50%;height:42px;transform:translateY(-50%);border-radius:9px;pointer-events:none;
-    border:1px solid color-mix(in srgb,var(--blue) 45%,transparent);background:color-mix(in srgb,var(--blue) 9%,transparent);transition:border-color .4s,background .4s,box-shadow .4s}
-  .rm.won .rm-marker{border-color:color-mix(in srgb,var(--grn) 60%,transparent);background:color-mix(in srgb,var(--grn) 13%,transparent);box-shadow:0 0 30px -6px color-mix(in srgb,var(--grn) 50%,transparent)}
-  .rm-foot{padding:14px 18px;border-top:1px solid var(--line);font-size:13.5px;color:var(--dim);text-align:center;min-height:22px}
+  .rm-row{height:44px;display:flex;align-items:center;gap:11px;padding:0 20px;font-family:var(--code);font-size:13px}
+  .rm-row .av{width:22px;height:22px;border-radius:7px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.07) inset}
+  .rm-row .ad{color:var(--silver);letter-spacing:-.01em}
+  .rm-row .hd{margin-left:auto;color:var(--faint);font-size:12px}
+  .rm-row.win .ad{color:var(--grn);font-weight:700} .rm-row.win .hd{color:var(--grn)}
+  .rm-marker{position:absolute;left:12px;right:12px;top:50%;height:44px;transform:translateY(-50%);border-radius:11px;pointer-events:none;
+    border:1px solid color-mix(in srgb,var(--blue) 42%,transparent);background:color-mix(in srgb,var(--blue) 7%,transparent);
+    transition:border-color .45s,background .45s,box-shadow .45s}
+  .rm.won .rm-marker{border-color:color-mix(in srgb,var(--grn) 62%,transparent);background:color-mix(in srgb,var(--grn) 13%,transparent);box-shadow:0 0 36px -4px color-mix(in srgb,var(--grn) 55%,transparent)}
+  .rm-foot{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 18px;border-top:1px solid var(--line);font-size:13.5px;color:var(--dim);text-align:center;min-height:22px}
   .rm-foot b{color:var(--grn);font-weight:600}
+  .rm-foot .tp{font-size:16px;line-height:1}
   /* live creator-fee readout */
   .live-fee{display:inline-flex;flex-direction:column;gap:4px;padding:16px 22px;margin-bottom:30px;border:1px solid var(--line-2);border-radius:16px;
     background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(8px)}
@@ -354,9 +362,12 @@
     </div>
     <div class="raffle-col">
       <div class="rm rv" id="raffleMachine">
-        <div class="rm-head"><span class="rm-live"><span class="d"></span>Live draw</span><span class="rm-dev">devnet</span><span class="rm-pot" id="rmPot">$0</span></div>
+        <div class="rm-head">
+          <span class="rm-live"><span class="d"></span>Live draw</span>
+          <span class="rm-prize"><svg id="rmLogo" viewBox="0 0 24 24"><use href="#lg-apple"/></svg><b id="rmPot">$0</b><span id="rmStock">AAPLx</span></span>
+        </div>
         <div class="rm-reel-wrap"><div class="rm-reel" id="rmReel"></div><div class="rm-marker"></div></div>
-        <div class="rm-foot" id="rmFoot">Drawing this hour's winner…</div>
+        <div class="rm-foot" id="rmFoot">Spinning up the draw…</div>
       </div>
     </div>
   </div></div>
@@ -745,31 +756,35 @@ token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; win
     setInterval(function(){fees += Math.random()*Math.random()*9;paint();},900);
   })();
 
-  // ---- hero live-draw machine: a reel of holders spins, decelerates, and lands on a winner ----
+  // ---- hero live-draw machine: a reel of holder cards spins, decelerates, lands on the winner ----
   (function(){
     var rm=document.getElementById("raffleMachine"); if(!rm) return;
-    var reel=document.getElementById("rmReel"), foot=document.getElementById("rmFoot"), potEl=document.getElementById("rmPot");
-    var ROWH=42, H=250, CENTER=H/2-ROWH/2, stocks=["AAPLx","NVDAx","TSLAx","COINx","MSTRx"];
+    var reel=document.getElementById("rmReel"),foot=document.getElementById("rmFoot"),potEl=document.getElementById("rmPot"),logo=document.getElementById("rmLogo"),nameEl=document.getElementById("rmStock");
+    var ROWH=44,H=264,CENTER=H/2-ROWH/2;
+    var stocks=[["AAPLx","lg-apple","#E6EAF2"],["NVDAx","lg-nvidia","#76B900"],["TSLAx","lg-tesla","#E82127"],["COINx","lg-coinbase","#0052FF"],["MSTRx","lg-mstr","#F0512B"]];
     function b58(n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(Math.random()*A.length)|0];return s;}
-    function who(){var a=b58(44);return a.slice(0,4)+"…"+a.slice(-4);}
+    function h32(s){var x=0;for(var i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))>>>0;return x;}
+    function card(){var a=b58(44),sh=a.slice(0,4)+"…"+a.slice(-4),x=h32(a),h1=x%360,h2=(x>>9)%360,hold=25+(x%960);
+      return '<div class="rm-row"><span class="av" style="background:linear-gradient(135deg,hsl('+h1+',62%,57%),hsl('+h2+',58%,43%))"></span><span class="ad">'+sh+'</span><span class="hd">◎ '+hold.toLocaleString()+'</span></div>';}
     var timers=[];
     function cycle(){
-      timers.forEach(clearTimeout); timers=[];
-      rm.classList.remove("won"); foot.textContent="Drawing this hour's winner…";
-      var pot=400+Math.floor(Math.random()*2600); potEl.textContent="$"+pot.toLocaleString();
-      var stock=stocks[(Math.random()*5)|0], N=44, winIdx=36, rows="";
-      for(var i=0;i<N;i++) rows+='<div class="rm-row">'+who()+'</div>';
+      timers.forEach(clearTimeout);timers=[];
+      rm.classList.remove("won");foot.innerHTML="Spinning up the draw…";
+      var pot=400+Math.floor(Math.random()*2600);potEl.textContent="$"+pot.toLocaleString();
+      var st=stocks[(Math.random()*5)|0];logo.innerHTML='<use href="#'+st[1]+'"/>';logo.style.color=st[2];nameEl.textContent=st[0];
+      var N=46,winIdx=38,rows="";for(var i=0;i<N;i++)rows+=card();
       reel.innerHTML=rows;
-      reel.style.transition="none"; reel.style.transform="translateY(0)"; void reel.offsetHeight;
-      reel.style.transition="transform 4.4s cubic-bezier(.09,.82,.17,1)";
+      reel.style.transition="none";reel.style.transform="translateY(0)";void reel.offsetHeight;
+      reel.style.transition="transform 4.7s cubic-bezier(.07,.84,.15,1)";
       reel.style.transform="translateY("+(CENTER-winIdx*ROWH)+"px)";
       timers.push(setTimeout(function(){
-        rm.classList.add("won"); var w=reel.children[winIdx];
-        if(w){ w.classList.add("win"); foot.innerHTML="🏆 <b>"+w.textContent+"</b> won $"+pot.toLocaleString()+" "+stock; }
-      },4500));
-      timers.push(setTimeout(cycle,7900));
+        rm.classList.add("won");var w=reel.children[winIdx];
+        if(w){w.classList.add("win");var ad=w.querySelector(".ad").textContent;
+          foot.innerHTML='<span class="tp">🏆</span> <b>'+ad+'</b> won $'+pot.toLocaleString()+' '+st[0];}
+      },4800));
+      timers.push(setTimeout(cycle,8500));
     }
-    if(RM){ reel.innerHTML='<div class="rm-row win">'+who()+'</div>'; foot.innerHTML="🏆 a holder wins every hour"; potEl.textContent="$1,240"; }
+    if(RM){reel.innerHTML=card().replace("rm-row","rm-row win");foot.innerHTML="🏆 a holder wins every hour";potEl.textContent="$1,240";}
     else cycle();
   })();
 
