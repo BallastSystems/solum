@@ -375,9 +375,12 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     var f=document.getElementById("logofield"); if(!f) return;
     var L=[["lg-apple","#E6EAF2"],["lg-nvidia","#76B900"],["lg-tesla","#E82127"],["lg-coinbase","#0052FF"],["lg-mstr","#F0512B"]];
     function build(){
-      var w=innerWidth, cols=w<640?4:(w<1000?6:8), rows=w<640?6:5, out="", i=0;
-      for(var r=0;r<rows;r++){for(var c=0;c<cols;c++){
-        var lg=L[(i*3+r)%L.length]; i++;
+      var w=innerWidth, cols=w<640?4:(w<1000?6:8), rows=w<640?6:5, out="", grid=[];
+      for(var r=0;r<rows;r++){grid[r]=[];for(var c=0;c<cols;c++){
+        // pick a random logo that doesn't match the neighbour to the left or above
+        var pl=c>0?grid[r][c-1]:-1, pu=r>0?grid[r-1][c]:-1, ch=[];
+        for(var k=0;k<L.length;k++){if(k!==pl&&k!==pu)ch.push(k);}
+        var idx=ch[(Math.random()*ch.length)|0]; grid[r][c]=idx; var lg=L[idx];
         var left=((c+0.5+(Math.random()-0.5)*0.85)/cols)*100;
         var top=((r+0.5+(Math.random()-0.5)*0.85)/rows)*100;
         var t=Math.random(), sz=t<0.34?24+Math.random()*24:(t<0.72?52+Math.random()*36:94+Math.random()*48);
