@@ -145,6 +145,26 @@
   .pnl-top .live{font-size:12px;font-weight:600;color:var(--blue);display:inline-flex;align-items:center;gap:7px}
   .pnl-top .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px var(--blue);animation:bp 2s infinite}
   .pnl-top .note{margin-left:auto;font-size:13px;color:var(--faint)} @media (max-width:520px){.pnl-top .note{display:none}}
+  /* live raffle centerpiece */
+  .livewrap{padding:clamp(48px,7vh,80px) 0 clamp(20px,3vh,32px)}
+  .livedraw{position:relative;overflow:hidden;border:1px solid var(--line-2);border-radius:24px;padding:clamp(26px,4vw,44px);
+    background:linear-gradient(158deg,color-mix(in srgb,var(--blue) 11%,var(--panel)),var(--ink-2));box-shadow:0 44px 130px -55px var(--blue-glow)}
+  .livedraw::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(58% 90% at 82% -10%,var(--blue-glow),transparent 62%)}
+  .ld-top{position:relative;display:flex;align-items:center;gap:12px;margin-bottom:clamp(22px,3vw,30px);flex-wrap:wrap;font-size:15px;font-weight:600}
+  .ld-live{display:inline-flex;align-items:center;gap:8px;color:var(--blue);font-size:11.5px;text-transform:uppercase;letter-spacing:.12em;border:1px solid color-mix(in srgb,var(--blue) 42%,transparent);border-radius:100px;padding:5px 12px}
+  .ld-live .d{width:7px;height:7px;border-radius:50%;background:var(--blue);box-shadow:0 0 11px var(--blue);animation:bp 1.5s infinite}
+  .ld-stock{margin-left:auto;display:inline-flex;align-items:center;gap:9px;color:var(--dim);font-size:14px}
+  .ld-stock svg{width:22px;height:22px;fill:currentColor;flex:none}
+  .ld-grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,3vw,32px)}
+  @media(max-width:620px){.ld-grid{grid-template-columns:1fr;gap:20px}}
+  .ld-lab{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:600}
+  .ld-big{font-family:var(--display);font-size:clamp(40px,6.4vw,72px);font-weight:600;letter-spacing:-.035em;line-height:.95;margin-top:9px;font-variant-numeric:tabular-nums}
+  .ld-pot{color:transparent;background:linear-gradient(120deg,var(--blue-hi),var(--blue));-webkit-background-clip:text;background-clip:text}
+  .ld-status{position:relative;margin-top:clamp(22px,3vw,30px);padding-top:clamp(18px,2.5vw,24px);border-top:1px solid var(--line);font-size:15px;color:var(--dim);transition:color .4s}
+  .ld-status b{color:var(--silver);font-weight:600}
+  .ld-status.won{color:var(--silver)} .ld-status.won b{color:var(--grn)}
+  @keyframes ldflash{0%{background:color-mix(in srgb,var(--grn) 16%,transparent)}100%{background:transparent}}
+  .livedraw.reveal{animation:ldflash 1.4s var(--ease)}
   /* draw status card */
   .draw-status{margin-bottom:20px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--ink-2),var(--panel));padding:18px 22px}
   .ds-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:15px}
@@ -309,6 +329,22 @@
 </header>
 
 <div class="tick" aria-hidden="true"><div class="tick-t" id="tick"></div></div>
+
+<!-- live raffle centerpiece -->
+<section class="livewrap" id="live"><div class="shell">
+  <div class="livedraw rv" id="liveDraw">
+    <div class="ld-top">
+      <span class="ld-live"><span class="d"></span>Live</span> This hour's raffle
+      <span class="ld-stock" id="ldStock"></span>
+    </div>
+    <div class="ld-grid">
+      <div><div class="ld-lab">Next draw in</div><div class="ld-big" id="ldCd">--:--</div></div>
+      <div><div class="ld-lab">Prize pot</div><div class="ld-big ld-pot" id="ldPot">$0</div></div>
+      <div><div class="ld-lab">Holders entered</div><div class="ld-big" id="ldHold">0</div></div>
+    </div>
+    <div class="ld-status" id="ldStatus">Collecting fees · snapshot at a random moment this hour · winner drawn by VRF</div>
+  </div>
+</div></section>
 
 <!-- flywheel -->
 <section class="stmt" id="idea"><div class="shell">
@@ -554,6 +590,45 @@ token_interface::<span class="fnx">transfer_checked</span>(pot_custody -&gt; win
       }
     }
     render(); setInterval(render,1000);
+  })();
+
+  // ---- live raffle centerpiece: ticking countdown, growing pot, rotating stock, winner reveal ----
+  (function(){
+    var wrap=document.getElementById("liveDraw"); if(!wrap) return;
+    var HOUR=3600000;
+    var stocks=[["AAPLx","Apple","lg-apple","#E6EAF2"],["NVDAx","NVIDIA","lg-nvidia","#76B900"],["TSLAx","Tesla","lg-tesla","#E82127"],["COINx","Coinbase","lg-coinbase","#0052FF"],["MSTRx","MicroStrategy","lg-mstr","#F0512B"]];
+    function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+    function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
+    function cd(ms){ms=Math.max(0,ms);var s=Math.floor(ms/1000),m=Math.floor(s/60);s%=60;return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
+    var CD=document.getElementById("ldCd"),POT=document.getElementById("ldPot"),HOLD=document.getElementById("ldHold"),ST=document.getElementById("ldStock"),STAT=document.getElementById("ldStatus");
+    var hr=-1, snapAt=0, drawAt=0, holders=0, potBase=0, potGrow=0, win=null, st=stocks[0], revealed=false;
+    function seed(){
+      var h=Math.floor(Date.now()/HOUR); if(h===hr) return; hr=h; revealed=false;
+      var rng=m32(h);
+      snapAt=h*HOUR+(8+Math.floor(rng()*44))*60000; drawAt=snapAt+(4+Math.floor(rng()*11))*60000;
+      holders=800+Math.floor(rng()*2200); potBase=400+Math.floor(rng()*2400); potGrow=potBase*(0.15+rng()*0.4);
+      var a=b58(rng,44); win={addr:a.slice(0,4)+"…"+a.slice(-4),prize:180+Math.floor(rng()*900)};
+      st=stocks[h%stocks.length];
+      ST.innerHTML='<svg viewBox="0 0 24 24" style="color:'+st[3]+'"><use href="#'+st[2]+'"/></svg>'+st[0]+' · '+st[1];
+      wrap.classList.remove("reveal"); STAT.classList.remove("won");
+    }
+    function tick(){
+      seed(); var now=Date.now(), frac=(now-Math.floor(now/HOUR)*HOUR)/HOUR;
+      POT.textContent="$"+Math.round(potBase+potGrow*frac).toLocaleString();
+      HOLD.textContent=holders.toLocaleString();
+      if(now<drawAt){
+        CD.textContent=cd(drawAt-now);
+        STAT.innerHTML = now<snapAt
+          ? "Collecting fees · snapshot at a random moment this hour · winner drawn by VRF"
+          : "<b>Snapshot taken</b> · "+holders.toLocaleString()+" holders locked in · drawing soon";
+      } else {
+        CD.textContent="00:00";
+        STAT.classList.add("won");
+        STAT.innerHTML="🏆 <b>"+win.addr+"</b> won <b>$"+win.prize.toLocaleString()+"</b> of "+st[0];
+        if(!revealed){ revealed=true; wrap.classList.add("reveal"); }
+      }
+    }
+    tick(); setInterval(tick,1000);
   })();
 
   // ---- recent winners feed: self-contained demo; reads winners.json (published by the bot) to go live ----
