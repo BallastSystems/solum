@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Solum — hold the coin, win real stock</title>
-<meta name="description" content="Every trade buys real Apple, NVIDIA & Tesla stock into a vault — a floor that can't rug, and a jackpot holders win. You never lose your coins.">
-<meta property="og:title" content="Solum — a memecoin backed by real stock">
-<meta property="og:description" content="A floor that can't rug, and a no-loss jackpot of real stock. Hold the coin, win the pot.">
+<title>Solum — hold $SOLUM, win real stock</title>
+<meta name="description" content="Every hour, $SOLUM's creator fees buy real Apple, NVIDIA & Tesla stock and raffle it to holders. More volume, bigger pot. The more you hold, the better your odds. Provably random.">
+<meta property="og:title" content="Solum — hold $SOLUM, win real stock">
+<meta property="og:description" content="Creator fees buy real stock every hour and raffle it to holders. Provably random. You keep your coins.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23D6E6FA'/%3E%3Cstop offset='.5' stop-color='%237FB0EC'/%3E%3Cstop offset='1' stop-color='%233A72BE'/%3E%3C/linearGradient%3E%3CclipPath id='h'%3E%3Crect x='0' y='0' width='24' height='14.4'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect width='24' height='24' rx='5' fill='%230A0F1C'/%3E%3Ccircle cx='12' cy='14.4' r='5.3' fill='url(%23g)' clip-path='url(%23h)'/%3E%3Cpath d='M3.5 14.4h17' fill='none' stroke='url(%23g)' stroke-width='1.7' stroke-linecap='round'/%3E%3Cpath d='M5.7 17.5h12.6' fill='none' stroke='%236E88AE' stroke-width='1.25' stroke-linecap='round' opacity='.8'/%3E%3Cpath d='M7.8 20.2h8.4' fill='none' stroke='%236E88AE' stroke-width='1.1' stroke-linecap='round' opacity='.55'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,6 +18,7 @@
     --blue:#5AA6F0; --blue-hi:#93C6FF; --blue-deep:#3579C8; --blue-glow:rgba(90,166,240,.18);
     --steel:#B9C4D8; --cool:#9FB0C8; --grn:#57D3A8;
     --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Hanken Grotesk","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --code:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
     --pad:40px; --ease:cubic-bezier(.16,1,.3,1);
   }
   @media (prefers-color-scheme:light){:root{
@@ -47,18 +48,13 @@
   a{color:inherit;text-decoration:none} p{margin:0}
   h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.03em;line-height:1.03;text-wrap:balance}
   a:focus-visible,button:focus-visible{outline:1.5px solid var(--blue);outline-offset:4px;border-radius:3px}
-
   .shell{width:100%;max-width:1200px;margin:0 auto;padding:0 var(--pad)}
   @media (max-width:820px){:root{--pad:22px}}
-
   .rv{opacity:0;transform:translateY(20px);transition:opacity 1s var(--ease),transform 1s var(--ease);transition-delay:calc(var(--i,0)*80ms)}
   .rv.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
-
-  /* links — Apple chevron style */
   .lk{color:var(--blue);font-weight:500;font-size:16px;display:inline-flex;align-items:center;gap:5px}
-  .lk .c{transition:transform .35s var(--ease)}
-  .lk:hover .c{transform:translateX(4px)}
+  .lk .c{transition:transform .35s var(--ease)} .lk:hover .c{transform:translateX(4px)}
   .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;letter-spacing:-.01em;
     color:#06101f;background:var(--blue);padding:12px 22px;border-radius:100px;transition:background .3s,transform .3s var(--ease);border:0;cursor:pointer}
   .btn:hover{background:var(--blue-hi);transform:translateY(-1px)}
@@ -70,26 +66,37 @@
   .wm svg{width:25px;height:25px}
   .nav-r{margin-left:auto;display:flex;align-items:center;gap:30px}
   .nav-r a.n{font-size:15px;font-weight:500;color:var(--dim);transition:color .3s} .nav-r a.n:hover{color:var(--silver)}
-  @media (max-width:760px){.nav-r a.n{display:none}}
+  .nav-fee{font-size:13px;color:var(--faint);font-weight:500;display:flex;align-items:center;gap:7px}
+  .nav-fee b{color:var(--blue);font-weight:700;font-variant-numeric:tabular-nums}
+  .nav-fee .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:bp 2s infinite}
+  @media (max-width:900px){.nav-r a.n{display:none}} @media (max-width:520px){.nav-fee{display:none}}
 
   /* HERO */
   .hero{position:relative;min-height:100svh;display:flex;align-items:center;overflow:hidden}
   #sky{position:absolute;inset:0;width:100%;height:100%;z-index:0}
   .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
     background:linear-gradient(90deg,var(--ink) 3%,color-mix(in srgb,var(--ink) 50%,transparent) 44%,transparent 74%),linear-gradient(0deg,var(--ink) 1%,transparent 24%)}
-  .hero-in{position:relative;z-index:2;width:100%;padding:120px 0 90px}
-  .hero-col{max-width:min(760px,88%)}
-  h1{font-size:clamp(54px,9.4vw,124px);font-weight:700;letter-spacing:-.045em;line-height:.94}
+  .hero-in{position:relative;z-index:2;width:100%;padding:118px 0 90px}
+  .hero-col{max-width:min(780px,90%)}
+  /* live creator-fee readout */
+  .live-fee{display:inline-flex;flex-direction:column;gap:4px;padding:16px 22px;margin-bottom:30px;border:1px solid var(--line-2);border-radius:16px;
+    background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(8px)}
+  .live-fee .lab{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .live-fee .lab .d{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:bp 1.8s infinite}
+  @keyframes bp{0%,100%{opacity:1}50%{opacity:.4}}
+  .live-fee .num{font-size:clamp(30px,5vw,52px);font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;
+    background:linear-gradient(120deg,var(--blue-hi),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .live-fee .sub{font-size:12.5px;color:var(--faint)}
+  h1{font-size:clamp(48px,8.4vw,116px);font-weight:700;letter-spacing:-.045em;line-height:.94}
   h1 em{font-style:normal;color:var(--blue)}
-  .h-sub{max-width:30ch;margin-top:30px;color:var(--dim);font-size:clamp(17px,1.9vw,22px);line-height:1.42;font-weight:400}
+  .h-sub{max-width:38ch;margin-top:26px;color:var(--dim);font-size:clamp(16px,1.75vw,21px);line-height:1.45;font-weight:400}
   .h-sub b{color:var(--silver);font-weight:600}
-  .h-act{display:flex;align-items:center;gap:28px;margin-top:38px;flex-wrap:wrap}
-  .scrollhint{position:absolute;left:50%;transform:translateX(-50%);bottom:26px;z-index:2;color:var(--faint)}
+  .h-act{display:flex;align-items:center;gap:26px;margin-top:38px;flex-wrap:wrap}
+  .scrollhint{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;z-index:2;color:var(--faint)}
   .scrollhint svg{width:22px;height:22px;animation:bob 2.4s var(--ease) infinite}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
   @media (prefers-reduced-motion:reduce){.scrollhint svg{animation:none}}
 
-  /* ticker */
   .tick{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
   .tick-t{display:flex;width:max-content;animation:tk 48s linear infinite}
@@ -97,98 +104,93 @@
   @media (prefers-reduced-motion:reduce){.tick-t{animation:none}}
   @keyframes tk{to{transform:translateX(-50%)}}
   .tk-i{display:inline-flex;align-items:baseline;gap:11px;padding:17px 34px;border-right:1px solid var(--line);white-space:nowrap}
-  .tk-i .sym{font-weight:700;font-size:15px;color:var(--silver);letter-spacing:-.01em}
-  .tk-i .nm{font-size:14px;color:var(--faint)}
-  .tk-i .dl{font-size:13px;color:var(--grn);font-variant-numeric:tabular-nums}
+  .tk-i .sym{font-weight:700;font-size:15px;color:var(--silver)} .tk-i .nm{font-size:14px;color:var(--faint)} .tk-i .dl{font-size:13px;color:var(--grn);font-variant-numeric:tabular-nums}
 
-  /* section */
-  .s{padding:clamp(100px,16vh,190px) 0}
-  .s-head{max-width:780px}
-  .s h2{font-size:clamp(36px,5.6vw,74px);font-weight:700;letter-spacing:-.04em;line-height:1}
+  .s{padding:clamp(96px,15vh,180px) 0}
+  .s-head{max-width:820px}
+  .s h2{font-size:clamp(34px,5.4vw,70px);font-weight:700;letter-spacing:-.04em;line-height:1}
   .s h2 em{font-style:normal;color:var(--blue)}
-  .s-sub{margin-top:22px;color:var(--dim);font-size:clamp(17px,1.8vw,21px);line-height:1.45;max-width:44ch;font-weight:400}
+  .s-sub{margin-top:22px;color:var(--dim);font-size:clamp(17px,1.8vw,21px);line-height:1.45;max-width:46ch;font-weight:400}
 
-  /* statement (idea) */
-  .stmt{padding:clamp(110px,18vh,210px) 0}
-  .stmt p{font-size:clamp(30px,5vw,64px);font-weight:600;letter-spacing:-.035em;line-height:1.08;max-width:19ch}
+  .stmt{padding:clamp(104px,17vh,200px) 0}
+  .stmt p{font-size:clamp(28px,4.8vw,60px);font-weight:600;letter-spacing:-.035em;line-height:1.1;max-width:20ch}
   .stmt em{font-style:normal;color:var(--blue)}
+  .stmt .flow{margin-top:34px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:clamp(14px,1.5vw,17px);color:var(--dim);font-weight:500}
+  .stmt .flow b{color:var(--silver);font-weight:600} .stmt .flow .ar{color:var(--blue)}
 
-  /* steps */
-  .steps{margin-top:clamp(50px,7vw,90px);display:flex;flex-direction:column;gap:0}
+  .steps{margin-top:clamp(48px,7vw,88px);display:flex;flex-direction:column}
   .strow{display:grid;grid-template-columns:120px 1fr;column-gap:40px;align-items:start;padding:40px 0;border-top:1px solid var(--line)}
   .strow:last-child{border-bottom:1px solid var(--line)}
-  .strow .idx{font-size:clamp(44px,5.5vw,72px);font-weight:300;color:var(--blue);letter-spacing:-.04em;line-height:.8}
+  .strow .idx{font-size:clamp(44px,5vw,72px);font-weight:300;color:var(--blue);letter-spacing:-.04em;line-height:.8}
   .strow h3{font-size:clamp(23px,2.6vw,32px);font-weight:600;letter-spacing:-.025em}
-  .strow p{margin-top:10px;color:var(--dim);font-size:17px;line-height:1.45;max-width:52ch}
-  @media (max-width:640px){.strow{grid-template-columns:64px 1fr;column-gap:24px;padding:32px 0}}
+  .strow p{margin-top:10px;color:var(--dim);font-size:17px;line-height:1.45;max-width:54ch}
+  @media (max-width:640px){.strow{grid-template-columns:56px 1fr;column-gap:22px;padding:32px 0}}
 
-  /* two jobs — feature duo */
-  .duo{margin-top:clamp(50px,7vw,84px);display:grid;grid-template-columns:1fr 1fr;gap:24px}
-  @media (max-width:820px){.duo{grid-template-columns:1fr}}
-  .feat{position:relative;padding:clamp(34px,3.4vw,52px);border-radius:22px;background:linear-gradient(180deg,var(--ink-2),var(--panel));border:1px solid var(--line);overflow:hidden;transition:transform .5s var(--ease),border-color .5s}
-  .feat:hover{transform:translateY(-4px);border-color:var(--line-2)}
-  .feat .tag{font-size:14px;font-weight:600;color:var(--blue);letter-spacing:-.01em}
-  .feat h3{margin-top:16px;font-size:clamp(27px,3vw,38px);font-weight:700;letter-spacing:-.03em;line-height:1.04}
-  .feat p{margin-top:16px;color:var(--dim);font-size:16.5px;line-height:1.5}
-  .feat .glow{position:absolute;right:-30%;top:-40%;width:70%;height:120%;background:radial-gradient(circle,var(--blue-glow),transparent 66%);pointer-events:none}
-
-  /* vault panel */
+  /* pot / fee panel */
   .panel{margin-top:clamp(46px,6vw,72px);background:linear-gradient(180deg,var(--panel),var(--ink-2));border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 50px 130px -60px rgba(0,0,0,.7)}
   .pnl-top{display:flex;align-items:center;gap:13px;padding:16px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-  .pnl-top .tk{font-weight:700;font-size:15px;letter-spacing:-.01em}
+  .pnl-top .tk{font-weight:700;font-size:15px}
   .pnl-top .live{font-size:12px;font-weight:600;color:var(--blue);display:inline-flex;align-items:center;gap:7px}
   .pnl-top .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px var(--blue);animation:bp 2s infinite}
-  @keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
-  .pnl-top .note{margin-left:auto;font-size:13px;color:var(--faint)}
-  @media (max-width:520px){.pnl-top .note{display:none}}
+  .pnl-top .note{margin-left:auto;font-size:13px;color:var(--faint)} @media (max-width:520px){.pnl-top .note{display:none}}
   .pnl-stat{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
   .pnl-stat>div{padding:18px 22px;border-right:1px solid var(--line)} .pnl-stat>div:last-child{border-right:0}
   .pnl-stat dt{font-size:12px;color:var(--faint);margin:0;font-weight:500}
-  .pnl-stat dd{margin:7px 0 0;font-weight:700;font-size:clamp(18px,2.5vw,27px);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .pnl-stat dd{margin:7px 0 0;font-weight:700;font-size:clamp(18px,2.4vw,27px);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .pnl-stat .g dd{color:var(--blue)} .pnl-stat .c dd{color:var(--grn)}
   @media (max-width:720px){.pnl-stat{grid-template-columns:1fr 1fr}.pnl-stat>div:nth-child(2){border-right:0}}
   .pnl-body{display:grid;grid-template-columns:1fr 250px}
   @media (max-width:720px){.pnl-body{grid-template-columns:1fr}}
-  #chart{display:block;width:100%;height:330px} @media (max-width:720px){#chart{height:240px}}
+  #chart{display:block;width:100%;height:320px} @media (max-width:720px){#chart{height:230px}}
   .tape{border-left:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
   @media (max-width:720px){.tape{border-left:0;border-top:1px solid var(--line)}}
   .tape .th{font-size:11px;color:var(--faint);font-weight:600}
   .trd{font-size:13px;display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);animation:sl .5s var(--ease);font-variant-numeric:tabular-nums}
   @keyframes sl{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-  .trd .b{color:var(--grn)} .trd .s{color:#E08A6E} .trd .a{color:var(--blue)}
+  .trd .b{color:var(--grn)} .trd .a{color:var(--blue)}
   .pnl-leg{display:flex;gap:22px;padding:12px 22px;border-top:1px solid var(--line);font-size:13px;color:var(--dim);flex-wrap:wrap}
   .pnl-leg i{display:inline-block;width:16px;height:2px;vertical-align:middle;margin-right:7px}
 
-  /* why list */
+  /* provably fair — code */
+  .fair{display:grid;grid-template-columns:1fr 1.05fr;gap:44px;align-items:center;margin-top:clamp(44px,6vw,72px)}
+  @media (max-width:900px){.fair{grid-template-columns:1fr;gap:32px}}
+  .fair .pts{display:flex;flex-direction:column;gap:26px}
+  .fair .pt h3{font-size:clamp(19px,2vw,24px);font-weight:600;letter-spacing:-.02em}
+  .fair .pt p{margin-top:8px;color:var(--dim);font-size:15.5px;line-height:1.5}
+  .code{background:#070B14;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 40px 100px -50px rgba(0,0,0,.8)}
+  :root[data-theme="light"] .code{background:#0B1220}
+  .code-top{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .code-top .dot{width:11px;height:11px;border-radius:50%;background:var(--line-2)}
+  .code-top .fn{margin-left:8px;font-family:var(--code);font-size:12px;color:var(--faint)}
+  .code pre{margin:0;padding:20px;overflow-x:auto;font-family:var(--code);font-size:13px;line-height:1.7;color:#C6D3E6}
+  .code .cm{color:#5F718C} .code .kw{color:#7FB0EC} .code .fnx{color:#9FE0C0} .code .ty{color:#C9A9F0} .code .num{color:#E0B080}
+
   .why{margin-top:clamp(50px,7vw,84px);border-top:1px solid var(--line)}
   .wrow{display:grid;grid-template-columns:1fr 1fr;column-gap:40px;padding:36px 0;border-bottom:1px solid var(--line);align-items:baseline}
   .wrow h3{font-size:clamp(22px,2.6vw,32px);font-weight:600;letter-spacing:-.025em}
   .wrow p{color:var(--dim);font-size:17px;line-height:1.45}
   @media (max-width:760px){.wrow{grid-template-columns:1fr;row-gap:8px;padding:28px 0}}
 
-  /* proof */
-  .spec{margin-top:clamp(46px,6vw,72px);display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+  .spec{margin-top:clamp(46px,6vw,72px);display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
   @media (max-width:720px){.spec{grid-template-columns:1fr 1fr}}
-  .sp{padding:40px 30px 40px 0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding-left:26px}
-  .sp .v{font-size:clamp(40px,5.6vw,68px);font-weight:700;letter-spacing:-.045em;line-height:.9;color:var(--silver);font-variant-numeric:tabular-nums}
+  .sp{padding:40px 30px 40px 26px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .sp .v{font-size:clamp(40px,5.6vw,66px);font-weight:700;letter-spacing:-.045em;line-height:.9;color:var(--silver);font-variant-numeric:tabular-nums}
   .sp .v small{font-size:.5em;color:var(--blue);font-weight:700;vertical-align:super}
   .sp .k{margin-top:14px;font-size:14.5px;color:var(--dim);line-height:1.4;max-width:22ch}
   .cap{margin-top:22px;font-size:14px;color:var(--faint)} .cap b{color:var(--blue);font-weight:600}
 
-  /* close */
   .close{position:relative;padding:clamp(120px,20vh,220px) 0;overflow:hidden;border-top:1px solid var(--line)}
   #closeglow{position:absolute;inset:0;width:100%;height:100%;z-index:0;opacity:.7}
   .close .in{position:relative;z-index:1}
-  .close h2{font-size:clamp(40px,7vw,96px);font-weight:700;letter-spacing:-.045em;line-height:.96;max-width:14ch}
+  .close h2{font-size:clamp(40px,7vw,94px);font-weight:700;letter-spacing:-.045em;line-height:.96;max-width:15ch}
   .close h2 em{font-style:normal;color:var(--blue)}
-  .close .p{margin-top:26px;color:var(--dim);font-size:18px;max-width:36ch;line-height:1.45}
-  .close .a{display:flex;gap:28px;align-items:center;margin-top:40px;flex-wrap:wrap}
+  .close .p{margin-top:26px;color:var(--dim);font-size:18px;max-width:38ch;line-height:1.45}
+  .close .a{display:flex;gap:26px;align-items:center;margin-top:40px;flex-wrap:wrap}
 
   footer{border-top:1px solid var(--line);padding:42px 0 40px}
   .ft{display:flex;align-items:center;gap:26px;flex-wrap:wrap;font-size:14px;color:var(--dim)}
   .ft .wm{font-size:16px} .ft a:hover{color:var(--silver)}
-  .ft .disc{margin-left:auto;color:var(--faint);font-size:12px}
-  @media (max-width:640px){.ft .disc{margin-left:0;width:100%}}
+  .ft .disc{margin-left:auto;color:var(--faint);font-size:12px} @media (max-width:640px){.ft .disc{margin-left:0;width:100%}}
 </style>
 </head>
 <body>
@@ -205,9 +207,9 @@
 <nav id="nav"><div class="shell nav-in">
   <span class="wm"><svg><use href="#sol"/></svg>Solum</span>
   <span class="nav-r">
+    <span class="nav-fee"><span class="d"></span>Creator fees <b id="navFee">$0</b></span>
     <a class="n" href="#how">How it works</a>
-    <a class="n" href="#vault">The vault</a>
-    <a class="n" href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Audit</a>
+    <a class="n" href="#fair">Provably fair</a>
     <a class="btn" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">View code</a>
   </span>
 </div></nav>
@@ -216,11 +218,16 @@
   <canvas id="sky" aria-hidden="true"></canvas>
   <div class="hero-in"><div class="shell">
     <div class="hero-col">
-      <h1>Hold the coin.<br>Win <em>real&nbsp;stock.</em></h1>
-      <p class="h-sub rv" style="--i:1">Every trade buys real Apple, NVIDIA &amp; Tesla into a vault — a floor that <b>can't rug</b>, and a jackpot holders win. You never lose your coins.</p>
+      <div class="live-fee rv">
+        <span class="lab"><span class="d"></span>Live · creator fees → real stock</span>
+        <span class="num" id="feeBig">$0</span>
+        <span class="sub">collected and buying tokenized stock for the next draw · devnet illustrative</span>
+      </div>
+      <h1>Hold $SOLUM.<br>Win <em>real&nbsp;stock.</em></h1>
+      <p class="h-sub rv" style="--i:1">Every hour, $SOLUM's creator fees buy real Apple, NVIDIA &amp; Tesla and <b>raffle it to holders</b>. More volume, bigger pot. The more you hold, the better your odds.</p>
       <div class="h-act rv" style="--i:2">
         <a class="btn" href="#how">How it works</a>
-        <a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the code <span class="c">›</span></a>
+        <a class="lk" href="#fair">See it's provably fair <span class="c">›</span></a>
       </div>
     </div>
   </div></div>
@@ -229,85 +236,93 @@
 
 <div class="tick" aria-hidden="true"><div class="tick-t" id="tick"></div></div>
 
-<!-- idea -->
+<!-- flywheel -->
 <section class="stmt" id="idea"><div class="shell">
-  <p class="rv">Every trade quietly buys <em>real stock</em>. It never leaves the vault — it just builds a floor and fills a pot.</p>
+  <p class="rv">Your trading <em>fuels the pot</em>. The more $SOLUM trades, the more real stock is raffled back to holders.</p>
+  <div class="flow rv" style="--i:1"><b>More volume</b> <span class="ar">→</span> more creator fees <span class="ar">→</span> bigger stock buy <span class="ar">→</span> <b>bigger pot</b> <span class="ar">→</span> more volume</div>
 </div></section>
 
 <!-- how -->
 <section class="s" id="how"><div class="shell">
   <div class="s-head">
     <h2 class="rv">How it <em>works</em></h2>
-    <p class="s-sub rv" style="--i:1">A normal pump.fun coin — with its trading fees wired into a real-stock vault you win from.</p>
+    <p class="s-sub rv" style="--i:1">$SOLUM launches on pump.fun. pump.fun pays creator fees on every trade — and we wire those fees straight into an hourly stock raffle for holders.</p>
   </div>
   <div class="steps">
-    <div class="strow rv"><div class="idx">1</div><div><h3>Buy the coin</h3><p>Ape in like any Solana memecoin. No accounts, no sign-up.</p></div></div>
-    <div class="strow rv"><div class="idx">2</div><div><h3>Hold to earn tickets</h3><p>Every trade sends real stock into the vault. Hold the coin and you collect tickets — the longer you hold, the more you get.</p></div></div>
-    <div class="strow rv"><div class="idx">3</div><div><h3>Win the pot — or cash out the floor</h3><p>Win the growing jackpot of real stock, or redeem your share of the vault anytime. Either way, you keep your coins.</p></div></div>
+    <div class="strow rv"><div class="idx">1</div><div><h3>Hold $SOLUM</h3><p>Buy and hold like any Solana memecoin. Your <b>average balance over the hour</b> is your entry — no staking, no lock-up.</p></div></div>
+    <div class="strow rv"><div class="idx">2</div><div><h3>Fees buy real stock, every hour</h3><p>Each hour the accrued creator fees automatically buy real tokenized stock into the pot — the bigger the trading volume, the bigger the buy.</p></div></div>
+    <div class="strow rv"><div class="idx">3</div><div><h3>A holder wins the pot</h3><p>At a random moment each hour, one holder is drawn to win the whole pot of real stock. <b>The more $SOLUM you hold, the higher your odds.</b> You keep your coins either way.</p></div></div>
   </div>
 </div></section>
 
-<!-- two jobs -->
-<section class="s" id="jobs"><div class="shell">
+<!-- live pot -->
+<section class="s" id="pot"><div class="shell">
   <div class="s-head">
-    <h2 class="rv">One vault.<br><em>Two ways</em> you win.</h2>
-    <p class="s-sub rv" style="--i:1">The stock that piles up never leaves. It does two jobs at once.</p>
-  </div>
-  <div class="duo">
-    <div class="feat rv"><span class="glow"></span><span class="tag">The floor · your downside</span><h3>It can't go to zero</h3><p>Real stock backs every coin. Redeem your pro-rata share anytime, on-chain — no one can drain it, not even the team. A hard floor under the price.</p></div>
-    <div class="feat rv" style="--i:1"><span class="glow"></span><span class="tag">The jackpot · your upside</span><h3>Hold, and you can win the pot</h3><p>A share of every trade fills a prize pot of real stock. Hold the coin to earn tickets; a winner is drawn and claims the pot. No-loss — your coins stay yours.</p></div>
-  </div>
-</div></section>
-
-<!-- vault sim -->
-<section class="s" id="vault"><div class="shell">
-  <div class="s-head">
-    <h2 class="rv">Watch the vault <em>fill</em></h2>
-    <p class="s-sub rv" style="--i:1">Fees become stock and lock in. The floor rises, the pot grows — and nothing takes value out except a holder claiming their share.</p>
+    <h2 class="rv">The pot, <em>live</em></h2>
+    <p class="s-sub rv" style="--i:1">Every creator fee is accounted for on-chain and converted to real stock. Watch it build toward the next draw.</p>
   </div>
   <div class="panel rv">
-    <div class="pnl-top"><span class="tk">$DEMO</span><span class="live">Live simulation</span><span class="note">fees → real stock → floor + jackpot</span></div>
+    <div class="pnl-top"><span class="tk">$SOLUM</span><span class="live">Live</span><span class="note">creator fees → tokenized stock → hourly raffle</span></div>
     <dl class="pnl-stat">
-      <div class="g"><dt>Prize pot</dt><dd id="s-pot">$0</dd></div>
-      <div><dt>Coin price</dt><dd id="s-price">$0.000000</dd></div>
-      <div class="c"><dt>Floor</dt><dd id="s-floor">$0.000000</dd></div>
-      <div><dt>Stock in vault</dt><dd id="s-back">$0</dd></div>
+      <div class="g"><dt>Creator fees (24h)</dt><dd id="s-fees">$0</dd></div>
+      <div class="c"><dt>Stock in the pot</dt><dd id="s-pot">$0</dd></div>
+      <div><dt>Holders entered</dt><dd id="s-holders">0</dd></div>
+      <div><dt>Next draw</dt><dd id="s-cd">--:--</dd></div>
     </dl>
     <div class="pnl-body">
-      <canvas id="chart" aria-label="Simulation of the vault's real-stock floor rising with trading volume"></canvas>
-      <div class="tape"><div class="th">Trade tape</div><div id="tape"></div></div>
+      <canvas id="chart" aria-label="Simulation of the prize pot growing as creator fees buy real stock"></canvas>
+      <div class="tape"><div class="th">Fees → stock</div><div id="tape"></div></div>
     </div>
-    <div class="pnl-leg">
-      <span><i style="background:var(--cool)"></i>Coin price</span>
-      <span><i style="background:var(--blue)"></i>Floor — only rises</span>
-      <span style="margin-left:auto;color:var(--faint)">Illustrative · not live market data</span>
+    <div class="pnl-leg"><span><i style="background:var(--blue)"></i>Pot — real stock, only grows until each draw</span><span style="margin-left:auto;color:var(--faint)">Devnet · illustrative — live figures at launch</span></div>
+  </div>
+</div></section>
+
+<!-- provably fair -->
+<section class="s" id="fair"><div class="shell">
+  <div class="s-head">
+    <h2 class="rv">Provably <em>fair</em></h2>
+    <p class="s-sub rv" style="--i:1">The draw isn't a promise — it's code you can read. Randomness comes from a Switchboard oracle no one can predict or grind, and the winner is settled on-chain.</p>
+  </div>
+  <div class="fair">
+    <div class="pts rv">
+      <div class="pt"><h3>Randomness you can't rig</h3><p>The winning ticket comes straight from a Switchboard VRF — revealed by an oracle network. Not the team, not a bot, not the winner can predict or influence it.</p></div>
+      <div class="pt"><h3>You can't game the snapshot</h3><p>Your odds are your <b>average $SOLUM balance over the whole hour</b>, and the draw fires at a <b>random moment</b> — so buying a big bag right before does nothing, and you can't even know when to try.</p></div>
+      <div class="pt"><h3>More $SOLUM, better odds</h3><p>Tickets scale linearly with how much you held. Simple, transparent, and every line is open-source.</p></div>
+      <div class="pt"><a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the full draw code <span class="c">›</span></a></div>
+    </div>
+    <div class="code rv" style="--i:1">
+      <div class="code-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="fn">solum · settle_draw</span></div>
+<pre><span class="cm">// The winning ticket comes straight from Switchboard VRF —</span>
+<span class="cm">// oracle-revealed, unpredictable, and impossible to grind.</span>
+<span class="kw">let</span> value: <span class="ty">[u8; 32]</span> = randomness.<span class="fnx">get_value</span>(clock.slot)?;
+jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, total_tickets)?;
+
+<span class="cm">// Your odds scale with how much $SOLUM you held (avg over the hour).</span>
+<span class="kw">fn</span> <span class="fnx">winning_ticket</span>(randomness: &amp;<span class="ty">[u8; 32]</span>, total: <span class="ty">u64</span>) -&gt; <span class="ty">u64</span> {
+    <span class="ty">u64</span>::from_le_bytes(randomness[..<span class="num">8</span>]) % total
+}</pre>
     </div>
   </div>
 </div></section>
 
 <!-- why -->
 <section class="s" id="why"><div class="shell">
-  <div class="s-head">
-    <h2 class="rv">Why people <em>actually hold</em></h2>
-  </div>
+  <div class="s-head"><h2 class="rv">Why people <em>hold</em></h2></div>
   <div class="why">
-    <div class="wrow rv"><h3>Lottery upside, not a drip</h3><p>A real, growing jackpot of blue-chip stock — the kind of upside traders show up for.</p></div>
-    <div class="wrow rv"><h3>Holding beats flipping</h3><p>Only holders earn tickets, and longer holds win more. The whole game rewards conviction.</p></div>
-    <div class="wrow rv"><h3>A floor that can't rug</h3><p>Real stock backs the price. It can't be drained, and it can't fall to zero.</p></div>
-    <div class="wrow rv"><h3>The pot markets itself</h3><p>More volume means a bigger pot and a higher floor — which pulls in more volume.</p></div>
+    <div class="wrow rv"><h3>Real stock, not a promise</h3><p>The pot is actual Apple, NVIDIA &amp; Tesla — bought on-chain and verifiable, not an IOU.</p></div>
+    <div class="wrow rv"><h3>The flywheel pays you</h3><p>Every trade grows the pot. Holders have a direct reason to bring volume — and volume feeds the pot they're chasing.</p></div>
+    <div class="wrow rv"><h3>You never lose your coins</h3><p>It's a raffle, not a stake. Losing a draw costs nothing; you keep every $SOLUM and roll into the next hour.</p></div>
+    <div class="wrow rv"><h3>Fair by design</h3><p>Provable randomness, average-balance odds, a random draw time, and open code. Nothing to trust — everything to verify.</p></div>
   </div>
 </div></section>
 
 <!-- proof -->
 <section class="s" id="proof"><div class="shell">
-  <div class="s-head">
-    <h2 class="rv">Built to be <em>trusted</em></h2>
-    <p class="s-sub rv" style="--i:1">The upside is only real if the vault can't be touched. So we hammered it.</p>
-  </div>
+  <div class="s-head"><h2 class="rv">Built to be <em>trusted</em></h2><p class="s-sub rv" style="--i:1">The pot is only worth chasing if it can't be touched. So we hammered it.</p></div>
   <div class="spec rv">
     <div class="sp"><div class="v" data-count="9800"><small>+</small></div><div class="k">Fuzzed ops, zero violations</div></div>
-    <div class="sp"><div class="v" data-count="60"></div><div class="k">Tests, all green</div></div>
-    <div class="sp"><div class="v" data-count="0"></div><div class="k">Ways to drain the vault</div></div>
+    <div class="sp"><div class="v" data-count="71"></div><div class="k">Tests, all green</div></div>
+    <div class="sp"><div class="v" data-count="0"></div><div class="k">Ways to drain the pot</div></div>
     <div class="sp"><div class="v" style="font-size:clamp(28px,3.6vw,42px)">OtterSec</div><div class="k">Audit in progress</div></div>
   </div>
   <p class="cap rv">Open-source · devnet · pre-audit. Audit tracked at <b>github.com/BallastSystems/solum-audit</b>.</p>
@@ -315,8 +330,8 @@
 
 <!-- close -->
 <section class="close"><canvas id="closeglow" aria-hidden="true"></canvas><div class="shell in">
-  <h2 class="rv">Hold the coin.<br><em>Win real stock.</em></h2>
-  <p class="p rv" style="--i:1">Live on devnet. Fully open-source. Verify the vault yourself.</p>
+  <h2 class="rv">Hold $SOLUM.<br><em>Win real stock.</em></h2>
+  <p class="p rv" style="--i:1">Fees in, stock out, a winner every hour. Fully open-source — verify it yourself.</p>
   <div class="a rv" style="--i:2">
     <a class="btn" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">Read the code</a>
     <a class="lk" href="https://x.com/solumhq" target="_blank" rel="noopener">Follow @solumhq <span class="c">›</span></a>
@@ -336,8 +351,10 @@
   var RM = matchMedia("(prefers-reduced-motion:reduce)").matches;
   function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
   function hexA(hex,a){hex=(hex||"#5AA6F0").replace('#','');if(hex.length===3)hex=hex.split('').map(function(c){return c+c;}).join('');var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);return "rgba("+r+","+g+","+b+","+a+")";}
+  var money=function(n){return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});};
+  var fmtK=function(n){if(n>=1e6)return "$"+(n/1e6).toFixed(2)+"M";if(n>=1e3)return "$"+(n/1e3).toFixed(1)+"k";return "$"+Math.round(n);};
 
-  if(!RM){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});},{threshold:.16});
+  if(!RM){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});},{threshold:.14});
     document.querySelectorAll(".rv").forEach(function(el){io.observe(el);});}
   else{document.querySelectorAll(".rv").forEach(function(el){el.classList.add("in");});}
 
@@ -351,15 +368,25 @@
   var cio=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){cnt(e.target);cio.unobserve(e.target);}});},{threshold:.6});
   document.querySelectorAll(".v[data-count]").forEach(function(el){cio.observe(el);});
 
-  if(!RM){var sky=document.getElementById("sky"),hin=document.querySelector(".hero-in"),tk=false;
-    addEventListener("scroll",function(){if(tk)return;tk=true;requestAnimationFrame(function(){var y=scrollY;
-      if(y<innerHeight){sky.style.transform="translateY("+(y*.22)+"px)";hin.style.transform="translateY("+(y*.08)+"px)";hin.style.opacity=String(Math.max(0,1-y/(innerHeight*.8)));}tk=false;});},{passive:true});}
+  if(!RM){var sky=document.getElementById("sky"),hin=document.querySelector(".hero-in"),tkg=false;
+    addEventListener("scroll",function(){if(tkg)return;tkg=true;requestAnimationFrame(function(){var y=scrollY;
+      if(y<innerHeight){sky.style.transform="translateY("+(y*.22)+"px)";hin.style.transform="translateY("+(y*.08)+"px)";hin.style.opacity=String(Math.max(0,1-y/(innerHeight*.8)));}tkg=false;});},{passive:true});}
 
   (function(){var st=[["AAPLx","Apple","+1.2%"],["NVDAx","NVIDIA","+2.4%"],["TSLAx","Tesla","+0.8%"],["COINx","Coinbase","+3.1%"],["MSTRx","MicroStrategy","+1.9%"]];
     var one=st.map(function(s){return '<span class="tk-i"><span class="sym">'+s[0]+'</span><span class="nm">'+s[1]+'</span><span class="dl">'+s[2]+'</span></span>';}).join("");
     document.getElementById("tick").innerHTML=one+one;})();
 
-  // hero: first-light over rising strata (blue + silver)
+  // --- live creator-fee counter (hero + nav) — illustrative, ticks up to feel live ---
+  (function(){
+    var big=document.getElementById("feeBig"),navf=document.getElementById("navFee");
+    var fees=12480 + Math.floor(Date.now()/3.6e6)%5000; // stable-ish base
+    function paint(){var s=money(fees);big.textContent=s;navf.textContent=s;}
+    paint();
+    if(RM)return;
+    setInterval(function(){fees += Math.random()*Math.random()*9;paint();},900);
+  })();
+
+  // --- hero canvas: first-light over rising strata ---
   (function(){
     var cv=document.getElementById("sky");if(!cv||!cv.getContext)return;var ctx=cv.getContext("2d"),W,H,dpr,t=0;
     function size(){dpr=Math.max(1,Math.min(2,devicePixelRatio||1));W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
@@ -379,12 +406,9 @@
       ctx.strokeStyle=hexA(steel,.5);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,horizon);ctx.lineTo(W,horizon);ctx.stroke();
       ctx.fillStyle=ink;ctx.fillRect(0,horizon,W,H-horizon);
       var gap=26,depth=H-horizon,speed=10;
-      for(var i=0;i<Math.ceil(depth/gap)+2;i++){
-        var y=horizon+((i*gap - (t*speed)%gap));if(y<horizon||y>H)continue;
-        var d=(y-horizon)/depth,a=(1-d)*0.5;
-        ctx.strokeStyle=hexA(blue,a*0.65);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
-        ctx.fillStyle=hexA(steel,a*0.05);ctx.fillRect(0,y,W,gap*0.5);
-      }
+      for(var i=0;i<Math.ceil(depth/gap)+2;i++){var y=horizon+((i*gap-(t*speed)%gap));if(y<horizon||y>H)continue;
+        var d=(y-horizon)/depth,a=(1-d)*0.5;ctx.strokeStyle=hexA(blue,a*0.65);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+        ctx.fillStyle=hexA(steel,a*0.05);ctx.fillRect(0,y,W,gap*0.5);}
       var rg=ctx.createLinearGradient(0,horizon,0,H);rg.addColorStop(0,hexA(hi,.24));rg.addColorStop(.5,hexA(blue,.06));rg.addColorStop(1,"rgba(0,0,0,0)");
       ctx.fillStyle=rg;ctx.fillRect(sx-48,horizon,96,H-horizon);
     }
@@ -402,37 +426,32 @@
     var io2=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){size();if(RM)draw();else requestAnimationFrame(loop);io2.disconnect();}});},{threshold:.1});
     io2.observe(cv);addEventListener("resize",function(){size();});})();
 
-  // vault simulator (floor + pot)
+  // --- pot panel: pot grows from fees, countdown to next draw ---
   (function(){
     var cv=document.getElementById("chart");if(!cv||!cv.getContext)return;var ctx=cv.getContext("2d");
-    var ePot=document.getElementById("s-pot"),eP=document.getElementById("s-price"),eFl=document.getElementById("s-floor"),eB=document.getElementById("s-back"),tape=document.getElementById("tape");
-    var SUPPLY=1e9,SOL=150,back=42000,pot=1800,price=0.00090,floor=back/SUPPLY,N=120,P=[],F=[],W,H,dpr;
-    for(var i=0;i<N;i++){P.push(price);F.push(floor);}
+    var eFees=document.getElementById("s-fees"),ePot=document.getElementById("s-pot"),eHold=document.getElementById("s-holders"),eCd=document.getElementById("s-cd"),tape=document.getElementById("tape");
+    var fees24=8200,pot=1450,holders=1280,N=120,POT=[],W,H,dpr;
+    for(var i=0;i<N;i++)POT.push(pot);
     function size(){dpr=Math.max(1,Math.min(2,devicePixelRatio||1));W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
-    function fmt(n){if(n>=1e6)return "$"+(n/1e6).toFixed(2)+"M";if(n>=1e3)return "$"+(n/1e3).toFixed(1)+"k";return "$"+Math.round(n);}
-    function mon(n){return "$"+n.toFixed(6);}
-    function tick(){var buy=Math.random()<0.54,sz=0.15+Math.random()*Math.random()*5.2,fee=sz*0.03*SOL;
-      back+=fee*0.6;pot+=fee*0.4;floor=back/SUPPLY;var noise=(Math.random()-0.5)*0.05,imp=(buy?1:-1)*sz*0.006;if(Math.random()<0.06)noise+=(Math.random()-0.5)*0.2;
-      price=price*(1+0.004+noise+imp);if(price<floor*1.01)price=floor*1.01;P.push(price);F.push(floor);if(P.length>N){P.shift();F.shift();}
-      ePot.textContent=fmt(pot);eP.textContent=mon(price);eFl.textContent=mon(floor);eB.textContent=fmt(back);
+    function cd(){var now=new Date(),m=59-now.getMinutes(),s=59-now.getSeconds();return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
+    function tick(){var vol=0.15+Math.random()*Math.random()*5,fee=vol*0.03*150;fees24+=fee;pot+=fee;if(Math.random()<0.04)holders+=1;
+      POT.push(pot);if(POT.length>N)POT.shift();
+      eFees.textContent=fmtK(fees24);ePot.textContent=fmtK(pot);eHold.textContent=holders.toLocaleString();
       var r=document.createElement("div");r.className="trd";
-      r.innerHTML='<span class="'+(buy?'b':'s')+'">'+(buy?'BUY ':'SELL ')+sz.toFixed(2)+'◎</span><span class="a">+'+fmt(fee)+'</span>';
+      r.innerHTML='<span class="b">+'+vol.toFixed(2)+'◎ fee</span><span class="a">+'+money(fee)+' stock</span>';
       tape.insertBefore(r,tape.firstChild);while(tape.childNodes.length>7)tape.removeChild(tape.lastChild);}
-    function draw(){var pc=css("--cool")||"#9FB0C8",blue=css("--blue")||"#5AA6F0",ln=css("--line");
-      var pl=6,pt=16,pb=8,w=W-pl*2,h=H-pt-pb,lo=Infinity,hi=-Infinity;
-      for(var i=0;i<P.length;i++){lo=Math.min(lo,F[i]);hi=Math.max(hi,P[i]);}var pad=(hi-lo)*0.12+1e-9;lo-=pad*.4;hi+=pad;
+    function draw(){var blue=css("--blue")||"#5AA6F0",ln=css("--line");var pl=6,pt=16,pb=8,w=W-pl*2,h=H-pt-pb;
+      var lo=Math.min.apply(null,POT),hi=Math.max.apply(null,POT);var pad=(hi-lo)*0.15+1;lo-=pad;hi+=pad;
       var X=function(i){return pl+w*(i/(N-1));},Y=function(v){return pt+h*(1-(v-lo)/(hi-lo));};
       ctx.clearRect(0,0,W,H);ctx.strokeStyle=ln;ctx.lineWidth=1;
       for(var g=0;g<=3;g++){var gy=pt+h*g/3;ctx.beginPath();ctx.moveTo(pl,gy);ctx.lineTo(W-pl,gy);ctx.stroke();}
-      ctx.beginPath();ctx.moveTo(X(0),Y(F[0]));for(var a=1;a<F.length;a++)ctx.lineTo(X(a),Y(F[a]));ctx.lineTo(X(F.length-1),H-pb);ctx.lineTo(X(0),H-pb);ctx.closePath();
-      var gr=ctx.createLinearGradient(0,pt,0,H-pb);gr.addColorStop(0,hexA(blue,.26));gr.addColorStop(1,hexA(blue,.02));ctx.fillStyle=gr;ctx.fill();
-      ctx.beginPath();ctx.moveTo(X(0),Y(P[0]));for(var b=1;b<P.length;b++)ctx.lineTo(X(b),Y(P[b]));ctx.strokeStyle=pc;ctx.lineWidth=1.6;ctx.lineJoin="round";ctx.stroke();
-      ctx.beginPath();ctx.moveTo(X(0),Y(F[0]));for(var c=1;c<F.length;c++)ctx.lineTo(X(c),Y(F[c]));ctx.strokeStyle=blue;ctx.lineWidth=2.4;ctx.lineJoin="round";ctx.lineCap="round";ctx.shadowColor=blue;ctx.shadowBlur=14;ctx.stroke();ctx.shadowBlur=0;
-      ctx.beginPath();ctx.arc(X(F.length-1),Y(F[F.length-1]),4,0,7);ctx.fillStyle=blue;ctx.fill();
-      ctx.beginPath();ctx.arc(X(P.length-1),Y(P[P.length-1]),3.2,0,7);ctx.fillStyle=pc;ctx.fill();}
+      ctx.beginPath();ctx.moveTo(X(0),Y(POT[0]));for(var a=1;a<POT.length;a++)ctx.lineTo(X(a),Y(POT[a]));ctx.lineTo(X(POT.length-1),H-pb);ctx.lineTo(X(0),H-pb);ctx.closePath();
+      var gr=ctx.createLinearGradient(0,pt,0,H-pb);gr.addColorStop(0,hexA(blue,.28));gr.addColorStop(1,hexA(blue,.02));ctx.fillStyle=gr;ctx.fill();
+      ctx.beginPath();ctx.moveTo(X(0),Y(POT[0]));for(var b=1;b<POT.length;b++)ctx.lineTo(X(b),Y(POT[b]));ctx.strokeStyle=blue;ctx.lineWidth=2.4;ctx.lineJoin="round";ctx.lineCap="round";ctx.shadowColor=blue;ctx.shadowBlur=14;ctx.stroke();ctx.shadowBlur=0;
+      ctx.beginPath();ctx.arc(X(POT.length-1),Y(POT[POT.length-1]),4,0,7);ctx.fillStyle=blue;ctx.fill();}
     var acc=0,last=0,run=false;
-    function loop(ts){if(!last)last=ts;acc+=ts-last;last=ts;if(acc>640){acc=0;if(!RM)tick();}draw();if(run)requestAnimationFrame(loop);}
-    function start(){size();for(var i=0;i<40;i++)tick();draw();if(RM)return;
+    function loop(ts){if(!last)last=ts;acc+=ts-last;last=ts;eCd.textContent=cd();if(acc>620){acc=0;if(!RM)tick();}draw();if(run)requestAnimationFrame(loop);}
+    function start(){size();for(var i=0;i<40;i++)tick();draw();eCd.textContent=cd();if(RM)return;
       var io3=new IntersectionObserver(function(es){es.forEach(function(e){run=e.isIntersecting;if(run){last=0;requestAnimationFrame(loop);}});},{threshold:.05});io3.observe(cv);}
     var rt;addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){size();draw();},160);});
     if(document.readyState==="complete")start();else addEventListener("load",start);
