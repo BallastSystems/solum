@@ -34,6 +34,7 @@ Each hour:
 | `twab.test.ts` | pure unit tests (8/8) |
 | `cycle.test.ts` | full draw cycle on a validator (7/7) |
 | `stress-500.ts` | 500 independent fee-funded draws + fairness report (win rate vs ticket share) |
+| `fuzz-jackpot.ts` | stateful fuzzer — random op sequences vs a reference model (conservation, phase machine) |
 | `verify-draw.ts` | independent draw verifier — re-derive the root, confirm the winner (7/7 unit) |
 | `status.ts` | publishes status.json + winners.json for the site |
 
