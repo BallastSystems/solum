@@ -737,9 +737,12 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   var cio=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){cnt(e.target);cio.unobserve(e.target);}});},{threshold:.6});
   document.querySelectorAll(".v[data-count]").forEach(function(el){cio.observe(el);});
 
-  if(!RM){var sky=document.getElementById("sky"),hin=document.querySelector(".hero-in"),tkg=false;
+  // Only the background sky parallaxes on scroll. The hero content — and the live draw machine inside it —
+  // NEVER fades or drifts: on mobile the machine sits below the fold, so users scroll to watch it and it must
+  // stay fully crisp the whole time.
+  if(!RM){var sky=document.getElementById("sky"),tkg=false;
     addEventListener("scroll",function(){if(tkg)return;tkg=true;requestAnimationFrame(function(){var y=scrollY;
-      if(y<innerHeight){sky.style.transform="translateY("+(y*.22)+"px)";hin.style.transform="translateY("+(y*.08)+"px)";hin.style.opacity=String(Math.max(0,1-y/(innerHeight*.8)));}tkg=false;});},{passive:true});}
+      if(y<innerHeight){sky.style.transform="translateY("+(y*.16)+"px)";}tkg=false;});},{passive:true});}
 
   (function(){var st=[["AAPLx","Apple","+1.2%","lg-apple","#E6EAF2"],["NVDAx","NVIDIA","+2.4%","lg-nvidia","#76B900"],["TSLAx","Tesla","+0.8%","lg-tesla","#E82127"],["COINx","Coinbase","+3.1%","lg-coinbase","#0052FF"],["MSTRx","MicroStrategy","+1.9%","lg-mstr","#F0512B"]];
     var one=st.map(function(s){return '<span class="tk-i"><svg class="tk-lg" viewBox="0 0 24 24" style="color:'+s[4]+'"><use href="#'+s[3]+'"/></svg><span class="sym">'+s[0]+'</span><span class="nm">'+s[1]+'</span><span class="dl">'+s[2]+'</span></span>';}).join("");
