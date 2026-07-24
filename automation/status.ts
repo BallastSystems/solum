@@ -9,9 +9,10 @@ export type DrawStatus = {
   hourLabel: string; // e.g. "3 PM"
   phase: "collecting" | "snapshot_taken" | "drawn";
   snapshotAt: string | null; // ISO — only set once the snapshot is actually taken (hidden before)
-  drawAt: string | null; // ISO — the randomized draw time, revealed only after the snapshot
+  drawAt: string | null; // ISO — the draw time (snapshot + a fixed 5-min countdown), set once the snapshot is taken
   holders: number;
   potUsd: number; // this cycle's creator fees → the pot allotted to the NEXT draw (since the last snapshot)
+  prize: { stock: string; shares: number; usd: number } | null; // the stock bought AT the snapshot for THIS draw
   feesLifetimeUsd: number; // total creator fees collected all-time  (= prizesAwardedUsd + potUsd)
   prizesAwardedUsd: number; // total raffled to holders all-time (what's been given out)
   fees24hUsd: number; // creator fees collected in the last 24 hours

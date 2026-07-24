@@ -835,6 +835,18 @@ pub mod solum {
         Ok(())
     }
 
+    /// Reopen the jackpot for the next epoch WITHOUT paying — for the draw-only / hold-and-manually-
+    /// deliver model, where the winning ticket is proven on-chain and read by the snapshotter, but the
+    /// prize is delivered off-chain. There is no on-chain pot to protect, so a settled (or otherwise
+    /// non-open) epoch can be closed back to OPEN. Snapshotter-only, so no one else can reset a draw.
+    /// (In the auto-pay model, `claim_prize` does this reset as part of the payout instead.)
+    pub fn close_epoch(ctx: Context<CloseEpoch>) -> Result<()> {
+        let j = &mut ctx.accounts.jackpot;
+        j.winning_ticket = 0;
+        j.phase = PHASE_OPEN;
+        Ok(())
+    }
+
     /// Fix the winning ticket for the current epoch from verifiable randomness, once the epoch has
     /// elapsed (a draw can't settle early). Under `devnet-vrf` the randomness is injected by the
     /// snapshotter for local testing; production uses `switchboard-vrf` (see request_draw/settle).
@@ -1726,6 +1738,18 @@ pub struct CommitEpoch<'info> {
 #[cfg(all(feature = "devnet-vrf", not(feature = "switchboard-vrf")))]
 #[derive(Accounts)]
 pub struct SettleDraw<'info> {
+    pub snapshotter: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [JACKPOT_SEED, jackpot.coin_mint.as_ref(), jackpot.admin.as_ref()],
+        bump = jackpot.bump,
+        has_one = snapshotter @ SolumError::Unauthorized
+    )]
+    pub jackpot: Account<'info, JackpotState>,
+}
+
+#[derive(Accounts)]
+pub struct CloseEpoch<'info> {
     pub snapshotter: Signer<'info>,
     #[account(
         mut,

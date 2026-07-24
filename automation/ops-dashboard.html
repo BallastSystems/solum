@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solum · Payout Console</title>
+<style>
+  :root{
+    --bg:#0F1520; --panel:#151D2A; --raise:#1B2534; --line:rgba(200,214,235,.10); --line-2:rgba(200,214,235,.18);
+    --ink:#E6EAF2; --dim:#9AA6B8; --faint:#5C6675; --blue:#6E9BD8; --grn:#54C79A; --amber:#E2B45A; --red:#E07070;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 26px 80px}
+  header{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:0}
+  .sub{color:var(--dim);font-size:13.5px;margin-top:4px}
+  .wallet{margin-left:auto;text-align:right}
+  .wallet .lab{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .wallet .addr{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:3px}
+  .refresh{font-size:12px;color:var(--faint);margin-top:6px}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0 30px}
+  @media(max-width:720px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .card .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .card .v{font-size:27px;font-weight:600;letter-spacing:-.02em;margin-top:8px;font-variant-numeric:tabular-nums;line-height:1}
+  .card.ready .v{color:var(--grn)} .card.wait .v{color:var(--amber)}
+  .card .cap{font-size:12px;color:var(--dim);margin-top:6px}
+  h2{font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--dim);margin:26px 0 12px;text-transform:uppercase}
+  .tbl{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .tbl th{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);font-weight:600;text-align:left;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .tbl td{padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .ar{text-align:right;font-variant-numeric:tabular-nums}
+  .addr{font-family:var(--mono);font-size:13px}
+  .copy{cursor:pointer;color:var(--faint);border:1px solid var(--line-2);border-radius:6px;padding:1px 6px;font-size:11px;margin-left:8px}
+  .copy:hover{color:var(--ink);border-color:var(--blue)}
+  .stock{font-weight:600} .shares{font-family:var(--mono);font-weight:600} .units{font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:100px;white-space:nowrap}
+  .pill.ready{background:color-mix(in srgb,var(--grn) 16%,transparent);color:var(--grn)}
+  .pill.wait{background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber)}
+  .pill.sent{background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--blue)}
+  .pill.unclaimed{background:rgba(200,214,235,.07);color:var(--faint)}
+  .pill .d{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .cd{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px;color:var(--amber)}
+  .send{font-family:var(--mono);font-size:12px;color:var(--dim);background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-top:4px;display:inline-block}
+  .txlink{color:var(--blue);font-size:12px} .txlink:hover{text-decoration:underline}
+  .empty{padding:26px;text-align:center;color:var(--faint);font-size:14px}
+  .note{margin-top:26px;color:var(--faint);font-size:12.5px;line-height:1.6;max-width:760px}
+  .note b{color:var(--dim)}
+  .err{background:color-mix(in srgb,var(--red) 12%,transparent);border:1px solid color-mix(in srgb,var(--red) 40%,transparent);color:var(--red);padding:12px 16px;border-radius:10px;margin-bottom:18px;font-size:13.5px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Solum · Payout Console</h1>
+      <div class="sub">Who to send, what to send, and when their 24-hour window is up. Nothing here moves funds — you send, manually.</div>
+    </div>
+    <div class="wallet">
+      <div class="lab">Dev / creator wallet</div>
+      <div class="addr" id="wallet">ALUM6Y7rfVBDRB1P1xuoTkSECnVF6uRmP4E53B2DEt5Q</div>
+      <div class="refresh" id="fees">creator fees: —</div>
+    </div>
+  </header>
+
+  <div class="err" id="err"></div>
+
+  <div class="cards">
+    <div class="card ready"><div class="k">Ready to send</div><div class="v" id="c-ready">0</div><div class="cap">claimed · 24h elapsed</div></div>
+    <div class="card wait"><div class="k">Waiting (in 24h)</div><div class="v" id="c-wait">0</div><div class="cap">claimed · counting down</div></div>
+    <div class="card"><div class="k">Unclaimed</div><div class="v" id="c-unclaimed">0</div><div class="cap">no action yet</div></div>
+    <div class="card"><div class="k">Sent · all-time</div><div class="v" id="c-sent">0</div><div class="cap">delivered by you</div></div>
+  </div>
+
+  <h2>Send queue</h2>
+  <table class="tbl" id="queue-tbl">
+    <thead><tr>
+      <th>Winner</th><th>Prize</th><th class="ar">Shares to send</th><th>Claimed</th><th>24h window</th><th>Status</th>
+    </tr></thead>
+    <tbody id="queue"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+  </table>
+
+  <h2>Sent</h2>
+  <table class="tbl"><tbody id="sent"><tr><td colspan="6" class="empty">—</td></tr></tbody></table>
+
+  <div class="note">
+    <b>How it works.</b> A winner clicks Claim the moment they win; that starts a 24-hour clock. When a row shows
+    <b>Ready to send</b>, the 24h is up and it's yours to fulfil: send the exact <b>shares</b> of that stock, from
+    <b>ALUM…DEt5Q</b>, to the winner's wallet, then it appears under <b>Sent</b> (via the award CLI's tx). The console
+    is read-only — it never signs or moves anything. Reads <code>winners.json</code>.
+  </div>
+</div>
+
+<script>
+  var WINNERS_URL = new URLSearchParams(location.search).get("winners") || "winners.json";
+  var FEES_URL = new URLSearchParams(location.search).get("fees") || "creator-fees.json";
+  var DAY = 24*3600*1000;
+  var short = function(a){ return a ? a.slice(0,4)+"…"+a.slice(-4) : "—"; };
+  var money = function(n){ return "$"+Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2}); };
+  var EXPL = "https://explorer.solana.com/";
+  function fmt(ms){ if(ms<=0) return "ready"; var h=Math.floor(ms/3600000), m=Math.floor(ms%3600000/60000), s=Math.floor(ms%60000/1000); return (h<10?"0":"")+h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s; }
+  function cls(w){ if(w.awarded) return "sent"; if(!w.claimed) return "unclaimed"; return (Date.now()-Date.parse(w.claimedAt)>=DAY)?"ready":"wait"; }
+  function copyBtn(a){ return '<span class="copy" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+a+'\')">copy</span>'; }
+
+  function render(rows){
+    var q=document.getElementById("queue"), sent=document.getElementById("sent");
+    var counts={ready:0,wait:0,unclaimed:0,sent:0};
+    var pending=[], done=[];
+    rows.forEach(function(w){ var c=cls(w); counts[c]++; (c==="sent"?done:pending).push(w); });
+    document.getElementById("c-ready").textContent=counts.ready;
+    document.getElementById("c-wait").textContent=counts.wait;
+    document.getElementById("c-unclaimed").textContent=counts.unclaimed;
+    document.getElementById("c-sent").textContent=counts.sent;
+
+    // pending: ready first, then waiting, then unclaimed; ready sorted by longest-waiting
+    var order={ready:0,wait:1,unclaimed:2};
+    pending.sort(function(a,b){ var d=order[cls(a)]-order[cls(b)]; return d||(Date.parse(a.drawAt)-Date.parse(b.drawAt)); });
+
+    q.innerHTML = pending.length ? pending.map(function(w){
+      var c=cls(w), up=w.claimedAt?Date.parse(w.claimedAt)+DAY:0;
+      var status = c==="ready"?'<span class="pill ready"><span class="d"></span>Ready to send</span>'
+        : c==="wait"?'<span class="pill wait"><span class="d"></span>Waiting</span>'
+        : '<span class="pill unclaimed"><span class="d"></span>Unclaimed</span>';
+      var window24 = c==="unclaimed" ? '<span style="color:var(--faint)">—</span>'
+        : c==="ready" ? '<span class="cd" style="color:var(--grn)">up ✓</span>'
+        : '<span class="cd" data-up="'+up+'">'+fmt(up-Date.now())+'</span>';
+      var sendLine = c==="ready" ? '<div class="send">send '+ (w.prizeShares||"?") +' '+w.stock+' → '+short(w.addr)+'</div>' : '';
+      return '<tr>'
+        +'<td><a class="addr txlink" href="'+EXPL+'address/'+w.addr+'" target="_blank" rel="noopener">'+short(w.addr)+'</a>'+copyBtn(w.addr)+sendLine+'</td>'
+        +'<td><span class="stock">'+w.stock+'</span><div class="units">'+money(w.prizeUsd)+' · draw #'+w.epoch+'</div></td>'
+        +'<td class="ar"><span class="shares">'+(w.prizeShares||"?")+'</span><div class="units">'+(w.prizeBaseUnits||"")+' base</div></td>'
+        +'<td>'+(w.claimedAt?new Date(w.claimedAt).toLocaleString():'<span style="color:var(--faint)">not yet</span>')+'</td>'
+        +'<td>'+window24+'</td>'
+        +'<td>'+status+'</td>'
+        +'</tr>';
+    }).join("") : '<tr><td colspan="6" class="empty">No pending payouts.</td></tr>';
+
+    sent.innerHTML = done.length ? done.map(function(w){
+      var tx=w.awardTx||w.payoutTx;
+      return '<tr>'
+        +'<td><a class="addr txlink" href="'+EXPL+'address/'+w.addr+'" target="_blank" rel="noopener">'+short(w.addr)+'</a></td>'
+        +'<td><span class="stock">'+w.stock+'</span></td>'
+        +'<td class="ar"><span class="shares">'+(w.prizeShares||"?")+'</span></td>'
+        +'<td>'+(w.claimedAt?new Date(w.claimedAt).toLocaleString():'—')+'</td>'
+        +'<td>'+(tx?'<a class="txlink" href="'+EXPL+'tx/'+tx+'" target="_blank" rel="noopener">tx ↗</a>':'—')+'</td>'
+        +'<td><span class="pill sent"><span class="d"></span>Sent</span></td>'
+        +'</tr>';
+    }).join("") : '<tr><td colspan="6" class="empty">Nothing sent yet.</td></tr>';
+  }
+
+  function tickCountdowns(){ document.querySelectorAll(".cd[data-up]").forEach(function(el){ var ms=Number(el.getAttribute("data-up"))-Date.now(); el.textContent=fmt(ms); if(ms<=0){el.style.color="var(--grn)";el.textContent="up ✓";} }); }
+
+  function load(){
+    fetch(WINNERS_URL,{cache:"no-store"}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(rows){ document.getElementById("err").style.display="none"; render(Array.isArray(rows)?rows:[]); })
+      .catch(function(e){ var el=document.getElementById("err"); el.style.display="block"; el.textContent="Couldn't load "+WINNERS_URL+" ("+e.message+"). Open this page where winners.json is served, or pass ?winners=<url>."; document.getElementById("queue").innerHTML='<tr><td colspan="6" class="empty">—</td></tr>'; });
+    fetch(FEES_URL,{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; }).then(function(f){ if(f) document.getElementById("fees").textContent="creator fees: "+(f.earnedAllTimeSol||0).toFixed(3)+" ◎ earned · "+(f.accruedSol||0).toFixed(3)+" ◎ unclaimed"; }).catch(function(){});
+  }
+  load(); setInterval(load, 20000); setInterval(tickCountdowns, 1000);
+</script>
+</body>
+</html>

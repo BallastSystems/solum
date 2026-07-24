@@ -6,23 +6,53 @@
 // live mainnet/pump.fun/Jupiter, so they're marked; step 3 is a plain SPL transfer.
 
 import {
-  Connection, Keypair, PublicKey, VersionedTransaction, LAMPORTS_PER_SOL,
+  Connection, Keypair, PublicKey, Transaction, VersionedTransaction, LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { transferChecked, getMint } from "@solana/spl-token";
+import { OnlinePumpSdk } from "@pump-fun/pump-sdk";
 
 const JUP = "https://lite-api.jup.ag/swap/v1"; // Jupiter (routability + swap)
 const WSOL = "So11111111111111111111111111111111111111112";
 
 /**
- * Collect accrued pump.fun creator fees to `ops`. pump.fun exposes a creator-fee collection
- * instruction on its program; wire its SDK/IX here on mainnet. Returns lamports collected.
+ * Collect accrued pump.fun creator fees to `ops` (the $SOLUM coin creator). Returns lamports collected.
  *
- * INTEGRATION POINT (mainnet): build + send pump.fun's `collectCoinCreatorFee` for the $SOLUM
- * coin-creator vault, signed by the creator (ops) wallet. On devnet this is a no-op returning 0.
+ * Uses @pump-fun/pump-sdk: reads the creator vault balance across both fee programs, and if there is
+ * anything to collect, builds + sends pump.fun's `collect_coin_creator_fee`, signed by the creator.
+ * GUARDED to mainnet only — pump.fun has no devnet, so this is a no-op off mainnet. NEEDS A MAINNET
+ * SMOKE TEST before go-live (fee-sharing-migrated coins may require the V2 collect path; see below).
  */
-export async function collectCreatorFees(_conn: Connection, _ops: Keypair): Promise<number> {
-  // return (await pumpSdk.collectCoinCreatorFee({ creator: ops.publicKey })).lamports;
-  return 0; // devnet: no pump.fun program present
+export async function collectCreatorFees(conn: Connection, ops: Keypair): Promise<number> {
+  const ep = (conn as any)._rpcEndpoint as string | undefined;
+  const isMainnet = !!ep && !/devnet|testnet|localhost|127\.0\.0\.1/.test(ep);
+  if (!isMainnet) return 0; // devnet/local: no pump.fun program present — nothing to collect
+
+  const sdk = new OnlinePumpSdk(conn);
+  const accrued = await sdk.getCreatorVaultBalanceBothPrograms(ops.publicKey); // BN, lamports
+  const lamports = Number(accrued.toString());
+  if (lamports <= 0) return 0;
+
+  // Standard coin-creator collection. If the coin migrated to a fee-sharing config, swap this for
+  // collectCoinCreatorFeeV2Instructions(coinCreator, quoteMint, quoteTokenProgram, feePayer).
+  const ixs = await sdk.collectCoinCreatorFeeInstructions(ops.publicKey, ops.publicKey);
+  if (!ixs.length) return 0;
+  const tx = new Transaction().add(...ixs);
+  const sig = await conn.sendTransaction(tx, [ops], { skipPreflight: false });
+  await conn.confirmTransaction(sig, "confirmed");
+  return lamports; // swept to the ops (creator) wallet as SOL
+}
+
+/**
+ * Random buy schedule (pure, testable). Splits the funding window into `count` unpredictable moments
+ * so the bot buys tokenized stock "at random" rather than at a front-runnable fixed time. Returns
+ * sorted second-offsets from the window start. Deterministic only via the injected `rand` (default
+ * Math.random) so it can be unit-tested. See automation/README.md step 2.
+ */
+export function randomBuyTimes(windowSec: number, count: number, rand: () => number = Math.random): number[] {
+  const n = Math.max(1, Math.floor(count));
+  const t: number[] = [];
+  for (let i = 0; i < n; i++) t.push(Math.floor(rand() * windowSec));
+  return t.sort((a, b) => a - b);
 }
 
 /** Swap `solLamports` of SOL into `stockMint` via Jupiter and return the stock received (base units). */
