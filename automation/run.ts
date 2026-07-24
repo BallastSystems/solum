@@ -20,21 +20,24 @@ import { commitEpoch, settleDevnet, winningTicketOf, JackpotRefs } from "./draw"
 import { fundHourly } from "./fees";
 import { writeStatus, appendWinner, iso, hourLabel, feeLedger, WinnerEntry } from "./status";
 
-// The five tokenized stocks, raffled one per hour on rotation. (Each has its own mint + ops account
-// in production config; the bot buys the hour's stock and funds the pot with it.)
-const ROTATION = ["AAPLx", "NVDAx", "TSLAx", "COINx", "MSTRx"];
+// The five tokenized stocks, raffled one per hour on rotation. Each has its own mint + ops token
+// account; the bot buys the hour's stock and holds it in that account for manual delivery.
+const DEFAULT_ROTATION = ["AAPLx", "NVDAx", "TSLAx", "COINx", "MSTRx"];
 const now = () => Math.floor(Date.now() / 1000);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const sleepUntil = (unixSec: number) => sleep(Math.max(0, (unixSec - now()) * 1000));
 const rint = (a: number, b: number) => a + Math.floor(Math.random() * (b - a)); // random draw/snapshot offset
 
+// One tokenized stock in the rotation: its mint, the ops token account holding the bought stock for
+// manual delivery, and its token program (Sunrise xStocks are Token-2022).
+type StockCfg = { mint: PublicKey; opsAccount: PublicKey; tokenProgram: PublicKey };
+
 type Cfg = {
   rpc: string;
   coinMint: PublicKey; // $SOLUM
   coinDecimals: number;
-  stockMint: PublicKey;
-  stockLabel: string; // e.g. "NVDAx"
-  opsStockAccount: PublicKey;
+  stocks: Record<string, StockCfg>; // label → config for every rotated stock
+  rotation: string[]; // hourly order, e.g. ["AAPLx","NVDAx",...]
   ops: Keypair; // creator + snapshotter + payer
   refs: JackpotRefs;
   prog: any;
@@ -79,15 +82,17 @@ export async function runForever(cfg: Cfg) {
   while (true) {
     const hourStart = now();
     const label = hourLabel(hourStart);
-    const stockLabel = ROTATION[Math.floor(hourStart / 3600) % ROTATION.length]; // this hour's stock, on rotation
+    const stockLabel = cfg.rotation[Math.floor(hourStart / 3600) % cfg.rotation.length]; // this hour's stock, on rotation
+    const stk = cfg.stocks[stockLabel]; // its mint + ops account + token program
     const twab = new TwabAccumulator(hourStart);
     await seedInitialBalances(conn, cfg.coinMint, twab, hourStart);
     const sub = trackBalances(conn, cfg.coinMint, twab);
     let potUsd = 0, hourStockBought = 0n;
 
-    // collect creator fees → buy tokenized stock, held in the review (ops) wallet for the winner
+    // collect creator fees → buy THIS hour's tokenized stock, held in the review (ops) wallet
     try {
-      const f = await fundHourly(conn, cfg.ops, cfg.stockMint, cfg.opsStockAccount, cfg.refs.potCustody, TOKEN_PROGRAM_ID);
+      if (!stk) throw new Error(`no config for rotated stock ${stockLabel}`);
+      const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
       hourStockBought = f.stockBought; // exact prize for this hour's winner (base units)
       potUsd = Math.round(f.solCollected * cfg.solPriceUsd);
       console.log(`[fund] +${f.solCollected} SOL → ${f.stockBought} stock (~$${potUsd})`);
@@ -132,7 +137,7 @@ export async function runForever(cfg: Cfg) {
       let prizeShares = 0;
       const prizeBaseUnits = hourStockBought.toString();
       try {
-        const dec = (await getMint(conn, cfg.refs.prizeMint, undefined, cfg.refs.prizeTokenProgram)).decimals;
+        const dec = (await getMint(conn, stk.mint, undefined, stk.tokenProgram)).decimals;
         prizeShares = Number(hourStockBought) / 10 ** dec;
       } catch { /* leave prizeShares 0; the site falls back to a price estimate */ }
       const { entry } = winnerOf(snap, wt); // who the VRF drew — proven on-chain
@@ -170,12 +175,25 @@ if (require.main === module) {
   const enc = (s: string) => Buffer.from(s);
   const [jackpot] = PublicKey.findProgramAddressSync([enc("jackpot"), coinMint.toBuffer(), admin.toBuffer()], prog.programId);
   const [jackpotAuthority] = PublicKey.findProgramAddressSync([enc("jackpotauth"), jackpot.toBuffer()], prog.programId);
-  const stockMint = new PublicKey(process.env.SOLUM_STOCK_MINT!);
+  // SOLUM_STOCKS: JSON map of all rotated stocks, e.g.
+  //   {"AAPLx":{"mint":"..","opsAccount":"..","tokenProgram":"Tokenz.."},"NVDAx":{...}, ...}
+  // Falls back to the single SOLUM_STOCK_* vars (one-stock config) when SOLUM_STOCKS is unset.
+  const stockProgram = process.env.SOLUM_STOCK_PROGRAM || "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+  const stocks: Record<string, StockCfg> = {};
+  if (process.env.SOLUM_STOCKS) {
+    const raw = JSON.parse(process.env.SOLUM_STOCKS) as Record<string, { mint: string; opsAccount: string; tokenProgram?: string }>;
+    for (const [label, v] of Object.entries(raw))
+      stocks[label] = { mint: new PublicKey(v.mint), opsAccount: new PublicKey(v.opsAccount), tokenProgram: new PublicKey(v.tokenProgram || stockProgram) };
+  } else {
+    const label = process.env.SOLUM_STOCK_LABEL || "AAPLx";
+    stocks[label] = { mint: new PublicKey(process.env.SOLUM_STOCK_MINT!), opsAccount: new PublicKey(process.env.SOLUM_OPS_STOCK_ACCT!), tokenProgram: new PublicKey(stockProgram) };
+  }
+  const rotation = (process.env.SOLUM_ROTATION ? process.env.SOLUM_ROTATION.split(",") : DEFAULT_ROTATION).filter((l) => stocks[l]);
+  if (rotation.length === 0) throw new Error("no rotated stocks configured (set SOLUM_STOCKS or SOLUM_STOCK_MINT)");
+  const firstStock = stocks[rotation[0]];
   runForever({
-    rpc, coinMint, coinDecimals: Number(process.env.SOLUM_COIN_DECIMALS || 6), stockMint,
-    stockLabel: process.env.SOLUM_STOCK_LABEL || "NVDAx",
-    opsStockAccount: new PublicKey(process.env.SOLUM_OPS_STOCK_ACCT!), ops, prog,
-    refs: { jackpot, jackpotAuthority, prizeMint: stockMint, potCustody: new PublicKey(process.env.SOLUM_POT_CUSTODY!), prizeTokenProgram: new PublicKey(process.env.SOLUM_STOCK_PROGRAM!) },
+    rpc, coinMint, coinDecimals: Number(process.env.SOLUM_COIN_DECIMALS || 6), stocks, rotation, ops, prog,
+    refs: { jackpot, jackpotAuthority, prizeMint: firstStock.mint, potCustody: new PublicKey(process.env.SOLUM_POT_CUSTODY!), prizeTokenProgram: firstStock.tokenProgram },
     statusFile: process.env.SOLUM_STATUS_FILE || "public/status.json",
     winnersFile: process.env.SOLUM_WINNERS_FILE || "public/winners.json",
     snapshotDir: process.env.SOLUM_SNAPSHOT_DIR || "snapshots",
