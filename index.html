@@ -88,6 +88,31 @@
   .nav-fee .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:bp 2s infinite}
   @media (max-width:900px){.nav-r a.n{display:none}.nav-r a.n.nav-win{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line-2);color:var(--silver);font-weight:600;font-size:14px}.nav-r a.n.nav-win:hover{border-color:var(--blue);color:var(--silver)}}
   @media (max-width:520px){.nav-fee{display:none}.nav-r{gap:12px}}
+  .nav-cta{font:inherit;font-size:13px;font-weight:650;color:#fff;background:var(--blue);border:none;cursor:pointer;
+    padding:8px 15px;border-radius:100px;letter-spacing:.01em;transition:background .15s,transform .12s,box-shadow .15s;
+    box-shadow:0 8px 22px -10px var(--blue-glow)}
+  .nav-cta:hover{background:var(--blue-hi);transform:translateY(-1px)}
+  .nav-cta:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px}
+  .nav-cta.on{background:transparent;color:var(--silver);border:1px solid var(--line-2);box-shadow:none;font-variant-numeric:tabular-nums}
+  @media (max-width:400px){.nav-cta{padding:7px 12px;font-size:12px}}
+  /* winner-only toast — fixed, dismissible; only ever displayed for the exact winning wallet */
+  .win-toast{position:fixed;top:70px;right:16px;left:16px;z-index:60;display:flex;justify-content:center;pointer-events:none;animation:wtIn .5s cubic-bezier(.2,.7,.2,1)}
+  .win-toast[hidden]{display:none}
+  @keyframes wtIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+  .wt-in{pointer-events:auto;position:relative;max-width:400px;width:100%;padding:20px 22px 22px;border-radius:18px;
+    background:linear-gradient(160deg,rgba(42,97,206,.16),rgba(20,28,44,.94));border:1px solid var(--blue-hi);
+    box-shadow:0 30px 80px -30px rgba(0,0,0,.6),0 0 0 1px rgba(152,190,236,.12) inset;backdrop-filter:blur(14px)}
+  .wt-x{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--dim);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px}
+  .wt-x:hover{color:var(--silver)}
+  .wt-badge{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue-hi)}
+  .wt-prize{font-size:26px;font-weight:750;color:#fff;margin:6px 0 2px;letter-spacing:-.01em}
+  .wt-sub{font-size:12.5px;color:var(--dim);margin-bottom:15px}
+  .wt-claim{font:inherit;font-size:14px;font-weight:700;color:#fff;background:var(--blue);border:none;border-radius:12px;
+    padding:12px 18px;width:100%;cursor:pointer;transition:background .15s,transform .1s}
+  .wt-claim:hover{background:var(--blue-hi)}
+  .wt-claim:disabled{opacity:.6;cursor:default}
+  .wt-note{font-size:12px;color:var(--dim);margin-top:10px;text-align:center;min-height:1px}
+  .wt-note.ok{color:var(--grn)} .wt-note.err{color:#E0736B}
 
   /* HERO */
   .hero{position:relative;min-height:100svh;display:flex;align-items:center;overflow:hidden}
@@ -404,8 +429,21 @@
     <a class="n nav-win" href="/winners/">Winners</a>
     <a class="nav-ic" href="https://github.com/BallastSystems" target="_blank" rel="noopener" aria-label="Solum on GitHub"><svg><use href="#gh"/></svg></a>
     <a class="nav-ic" href="https://x.com/SolumHQ" target="_blank" rel="noopener" aria-label="Solum on X"><svg><use href="#x"/></svg></a>
+    <button class="nav-cta" id="wConnect" type="button">Connect wallet</button>
   </span>
 </div></nav>
+
+<!-- Winner-only notification: shown ONLY when the connected wallet exactly matches a winner in winners.json. Never broadcast. -->
+<div id="winToast" class="win-toast" hidden role="dialog" aria-live="polite">
+  <div class="wt-in">
+    <button class="wt-x" id="wtClose" type="button" aria-label="Dismiss">×</button>
+    <div class="wt-badge">🎉 You won this hour's raffle</div>
+    <div class="wt-prize" id="wtPrize">—</div>
+    <div class="wt-sub" id="wtSub">Drawn on-chain by Switchboard VRF — verifiable.</div>
+    <button class="wt-claim" id="wtClaim" type="button">Claim my prize</button>
+    <div class="wt-note" id="wtNote"></div>
+  </div>
+</div>
 
 <header class="hero" id="top">
   <canvas id="sky" aria-hidden="true"></canvas>
@@ -987,6 +1025,91 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
         solumPaintFees();
       }
     }).catch(function(){});}catch(e){}
+  })();
+
+  // ================= wallet connect + WINNER-ONLY notification + claim =================
+  // Injected-provider connect (Phantom / Solflare) — no external scripts (CSP-safe). The win banner +
+  // claim button appear ONLY when the connected wallet EXACTLY matches a winner in winners.json
+  // (positive pubkey match). Non-winners and disconnected wallets see nothing personal — never broadcast.
+  // Claim flow matches the claim service: winner signs "Solum claim | epoch N | <ISO>" → POST /claim.
+  (function(){
+    var SOLUM_CLAIM_API="https://claim.solum.work/claim"; // stood up at launch; inert pre-launch (no winners)
+    var btn=document.getElementById("wConnect"),toast=document.getElementById("winToast");
+    if(!btn||!toast) return;
+    var prizeEl=document.getElementById("wtPrize"),subEl=document.getElementById("wtSub"),
+        claimBtn=document.getElementById("wtClaim"),noteEl=document.getElementById("wtNote"),
+        closeBtn=document.getElementById("wtClose");
+    var pk=null, provider=null, curWin=null, dismissedEpoch=null;
+    var B58="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    function b58enc(bytes){var d=[],s="",i,j,c;for(i=0;i<bytes.length;i++){c=bytes[i]&0xff;for(j=0;j<d.length;j++){c+=d[j]<<8;d[j]=c%58;c=(c/58)|0;}while(c){d.push(c%58);c=(c/58)|0;}}for(i=0;i<bytes.length&&bytes[i]===0;i++)s+="1";for(i=d.length-1;i>=0;i--)s+=B58[d[i]];return s;}
+    function shorten(a){return a.slice(0,4)+"…"+a.slice(-4);}
+    function getProvider(){
+      if(window.phantom&&window.phantom.solana&&window.phantom.solana.isPhantom)return window.phantom.solana;
+      if(window.solana&&window.solana.isPhantom)return window.solana;
+      if(window.solflare&&window.solflare.isSolflare)return window.solflare;
+      if(window.solana)return window.solana;
+      return null;
+    }
+    function hideToast(){toast.hidden=true;}
+    function fmtPrize(w){var sh=(w.prizeShares!=null?(+w.prizeShares):null);return (sh!=null?(sh.toFixed(sh<1?4:2)+" "+w.stock):w.stock)+(w.prizeUsd?(" (~$"+Math.round(w.prizeUsd).toLocaleString()+")"):"");}
+    function showWinner(w){
+      curWin=w; toast.hidden=false;
+      prizeEl.textContent=fmtPrize(w);
+      noteEl.textContent=""; noteEl.className="wt-note";
+      if(w.awarded){ claimBtn.style.display="none"; subEl.textContent="Delivered — the prize is in your wallet."; }
+      else if(w.claimed){ claimBtn.style.display="none"; subEl.textContent="Claimed — you'll receive it within 24 hours, sent to your wallet."; }
+      else { claimBtn.style.display=""; claimBtn.disabled=false; claimBtn.textContent="Claim my prize"; subEl.textContent="Drawn on-chain by Switchboard VRF — verifiable."; }
+    }
+    // ONLY show for an EXACT pubkey match; a wallet with no win sees nothing personal.
+    function checkWinner(){
+      if(!pk){hideToast();return;}
+      fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():[];}).then(function(a){
+        if(!Array.isArray(a)){hideToast();return;}
+        var mine=a.filter(function(w){return w.addr===pk && !w.awarded;})
+                  .sort(function(x,y){return Date.parse(y.drawAt)-Date.parse(x.drawAt);});
+        if(mine.length && mine[0].epoch!==dismissedEpoch) showWinner(mine[0]); else if(!mine.length) hideToast();
+      }).catch(function(){hideToast();});
+    }
+    function setConnected(addr){pk=addr;btn.textContent=shorten(addr);btn.classList.add("on");checkWinner();}
+    function setDisconnected(){pk=null;provider=null;btn.textContent="Connect wallet";btn.classList.remove("on");hideToast();}
+    function connect(){
+      var p=getProvider();
+      if(!p){window.open("https://phantom.app/","_blank","noopener");return;}
+      Promise.resolve(p.connect()).then(function(res){provider=p;var key=(res&&res.publicKey)||p.publicKey;if(key)setConnected(key.toString());}).catch(function(){});
+    }
+    btn.addEventListener("click",function(){ if(pk){try{provider&&provider.disconnect&&provider.disconnect();}catch(e){} setDisconnected();} else connect(); });
+    if(closeBtn)closeBtn.addEventListener("click",function(){dismissedEpoch=curWin?curWin.epoch:null;hideToast();});
+    // claim: winner signs the epoch-bound message; POST to the claim service (starts the 24h window)
+    claimBtn.addEventListener("click",function(){
+      if(!curWin||!provider||!provider.signMessage)return;
+      claimBtn.disabled=true;claimBtn.textContent="Sign in your wallet…";noteEl.textContent="";noteEl.className="wt-note";
+      var iso=new Date().toISOString(), msg="Solum claim | epoch "+curWin.epoch+" | "+iso;
+      Promise.resolve(provider.signMessage(new TextEncoder().encode(msg),"utf8")).then(function(sr){
+        var sigBytes=(sr&&sr.signature)?sr.signature:sr;
+        var signature=b58enc(sigBytes);
+        claimBtn.textContent="Recording claim…";
+        return fetch(SOLUM_CLAIM_API,{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({epoch:curWin.epoch,winner:pk,message:msg,signature:signature})});
+      }).then(function(resp){return resp.json();}).then(function(out){
+        if(out&&out.ok){
+          claimBtn.style.display="none";
+          subEl.textContent="Claimed — you'll receive it within 24 hours, sent to your wallet.";
+          noteEl.textContent="✓ Claim recorded"+(out.awardWithin?(" · delivery by "+new Date(out.awardWithin).toLocaleString()):"");
+          noteEl.className="wt-note ok";
+        } else {
+          claimBtn.disabled=false;claimBtn.textContent="Claim my prize";
+          noteEl.textContent=(out&&out.reason)?("Couldn't record claim: "+out.reason):"Claim service unavailable — please try again shortly.";
+          noteEl.className="wt-note err";
+        }
+      }).catch(function(){
+        claimBtn.disabled=false;claimBtn.textContent="Claim my prize";
+        noteEl.textContent="Signing was cancelled or the claim didn't go through. Your prize is safe — try again.";
+        noteEl.className="wt-note err";
+      });
+    });
+    // eager reconnect if the wallet already trusts this site (a returning winner sees their banner)
+    (function(){var p=getProvider();if(p&&p.connect){Promise.resolve(p.connect({onlyIfTrusted:true})).then(function(res){var key=(res&&res.publicKey)||p.publicKey;if(key){provider=p;setConnected(key.toString());}}).catch(function(){});}})();
+    setInterval(function(){if(pk)checkWinner();},15000); // a draw could land while the winner is on the page
   })();
 </script>
 </body>
