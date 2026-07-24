@@ -1,0 +1,21 @@
+[Unit]
+Description=Solum claim service — records signature-verified winner claims, starts the 24h window (no payout)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/solum/app
+EnvironmentFile=/opt/solum/.env
+ExecStart=/usr/bin/node /opt/solum/build/automation/claim-server.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/www/solum-data
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

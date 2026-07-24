@@ -16,3 +16,6 @@ dist/
 .DS_Store
 # local notes that might carry identity/paths
 SCRATCH.md
+
+# secrets — never commit any wallet/host key
+.wallet/
