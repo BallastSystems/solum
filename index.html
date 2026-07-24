@@ -899,15 +899,23 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   // (buys the stock; resets to $0 the moment a snapshot is taken) and feesLifetimeUsd = all-time fees
   // earned (only climbs). Until $SOLUM launches and the bot publishes, every figure reads $0.
   var SOLUM_FEES={live:false, lifetime:0, pot:0, given:0, fees24:0};
-  function solumPaintFees(){
-    var f=SOLUM_FEES, life=money(Math.round(f.lifetime)), pot=money(Math.round(f.pot));
+  // Smoothly animate the fee figures (cents) toward their live targets so they visibly count up in real time.
+  var _feeDisp={life:null,pot:null,given:null}, _feeAnim=false;
+  function solumPaintFees(){ if(!_feeAnim){_feeAnim=true; requestAnimationFrame(_feeTick);} }
+  function _feeEase(cur,tgt){ if(cur==null||Math.abs(tgt-cur)>1e7)return tgt; var d=tgt-cur; if(Math.abs(d)<0.004)return tgt; return cur+d*0.05; }
+  function _feeTick(){
+    var f=SOLUM_FEES;
     var big=document.getElementById("feeBig"),navf=document.getElementById("navFee"),allot=document.getElementById("feeAllot"),
         eGiven=document.getElementById("s-given"),ePot=document.getElementById("s-pot"),eFees=document.getElementById("s-fees");
-    if(allot)allot.textContent=pot; if(navf)navf.textContent=pot; // this cycle's rewards → next-draw pot
-    if(big)big.textContent=life; // all-time creator fees
-    if(eGiven)eGiven.textContent=money(Math.round(f.given));
-    if(ePot)ePot.textContent=fmtK(f.pot);
+    _feeDisp.life=_feeEase(_feeDisp.life,f.lifetime||0);
+    _feeDisp.pot=_feeEase(_feeDisp.pot,f.pot||0);
+    _feeDisp.given=_feeEase(_feeDisp.given,f.given||0);
+    if(allot)allot.textContent=money(_feeDisp.pot); if(navf)navf.textContent=money(_feeDisp.pot); // this cycle's rewards → next-draw pot
+    if(big)big.textContent=money(_feeDisp.life); // all-time creator fees
+    if(eGiven)eGiven.textContent=money(_feeDisp.given);
+    if(ePot)ePot.textContent=fmtK(_feeDisp.pot);
     if(eFees)eFees.textContent=fmtK(f.fees24);
+    requestAnimationFrame(_feeTick);
   }
   solumPaintFees(); // stays at $0 until the real status.json feed below sets SOLUM_FEES.live
 
