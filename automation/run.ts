@@ -37,6 +37,7 @@ type StockCfg = { mint: PublicKey; opsAccount: PublicKey; tokenProgram: PublicKe
 type Cfg = {
   rpc: string;
   coinMint: PublicKey; // $SOLUM
+  coinProgram: PublicKey; // the coin's token program — classic SPL OR Token-2022 (pump.fun uses Token-2022)
   coinDecimals: number;
   vrf: "devnet" | "switchboard"; // randomness source: injected (local/devnet) vs Switchboard On-Demand
   stocks: Record<string, StockCfg>; // label → config for every rotated stock
@@ -54,63 +55,96 @@ type Cfg = {
   feePollSec: number; // how often to refresh the live creator-fee pot while collecting
   feeStateFile: string; // persists the all-time creator fees CLAIMED, so the lifetime figure survives restarts
   solPriceUsd: number; // rough, for the displayed pot figure
+  firstSnapSec?: number; // if set, the FIRST snapshot fires this many seconds after start (else random); later ones stay random/hidden
 };
 
-/** Track live balances of every $SOLUM holder into the current epoch's TWAB accumulator. */
-function trackBalances(conn: Connection, coinMint: PublicKey, twab: TwabAccumulator) {
-  // SPL token accounts are 165 bytes; mint at offset 0, owner at 32, amount (u64 LE) at 64.
+/** Track live balances of every $SOLUM holder into the current epoch's TWAB accumulator.
+ * Token account base layout is identical for classic SPL and Token-2022 (mint@0, owner@32, amount@64);
+ * Token-2022 accounts are LARGER than 165 bytes (extensions), so we filter by mint only — never a rigid
+ * dataSize, or a Token-2022 coin's holders are all missed. `coinProgram` = the coin's actual program. */
+function trackBalances(conn: Connection, coinMint: PublicKey, coinProgram: PublicKey, twab: TwabAccumulator) {
   return conn.onProgramAccountChange(
-    TOKEN_PROGRAM_ID,
+    coinProgram,
     (info) => {
       const d = info.accountInfo.data;
+      if (d.length < 72) return; // not a token account
       twab.update(new PublicKey(d.subarray(32, 64)).toBase58(), d.readBigUInt64LE(64), now());
     },
     "confirmed",
-    [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: coinMint.toBase58() } }],
+    [{ memcmp: { offset: 0, bytes: coinMint.toBase58() } }],
   );
 }
 
-async function seedInitialBalances(conn: Connection, coinMint: PublicKey, twab: TwabAccumulator, t: number) {
-  const accts = await conn.getProgramAccounts(TOKEN_PROGRAM_ID, {
-    filters: [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: coinMint.toBase58() } }],
+async function seedInitialBalances(conn: Connection, coinMint: PublicKey, coinProgram: PublicKey, twab: TwabAccumulator, t: number) {
+  const accts = await conn.getProgramAccounts(coinProgram, {
+    filters: [{ memcmp: { offset: 0, bytes: coinMint.toBase58() } }],
   });
   for (const a of accts) {
     const d = a.account.data as Buffer;
+    if (d.length < 72) continue; // skip non-token-account matches
     twab.update(new PublicKey(d.subarray(32, 64)).toBase58(), d.readBigUInt64LE(64), t);
   }
+}
+
+/** Live SOL/USD so the displayed $ figures match reality (Jupiter → CoinGecko → last-known). */
+async function fetchSolPrice(fallback: number): Promise<number> {
+  const SOL = "So11111111111111111111111111111111111111112";
+  try { const j: any = await (await fetch(`https://lite-api.jup.ag/price/v2?ids=${SOL}`)).json(); const p = Number(j?.data?.[SOL]?.price); if (p > 0) return p; } catch { /* try next */ }
+  try { const j: any = await (await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd")).json(); const p = Number(j?.solana?.usd); if (p > 0) return p; } catch { /* keep fallback */ }
+  return fallback;
 }
 
 export async function runForever(cfg: Cfg) {
   const conn = new Connection(cfg.rpc, "confirmed");
   let sbQueue: any = null; // cached Switchboard queue (loaded once, on the switchboard path)
 
+  let solPrice = cfg.solPriceUsd; // refreshed live so the counter tracks pump.fun's USD figure
+  solPrice = await fetchSolPrice(solPrice);
+  setInterval(async () => { solPrice = await fetchSolPrice(solPrice); }, 120_000);
+
   // Real all-time creator fees = everything CLAIMED (swept + bought) over time + what's currently accrued.
   // Persisted so the lifetime figure survives restarts (start the bot near launch for a full total).
-  let feesClaimedSol = 0;
-  try { feesClaimedSol = JSON.parse(fs.readFileSync(cfg.feeStateFile, "utf8")).feesClaimedSol || 0; } catch { /* first run */ }
-  const saveFeeState = () => { try { fs.mkdirSync(path.dirname(cfg.feeStateFile), { recursive: true }); fs.writeFileSync(cfg.feeStateFile, JSON.stringify({ feesClaimedSol }, null, 2)); } catch { /* best-effort */ } };
-  const lifetimeUsd = (accruedSol: number) => Math.round((feesClaimedSol + accruedSol) * cfg.solPriceUsd);
+  let feesClaimedSol = 0;   // all-time creator fees collected (seed + tracked collections)
+  let drawnBaseline = 0;    // all-time EARNED at the last snapshot → "allotted to next draw" = earned - this. Starts 0 (no snapshot yet ⇒ allotted = ALL fees so far).
+  try { const st = JSON.parse(fs.readFileSync(cfg.feeStateFile, "utf8")); feesClaimedSol = st.feesClaimedSol || 0; drawnBaseline = st.drawnBaseline || 0; } catch { /* first run */ }
+  const saveFeeState = () => { try { fs.mkdirSync(path.dirname(cfg.feeStateFile), { recursive: true }); fs.writeFileSync(cfg.feeStateFile, JSON.stringify({ feesClaimedSol, drawnBaseline }, null, 2)); } catch { /* best-effort */ } };
+  const lifetimeUsd = (accruedSol: number) => Math.round((feesClaimedSol + accruedSol) * solPrice * 100) / 100; // cents, so the counter ticks live
+
+  let firstCycle = true; // the very first snapshot can be scheduled at a fixed offset (cfg.firstSnapSec); after that, random/hidden
+  let lastAccrued = 0; // last-seen vault accrued; a DROP means fees were collected → fold into feesClaimedSol so all-time is monotonic + real
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const hourStart = now();
     const label = hourLabel(hourStart);
     const twab = new TwabAccumulator(hourStart);
-    await seedInitialBalances(conn, cfg.coinMint, twab, hourStart);
-    const sub = trackBalances(conn, cfg.coinMint, twab);
-    let potUsd = 0, accruedSol = 0;
+    await seedInitialBalances(conn, cfg.coinMint, cfg.coinProgram, twab, hourStart);
+    const sub = trackBalances(conn, cfg.coinMint, cfg.coinProgram, twab);
+    // read the vault once at cycle start; fold any collection-while-idle into the all-time total
+    let accruedSol = await getAccruedCreatorFees(conn, cfg.ops.publicKey).then((l) => l / 1e9).catch(() => lastAccrued);
+    if (accruedSol < lastAccrued) { feesClaimedSol += lastAccrued - accruedSol; saveFeeState(); }
+    lastAccrued = accruedSol;
+    let potUsd = Math.round(Math.max(0, (feesClaimedSol + accruedSol) - drawnBaseline) * solPrice * 100) / 100; // allotted (cents) = fees since the LAST snapshot
 
     const collecting = () => writeStatus(cfg.statusFile, {
       hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, prize: null,
       ...feeLedger(cfg.winnersFile, potUsd), feesLifetimeUsd: lifetimeUsd(accruedSol), lastWinner: null,
     });
 
-    // choose a RANDOM, hidden snapshot time; until it fires, just track the creator fees accruing live
-    const snapAt = hourStart + rint(cfg.snapMinSec, cfg.snapMaxSec);
+    // choose a RANDOM, hidden snapshot time; until it fires, track creator fees earned live (accrued + collected).
+    // The FIRST snapshot can be pinned to a fixed offset (cfg.firstSnapSec) so launch timing is exact.
+    const snapAt = hourStart + ((firstCycle && cfg.firstSnapSec) ? cfg.firstSnapSec : rint(cfg.snapMinSec, cfg.snapMaxSec));
+    firstCycle = false;
     collecting();
     console.log(`[hour ${label}] snapshot scheduled (hidden) · tracking creator fees`);
     while (now() < snapAt) {
-      try { accruedSol = (await getAccruedCreatorFees(conn, cfg.ops.publicKey)) / 1e9; potUsd = Math.round(accruedSol * cfg.solPriceUsd); collecting(); } catch { /* keep last value */ }
+      try {
+        const a = (await getAccruedCreatorFees(conn, cfg.ops.publicKey)) / 1e9;
+        if (a < lastAccrued) { feesClaimedSol += lastAccrued - a; saveFeeState(); } // vault dropped → fees were collected; count them
+        lastAccrued = a; accruedSol = a;
+        potUsd = Math.round(Math.max(0, (feesClaimedSol + a) - drawnBaseline) * solPrice * 100) / 100; // allotted (cents) = fees since last snapshot
+        collecting();
+      } catch { /* keep last value */ }
       await sleep(Math.max(1000, Math.min(cfg.feePollSec * 1000, (snapAt - now()) * 1000)));
     }
 
@@ -142,11 +176,15 @@ export async function runForever(cfg: Cfg) {
       const stk = cfg.stocks[stockLabel];
       try {
         if (!stk) throw new Error(`no config for ${stockLabel}`);
-        const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
+        // buy with the FULL allotment for this cycle (all creator fees since the last snapshot), not just the vault
+        const allottedLamports = Math.round(Math.max(0, (feesClaimedSol + accruedSol) - drawnBaseline) * 1e9);
+        const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram, allottedLamports);
         prizeBaseUnits = f.stockBought.toString();
         buyTx = f.buyTx; // the Jupiter swap signature — the site links to it as proof of purchase
-        if (f.solCollected > 0) { potUsd = Math.round(f.solCollected * cfg.solPriceUsd); feesClaimedSol += f.solCollected; saveFeeState(); } // reconcile + fold into all-time claimed
-        accruedSol = 0; // the creator vault was just swept by the claim
+        if (f.solCollected > 0) { feesClaimedSol += f.solCollected; } // fold the freshly-collected vault into all-time
+        potUsd = Math.round((f.solSpent || f.solCollected) * solPrice); // advertised prize = SOL actually spent on the stock
+        accruedSol = 0; lastAccrued = 0; // the vault was just swept by the buy; reset so the drop isn't double-counted as a collection
+        drawnBaseline = feesClaimedSol; saveFeeState(); // "allotted to next draw" resets to 0 at the snapshot (all fees to date have now been allotted)
         const dec = (await getMint(conn, stk.mint, undefined, stk.tokenProgram)).decimals;
         // xStocks use the Token-2022 scaledUiAmount extension (a rebasing multiplier), so the shares a
         // holder actually SEES ≠ raw/10^decimals. Advertise the SCALED amount that shows in the winner's
@@ -210,13 +248,17 @@ export async function runForever(cfg: Cfg) {
   }
 }
 
-if (require.main === module) {
+if (require.main === module) (async () => {
   const rpc = process.env.SOLUM_RPC || "https://api.devnet.solana.com";
   const ops = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync(process.env.SOLUM_OPS_KEY!, "utf8"))));
   const idl = JSON.parse(fs.readFileSync(process.env.SOLUM_IDL || "target/idl/solum.json", "utf8"));
   const provider = new anchor.AnchorProvider(new Connection(rpc, "confirmed"), new anchor.Wallet(ops), {});
   const prog = new anchor.Program(idl, provider);
   const coinMint = new PublicKey(process.env.SOLUM_COIN_MINT!);
+  // the coin's token program: env override, else auto-detect from the mint owner (pump.fun uses Token-2022)
+  const coinProgram = process.env.SOLUM_COIN_PROGRAM
+    ? new PublicKey(process.env.SOLUM_COIN_PROGRAM)
+    : (await provider.connection.getAccountInfo(coinMint))!.owner;
   const admin = new PublicKey(process.env.SOLUM_ADMIN!);
   const enc = (s: string) => Buffer.from(s);
   const [jackpot] = PublicKey.findProgramAddressSync([enc("jackpot"), coinMint.toBuffer(), admin.toBuffer()], prog.programId);
@@ -238,7 +280,7 @@ if (require.main === module) {
   if (rotation.length === 0) throw new Error("no rotated stocks configured (set SOLUM_STOCKS or SOLUM_STOCK_MINT)");
   const firstStock = stocks[rotation[0]];
   runForever({
-    rpc, coinMint, coinDecimals: Number(process.env.SOLUM_COIN_DECIMALS || 6),
+    rpc, coinMint, coinProgram, coinDecimals: Number(process.env.SOLUM_COIN_DECIMALS || 6),
     vrf: process.env.SOLUM_VRF === "switchboard" ? "switchboard" : "devnet",
     stocks, rotation, ops, prog,
     refs: { jackpot, jackpotAuthority, prizeMint: firstStock.mint, potCustody: new PublicKey(process.env.SOLUM_POT_CUSTODY!), prizeTokenProgram: firstStock.tokenProgram },
@@ -252,5 +294,6 @@ if (require.main === module) {
     countdownSec: Number(process.env.SOLUM_COUNTDOWN || 5 * 60),
     feePollSec: Number(process.env.SOLUM_FEE_POLL || 20),
     solPriceUsd: Number(process.env.SOLUM_SOL_PRICE || 150),
+    firstSnapSec: process.env.SOLUM_FIRST_SNAP_SEC ? Number(process.env.SOLUM_FIRST_SNAP_SEC) : undefined,
   }).catch((e) => { console.error(e); process.exit(1); });
-}
+})().catch((e) => { console.error(e); process.exit(1); });

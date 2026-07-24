@@ -128,10 +128,15 @@ export async function fundHourly(
   opsStockAccount: PublicKey,
   _potCustody: PublicKey,
   tokenProgram: PublicKey,
-): Promise<{ solCollected: number; stockBought: bigint; buyTx: string }> {
-  const lamports = await collectCreatorFees(conn, ops);
-  if (lamports <= 0) return { solCollected: 0, stockBought: 0n, buyTx: "" };
-  const { received, sig } = await buyStock(conn, ops, lamports, stockMint.toBase58(), opsStockAccount);
-  // held in the ops/review wallet (opsStockAccount) — NOT moved to the pot custody.
-  return { solCollected: lamports / LAMPORTS_PER_SOL, stockBought: received, buyTx: sig };
+  targetLamports?: number, // how much SOL to actually spend on the stock (the cycle's allotment). Defaults to just-collected.
+): Promise<{ solCollected: number; solSpent: number; stockBought: bigint; buyTx: string }> {
+  const collected = await collectCreatorFees(conn, ops); // sweep the vault into the wallet (lamports; 0 if none)
+  const bal = await conn.getBalance(ops.publicKey);
+  const RESERVE = 50_000_000; // keep ~0.05 SOL for tx fees — never drain the wallet
+  let spend = Math.round(targetLamports != null ? targetLamports : collected);
+  spend = Math.min(spend, Math.max(0, bal - RESERVE)); // cap to available balance
+  if (spend <= 0) return { solCollected: collected / LAMPORTS_PER_SOL, solSpent: 0, stockBought: 0n, buyTx: "" };
+  const { received, sig } = await buyStock(conn, ops, spend, stockMint.toBase58(), opsStockAccount);
+  // stock held in the ops/review wallet (opsStockAccount) — NOT moved to the pot custody.
+  return { solCollected: collected / LAMPORTS_PER_SOL, solSpent: spend / LAMPORTS_PER_SOL, stockBought: received, buyTx: sig };
 }
