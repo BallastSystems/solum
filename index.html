@@ -123,8 +123,7 @@
   .rm-cols .ar{text-align:right}
   .rm-reel-wrap{position:relative;height:640px;overflow:hidden;
     -webkit-mask-image:linear-gradient(180deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(180deg,transparent,#000 7%,#000 93%,transparent)}
-  .rm-reel{will-change:transform,filter}
-  .rm-reel.spin{filter:blur(2px)}
+  .rm-reel{will-change:transform}
   .rm-foot .ph{color:var(--dim);font-weight:500}
   .rm-foot .ph::after{content:"";display:inline-block;width:6px;height:6px;margin-left:9px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px var(--blue);vertical-align:middle;animation:bp 1.1s infinite}
   .rm-row{height:32px;display:grid;grid-template-columns:20px minmax(0,1fr) auto minmax(88px,auto);gap:clamp(9px,1.5vw,18px);align-items:center;
@@ -890,7 +889,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       reel.style.transition="none";reel.style.transform="translateY(0)";reel.classList.add("spin");void reel.offsetHeight;
       phase("Snapshot sealed · "+holders.toLocaleString()+" holders locked in");
       requestAnimationFrame(function(){
-        reel.style.transition="transform 26s cubic-bezier(.1,.72,.1,1),filter 3s ease";
+        reel.style.transition="transform 26s cubic-bezier(.22,.55,.15,1)";
         reel.style.transform="translateY("+(CENTER-winIdx*ROWH)+"px)";
       });
       timers.push(setTimeout(function(){phase("Drawing on-chain…");},2600));
