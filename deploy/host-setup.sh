@@ -38,7 +38,7 @@ if [ ! -d "$APP/.git" ]; then git clone "$REPO" "$APP"; else git -C "$APP" pull 
 cd "$APP"
 npm ci
 # build the two service entrypoints to plain JS
-npx tsc automation/run.ts automation/claim-server.ts --outDir /opt/solum/build \
+npx tsc automation/run.ts automation/claim-server.ts --outDir /opt/solum/app/build \
   --rootDir . --module commonjs --target es2020 --esModuleInterop --resolveJsonModule \
   --skipLibCheck --moduleResolution node
 
