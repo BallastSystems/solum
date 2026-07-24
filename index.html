@@ -473,11 +473,11 @@
 <section class="s" id="draw-flow"><div class="shell">
   <div class="s-head">
     <h2 class="rv">From snapshot to <em>winner</em></h2>
-    <p class="s-sub rv" style="--i:1">Two random moments, one sealed list, verifiable randomness. Here's exactly how each hourly draw runs — and why no one, us included, can bend it.</p>
+    <p class="s-sub rv" style="--i:1">One hidden snapshot, a 5-minute countdown, verifiable randomness. Here's exactly how each hourly draw runs — and why no one, us included, can bend it.</p>
   </div>
   <div class="flow rv">
     <div class="fstep seal"><span class="fn">1</span><div class="fbody"><h3>Snapshot, sealed on-chain</h3><p>At a hidden, random moment each hour, your <b>time-averaged</b> $SOLUM balance becomes tickets and the full list is locked on-chain. A last-second bag earns almost nothing — and once sealed, entries can't change.</p></div></div>
-    <div class="fstep"><span class="fn">2</span><div class="fbody"><h3>Drawn by Switchboard VRF</h3><p>At a <b>second</b> random time, a verifiable-random oracle produces a number no one — team, bot, or winner — can predict or grind. The winner is whoever holds that ticket.</p></div></div>
+    <div class="fstep"><span class="fn">2</span><div class="fbody"><h3>Drawn by Switchboard VRF</h3><p><b>Five minutes</b> after the snapshot — a public countdown — a verifiable-random oracle produces a number no one, team, bot, or winner, can predict or grind. The winner is whoever holds that ticket.</p></div></div>
     <div class="fstep"><span class="fn">3</span><div class="fbody"><h3>Verify it yourself</h3><p>Recompute the list, check the number lands in the winner's range, replay the on-chain draw. <a class="lk" href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">See the draw code <span class="c">›</span></a></p></div></div>
   </div>
 </div></section>
@@ -506,7 +506,7 @@
     <div class="ds-steps">
       <div class="ds-step" id="dsSnap"><span class="ds-ico">◷</span><div class="ds-body"><div class="ds-t">Snapshot</div><div class="ds-v" id="dsSnapV">pending — a random moment this hour</div></div></div>
       <div class="ds-arrow">→</div>
-      <div class="ds-step" id="dsDraw"><span class="ds-ico">✦</span><div class="ds-body"><div class="ds-t">Drawing</div><div class="ds-v" id="dsDrawV">randomized — revealed once the snapshot is taken</div></div></div>
+      <div class="ds-step" id="dsDraw"><span class="ds-ico">✦</span><div class="ds-body"><div class="ds-t">Drawing</div><div class="ds-v" id="dsDrawV">a fixed 5-minute countdown after the snapshot</div></div></div>
       <div class="ds-arrow">→</div>
       <div class="ds-step" id="dsWin"><span class="ds-ico">★</span><div class="ds-body"><div class="ds-t">Winner</div><div class="ds-v" id="dsWinV">—</div></div></div>
     </div>
@@ -678,23 +678,24 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     var sV=document.getElementById("dsSnapV"),dV=document.getElementById("dsDrawV"),wV=document.getElementById("dsWinV"),hV=document.getElementById("dsHour");
     function render(){
       var now=Date.now(), hs=Math.floor(now/HOUR)*HOUR, rng=m32(Math.floor(now/HOUR));
-      var snapAt=hs+(8+Math.floor(rng()*44))*60000, drawAt=snapAt+(4+Math.floor(rng()*11))*60000;
-      var wStock=stocks[(rng()*5)|0], wPrize=180+Math.floor(rng()*900), wAddr=b58(rng,44), holders=800+Math.floor(rng()*2200);
+      var snapAt=hs+(8+Math.floor(rng()*44))*60000, drawAt=snapAt+5*60000;
+      var wStock=stocks[(rng()*5)|0], wPrize=180+Math.floor(rng()*900), wAddr=b58(rng,44), holders=800+Math.floor(rng()*2200), prize=null;
       if(real){ if(real.snapshotAt)snapAt=Date.parse(real.snapshotAt); if(real.drawAt)drawAt=Date.parse(real.drawAt);
-        if(typeof real.holders==="number")holders=real.holders;
+        if(typeof real.holders==="number")holders=real.holders; prize=real.prize;
         if(real.lastWinner){wAddr=real.lastWinner.addr;wPrize=real.lastWinner.prizeUsd;wStock=real.lastWinner.stock;} }
       hV.textContent="#"+(Math.floor(hs/HOUR)-Math.floor(Date.UTC(2026,6,19)/HOUR));
       [S,D,W].forEach(function(x){x.classList.remove("active","done");});
       var shortAddr=wAddr.slice(0,4)+"…"+wAddr.slice(-4);
+      var pzTxt=prize&&prize.stock?(" · prize: "+(prize.shares?(+prize.shares).toFixed(2)+" ":"")+prize.stock):"";
       if(now<snapAt){
         S.classList.add("active");
         sV.textContent="pending — taken at a hidden moment this hour";
-        dV.textContent="revealed once the snapshot is sealed";
+        dV.textContent="a fixed 5-minute countdown after the snapshot";
         wV.textContent="—";
       } else if(now<drawAt){
         S.classList.add("done"); D.classList.add("active");
-        sV.textContent="✓ sealed for this draw · "+holders.toLocaleString()+" holders locked in · time hidden";
-        dV.textContent="at "+fmt(drawAt)+" · in "+cd(drawAt-now);
+        sV.textContent="✓ sealed · "+holders.toLocaleString()+" holders locked in · time hidden"+pzTxt;
+        dV.textContent="in "+cd(drawAt-now)+" · 5-minute countdown";
         wV.textContent="drawing soon…";
       } else {
         S.classList.add("done"); D.classList.add("done"); W.classList.add("done");
@@ -714,31 +715,44 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
     function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
     function cd(ms){ms=Math.max(0,ms);var s=Math.floor(ms/1000),m=Math.floor(s/60);s%=60;return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
+    function stockOf(l){for(var i=0;i<stocks.length;i++)if(stocks[i][0]===l)return stocks[i];return stocks[0];}
     var CD=document.getElementById("ldCd"),POT=document.getElementById("ldPot"),HOLD=document.getElementById("ldHold"),ST=document.getElementById("ldStock"),STAT=document.getElementById("ldStatus");
     var hr=-1, snapAt=0, drawAt=0, holders=0, potBase=0, potGrow=0, win=null, st=stocks[0], revealed=false;
+    // reads status.json (published by the draw bot): real pot, 5-minute countdown, advertised prize, winner
+    var real=null; function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
+    poll(); setInterval(poll,8000);
     function seed(){
       var h=Math.floor(Date.now()/HOUR); if(h===hr) return; hr=h; revealed=false;
       var rng=m32(h);
-      snapAt=h*HOUR+(8+Math.floor(rng()*44))*60000; drawAt=snapAt+(4+Math.floor(rng()*11))*60000;
+      snapAt=h*HOUR+(8+Math.floor(rng()*44))*60000; drawAt=snapAt+5*60000; // fixed 5-min countdown after the snapshot
       holders=800+Math.floor(rng()*2200); potBase=400+Math.floor(rng()*2400); potGrow=potBase*(0.15+rng()*0.4);
-      var a=b58(rng,44); win={addr:a.slice(0,4)+"…"+a.slice(-4),prize:180+Math.floor(rng()*900)};
+      var a=b58(rng,44); win={addr:a.slice(0,4)+"…"+a.slice(-4),prize:180+Math.floor(rng()*900),stock:stocks[h%stocks.length][0]};
       st=stocks[h%stocks.length];
-      ST.innerHTML='<svg viewBox="0 0 24 24" style="color:'+st[3]+'"><use href="#'+st[2]+'"/></svg>'+st[0]+' · '+st[1];
       wrap.classList.remove("reveal"); STAT.classList.remove("won");
     }
+    function setStock(s){ST.innerHTML='<svg viewBox="0 0 24 24" style="color:'+s[3]+'"><use href="#'+s[2]+'"/></svg>'+s[0]+' · '+s[1];}
     function tick(){
       seed(); var now=Date.now(), frac=(now-Math.floor(now/HOUR)*HOUR)/HOUR;
-      POT.textContent="$"+Math.round(potBase+potGrow*frac).toLocaleString();
-      HOLD.textContent=holders.toLocaleString();
-      if(now<drawAt){
-        CD.textContent=cd(drawAt-now);
-        STAT.innerHTML = now<snapAt
-          ? "Collecting fees · snapshot at a random moment this hour · winner drawn by VRF"
-          : "<b>Snapshot taken</b> · "+holders.toLocaleString()+" holders locked in · drawing soon";
+      var sAt=snapAt, dAt=drawAt, hold=holders, pot=Math.round(potBase+potGrow*frac), phase=null, prize=null, lastWin=win;
+      if(real){ if(real.snapshotAt)sAt=Date.parse(real.snapshotAt); if(real.drawAt)dAt=Date.parse(real.drawAt);
+        if(typeof real.potUsd==="number")pot=real.potUsd; if(real.holders)hold=real.holders;
+        phase=real.phase; prize=real.prize; if(real.lastWinner)lastWin={addr:real.lastWinner.addr.slice(0,4)+"…"+real.lastWinner.addr.slice(-4),prize:real.lastWinner.prizeUsd,stock:real.lastWinner.stock}; }
+      POT.textContent="$"+pot.toLocaleString();
+      HOLD.textContent=hold.toLocaleString();
+      setStock(prize&&prize.stock?stockOf(prize.stock):st); // the bought prize once the snapshot's taken
+      var drawn=(phase==="drawn")||(dAt>0&&now>=dAt);
+      if(!drawn&&now<sAt){
+        CD.textContent="—";
+        STAT.classList.remove("won");
+        STAT.innerHTML="Collecting fees · snapshot at a random moment this hour · winner drawn by VRF";
+      } else if(!drawn){
+        CD.textContent=cd(dAt-now); // fixed 5-minute countdown, announced the instant the snapshot lands
+        STAT.classList.remove("won");
+        var pz=prize&&prize.stock?("bought <b>"+(prize.shares?(+prize.shares).toFixed(2)+" ":"")+prize.stock+"</b> (~$"+Math.round(prize.usd||pot).toLocaleString()+") · "):"";
+        STAT.innerHTML="<b>Snapshot taken</b> · "+pz+hold.toLocaleString()+" holders locked in · drawing in "+cd(dAt-now);
       } else {
-        CD.textContent="00:00";
-        STAT.classList.add("won");
-        STAT.innerHTML="🏆 <b>"+win.addr+"</b> won <b>$"+win.prize.toLocaleString()+"</b> of "+st[0];
+        CD.textContent="00:00"; STAT.classList.add("won");
+        STAT.innerHTML="🏆 <b>"+lastWin.addr+"</b> won <b>$"+(lastWin.prize||0).toLocaleString()+"</b> of "+(lastWin.stock||st[0]);
         if(!revealed){ revealed=true; wrap.classList.add("reveal"); }
       }
     }
