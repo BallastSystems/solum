@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>try{var _t=localStorage.getItem("solum-theme");document.documentElement.setAttribute("data-theme",_t||"dark");}catch(e){}</script>
+<script>document.documentElement.setAttribute("data-theme","dark");</script>
 <title>Solum — hold $SOLUM, win tokenized stock</title>
 <meta name="description" content="Hold the coin, win the stock. Every hour, $SOLUM raffles tokenized Apple, NVIDIA, Tesla, Coinbase & Strategy to holders — funded by trading fees, drawn on-chain, zero risk to your bag.">
 <meta property="og:title" content="Solum — hold $SOLUM, win tokenized stock">
@@ -395,7 +395,6 @@
     <a class="n" href="#draw-flow">How it works</a>
     <a class="n" href="#fair">Fair by design</a>
     <a class="n nav-win" href="/winners/">Winners</a>
-    <button class="tgl" id="tgl" aria-label="Toggle light or dark theme"><svg id="tglIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
     <a class="nav-ic" href="https://github.com/BallastSystems" target="_blank" rel="noopener" aria-label="Solum on GitHub"><svg><use href="#gh"/></svg></a>
     <a class="nav-ic" href="https://x.com/SolumHQ" target="_blank" rel="noopener" aria-label="Solum on X"><svg><use href="#x"/></svg></a>
   </span>
@@ -616,14 +615,6 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
 </script>
 
 <script>
-  (function(){var root=document.documentElement,tgl=document.getElementById("tgl"),tglI=document.getElementById("tglIcon");
-    var SUN='<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>';
-    var MOON='<path d="M20 14.5A8 8 0 019.5 4 7 7 0 1020 14.5z"/>';
-    function setIcon(){if(tglI)tglI.innerHTML=root.getAttribute("data-theme")==="dark"?SUN:MOON;}
-    setIcon();
-    if(tgl)tgl.addEventListener("click",function(){var next=root.getAttribute("data-theme")==="dark"?"light":"dark";
-      root.setAttribute("data-theme",next);try{localStorage.setItem("solum-theme",next);}catch(e){}setIcon();});
-  })();
   var RM = matchMedia("(prefers-reduced-motion:reduce)").matches;
 
   // ---- procedural logo field: jittered grid, wide size range, depth via opacity, playful drift ----
