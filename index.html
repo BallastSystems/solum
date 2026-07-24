@@ -1060,15 +1060,16 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       var io3=new IntersectionObserver(function(es){es.forEach(function(e){run=e.isIntersecting;if(run){last=0;requestAnimationFrame(loop);}});},{threshold:.05});io3.observe(cv);}
     var rt;addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){size();draw();},160);});
     if(document.readyState==="complete")start();else addEventListener("load",start);
-    // go live from status.json (published by the draw bot) — reconcile exactly to on-chain fees
-    try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    // go live from status.json (published by the draw bot) — POLL every 6s so the counters tick in real time
+    function pollSolumFees(){try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
       if(j&&(j.feesLifetimeUsd!=null||j.prizesAwardedUsd!=null||j.potUsd!=null)){
         var pot=+(j.potUsd||0),given=(j.prizesAwardedUsd!=null?+j.prizesAwardedUsd:((+(j.feesLifetimeUsd||0))-pot));
         var life=(j.feesLifetimeUsd!=null?+j.feesLifetimeUsd:given+pot); // REAL all-time creator fees (tracked on the dev wallet)
         SOLUM_FEES.live=true;SOLUM_FEES.given=given;SOLUM_FEES.pot=pot;SOLUM_FEES.lifetime=life;SOLUM_FEES.fees24=(j.fees24hUsd!=null?+j.fees24hUsd:SOLUM_FEES.fees24);
         solumPaintFees();
       }
-    }).catch(function(){});}catch(e){}
+    }).catch(function(){});}catch(e){}}
+    pollSolumFees(); setInterval(pollSolumFees,6000);
   })();
 
   // ================= wallet connect + WINNER-ONLY notification + claim =================
