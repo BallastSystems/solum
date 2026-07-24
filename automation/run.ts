@@ -15,6 +15,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, getAccount, getMint } from "@solana/spl-token";
 import * as fs from "fs";
+import * as path from "path";
 import { TwabAccumulator, buildSnapshot, winnerOf } from "./twab";
 import { commitEpoch, settleDevnet, requestDrawVrf, settleDrawVrf, loadSwitchboardQueue, winningTicketOf, JackpotRefs } from "./draw";
 import { fundHourly } from "./fees";
@@ -51,6 +52,7 @@ type Cfg = {
   snapMaxSec: number; // snapshot fires at a random point in [snapMin, snapMax] of the hour
   countdownSec: number; // FIXED snapshot → draw countdown (5 min = 300s)
   feePollSec: number; // how often to refresh the live creator-fee pot while collecting
+  feeStateFile: string; // persists the all-time creator fees CLAIMED, so the lifetime figure survives restarts
   solPriceUsd: number; // rough, for the displayed pot figure
 };
 
@@ -81,6 +83,14 @@ async function seedInitialBalances(conn: Connection, coinMint: PublicKey, twab: 
 export async function runForever(cfg: Cfg) {
   const conn = new Connection(cfg.rpc, "confirmed");
   let sbQueue: any = null; // cached Switchboard queue (loaded once, on the switchboard path)
+
+  // Real all-time creator fees = everything CLAIMED (swept + bought) over time + what's currently accrued.
+  // Persisted so the lifetime figure survives restarts (start the bot near launch for a full total).
+  let feesClaimedSol = 0;
+  try { feesClaimedSol = JSON.parse(fs.readFileSync(cfg.feeStateFile, "utf8")).feesClaimedSol || 0; } catch { /* first run */ }
+  const saveFeeState = () => { try { fs.mkdirSync(path.dirname(cfg.feeStateFile), { recursive: true }); fs.writeFileSync(cfg.feeStateFile, JSON.stringify({ feesClaimedSol }, null, 2)); } catch { /* best-effort */ } };
+  const lifetimeUsd = (accruedSol: number) => Math.round((feesClaimedSol + accruedSol) * cfg.solPriceUsd);
+
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const hourStart = now();
@@ -88,11 +98,11 @@ export async function runForever(cfg: Cfg) {
     const twab = new TwabAccumulator(hourStart);
     await seedInitialBalances(conn, cfg.coinMint, twab, hourStart);
     const sub = trackBalances(conn, cfg.coinMint, twab);
-    let potUsd = 0;
+    let potUsd = 0, accruedSol = 0;
 
     const collecting = () => writeStatus(cfg.statusFile, {
       hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, prize: null,
-      ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
+      ...feeLedger(cfg.winnersFile, potUsd), feesLifetimeUsd: lifetimeUsd(accruedSol), lastWinner: null,
     });
 
     // choose a RANDOM, hidden snapshot time; until it fires, just track the creator fees accruing live
@@ -100,7 +110,7 @@ export async function runForever(cfg: Cfg) {
     collecting();
     console.log(`[hour ${label}] snapshot scheduled (hidden) · tracking creator fees`);
     while (now() < snapAt) {
-      try { potUsd = Math.round((await getAccruedCreatorFees(conn, cfg.ops.publicKey)) / 1e9 * cfg.solPriceUsd); collecting(); } catch { /* keep last value */ }
+      try { accruedSol = (await getAccruedCreatorFees(conn, cfg.ops.publicKey)) / 1e9; potUsd = Math.round(accruedSol * cfg.solPriceUsd); collecting(); } catch { /* keep last value */ }
       await sleep(Math.max(1000, Math.min(cfg.feePollSec * 1000, (snapAt - now()) * 1000)));
     }
 
@@ -124,7 +134,8 @@ export async function runForever(cfg: Cfg) {
         if (!stk) throw new Error(`no config for ${stockLabel}`);
         const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
         prizeBaseUnits = f.stockBought.toString();
-        if (f.solCollected > 0) potUsd = Math.round(f.solCollected * cfg.solPriceUsd); // reconcile to what was actually spent
+        if (f.solCollected > 0) { potUsd = Math.round(f.solCollected * cfg.solPriceUsd); feesClaimedSol += f.solCollected; saveFeeState(); } // reconcile + fold into all-time claimed
+        accruedSol = 0; // the creator vault was just swept by the claim
         const dec = (await getMint(conn, stk.mint, undefined, stk.tokenProgram)).decimals;
         prizeShares = Number(f.stockBought) / 10 ** dec;
         console.log(`[snapshot ${label}] bought ${prizeShares} ${stockLabel} (~$${potUsd}) for this draw`);
@@ -135,7 +146,7 @@ export async function runForever(cfg: Cfg) {
       const prize = { stock: stockLabel, shares: prizeShares, usd: potUsd };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "snapshot_taken", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd, prize,
-        ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
+        ...feeLedger(cfg.winnersFile, potUsd), feesLifetimeUsd: lifetimeUsd(accruedSol), lastWinner: null,
       });
       console.log(`[snapshot ${label}] taken · ${holders} holders · ${stockLabel} prize · drawing in ${cfg.countdownSec}s`);
       await sleepUntil(drawAt);
@@ -165,7 +176,7 @@ export async function runForever(cfg: Cfg) {
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
         prize: { stock: stockLabel, shares: prizeShares, usd: potUsd },
-        ...feeLedger(cfg.winnersFile, potUsd),
+        ...feeLedger(cfg.winnersFile, potUsd), feesLifetimeUsd: lifetimeUsd(accruedSol),
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },
       });
       appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners register
@@ -213,6 +224,7 @@ if (require.main === module) {
     statusFile: process.env.SOLUM_STATUS_FILE || "public/status.json",
     winnersFile: process.env.SOLUM_WINNERS_FILE || "public/winners.json",
     snapshotDir: process.env.SOLUM_SNAPSHOT_DIR || "snapshots",
+    feeStateFile: process.env.SOLUM_FEE_STATE || "automation/fee-state.json",
     epochLenSec: Number(process.env.SOLUM_EPOCH_LEN || 60),
     snapMinSec: Number(process.env.SOLUM_SNAP_MIN || 8 * 60),
     snapMaxSec: Number(process.env.SOLUM_SNAP_MAX || 50 * 60),
