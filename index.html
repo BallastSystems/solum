@@ -351,6 +351,14 @@
   .ft{display:flex;align-items:center;gap:26px;flex-wrap:wrap;font-size:14px;color:var(--dim)}
   .ft .wm{font-size:16px} .ft a:hover{color:var(--silver)}
   .ft .disc{margin-left:auto;color:var(--faint);font-size:12px} @media (max-width:640px){.ft .disc{margin-left:0;width:100%}}
+  .legal{padding:20px 0 8px;color:var(--faint);font-size:12px;line-height:1.6;max-width:820px}
+  .legal b{color:var(--dim);font-weight:600}
+  /* staged geo-restriction gate — hidden unless SOLUM_RESTRICT is enabled + the visitor is blocked */
+  #georestrict{display:none;position:fixed;inset:0;z-index:9999;background:var(--ink);
+    align-items:center;justify-content:center;padding:32px;text-align:center}
+  #georestrict .gr{max-width:440px}
+  #georestrict h2{font-size:clamp(24px,4vw,34px);font-weight:600;margin-bottom:14px}
+  #georestrict p{color:var(--dim);font-size:15px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -572,7 +580,29 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   <a href="https://sunrise.xyz" target="_blank" rel="noopener">Sunrise Financial</a>
   <a href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Audit</a>
   <span class="disc">DEVNET · PRE-AUDIT · ILLUSTRATIVE · NOT INVESTMENT ADVICE</span>
-</div></footer>
+</div>
+<div class="shell legal">Solum is an experimental, on-chain raffle funded by $SOLUM's creator fees. Prizes are <b>tokenized stocks</b> (e.g. AAPLx) issued by Sunrise Financial — <b>not</b> real equities, and not offered, sold, or guaranteed by Solum. Nothing here is investment, legal, or tax advice, and no outcome is guaranteed. Participation may be restricted or unavailable in certain jurisdictions — it is your responsibility to comply with the laws that apply to you. Currently running on devnet, pre-audit.</div>
+</footer>
+
+<!-- Staged geo-restriction. OFF by default; flip SOLUM_RESTRICT for mainnet once counsel confirms the list. -->
+<div id="georestrict" aria-hidden="true"><div class="gr">
+  <h2>Not available in your region</h2>
+  <p>Based on your location (<span id="geoCC">your region</span>), Solum isn't available to you. This is a legal restriction.</p>
+</div></div>
+<script>
+(function(){
+  // STAGED OFF. For mainnet: set SOLUM_RESTRICT=true and confirm BLOCK with counsel. NOTE: client-side geo is
+  // bypassable — production MUST also enforce at the edge (e.g. Fastly Client-Geo-Country -> block page).
+  var SOLUM_RESTRICT=false, BLOCK=["US"]; // ISO-3166 alpha-2 codes blocked from participating
+  if(!SOLUM_RESTRICT) return;
+  function block(cc){var el=document.getElementById("georestrict");if(!el)return;
+    var s=document.getElementById("geoCC");if(s&&cc)s.textContent=cc;
+    el.style.display="flex";el.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";}
+  try{fetch("https://ipapi.co/json/",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;})
+    .then(function(j){var cc=j&&j.country_code;if(cc&&BLOCK.indexOf(cc)>=0)block(cc);})
+    .catch(function(){/* geo unknown — production fails closed at the edge */});}catch(e){}
+})();
+</script>
 
 <script>
   (function(){var root=document.documentElement,tgl=document.getElementById("tgl"),tglI=document.getElementById("tglIcon");
