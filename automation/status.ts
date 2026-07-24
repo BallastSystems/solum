@@ -12,7 +12,7 @@ export type DrawStatus = {
   drawAt: string | null; // ISO — the draw time (snapshot + a fixed 5-min countdown), set once the snapshot is taken
   holders: number;
   potUsd: number; // this cycle's creator fees → the pot allotted to the NEXT draw (since the last snapshot)
-  prize: { stock: string; shares: number; usd: number } | null; // the stock bought AT the snapshot for THIS draw
+  prize: { stock: string; shares: number; usd: number; buyTx?: string } | null; // the stock bought AT the snapshot for THIS draw (buyTx = the swap sig, proof of purchase)
   feesLifetimeUsd: number; // total creator fees collected all-time  (= prizesAwardedUsd + potUsd)
   prizesAwardedUsd: number; // total raffled to holders all-time (what's been given out)
   fees24hUsd: number; // creator fees collected in the last 24 hours

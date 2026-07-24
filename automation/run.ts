@@ -122,7 +122,7 @@ export async function runForever(cfg: Cfg) {
       continue;
     }
 
-    let drawAt = 0, winnerAddr = "", holders = 0, stockLabel = cfg.rotation[0], prizeShares = 0, prizeBaseUnits = "0";
+    let drawAt = 0, winnerAddr = "", holders = 0, stockLabel = cfg.rotation[0], prizeShares = 0, prizeBaseUnits = "0", buyTx = "";
     try {
       // SNAPSHOT: freeze the TWAB into ticket ranges + Merkle root, commit on-chain
       const snap = buildSnapshot(twab.finalize(now()), cfg.coinDecimals);
@@ -144,17 +144,27 @@ export async function runForever(cfg: Cfg) {
         if (!stk) throw new Error(`no config for ${stockLabel}`);
         const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
         prizeBaseUnits = f.stockBought.toString();
+        buyTx = f.buyTx; // the Jupiter swap signature — the site links to it as proof of purchase
         if (f.solCollected > 0) { potUsd = Math.round(f.solCollected * cfg.solPriceUsd); feesClaimedSol += f.solCollected; saveFeeState(); } // reconcile + fold into all-time claimed
         accruedSol = 0; // the creator vault was just swept by the claim
         const dec = (await getMint(conn, stk.mint, undefined, stk.tokenProgram)).decimals;
-        prizeShares = Number(f.stockBought) / 10 ** dec;
+        // xStocks use the Token-2022 scaledUiAmount extension (a rebasing multiplier), so the shares a
+        // holder actually SEES ≠ raw/10^decimals. Advertise the SCALED amount that shows in the winner's
+        // wallet. prizeBaseUnits stays raw — that's the exact quantity transferred on manual delivery.
+        let scale = 1;
+        try {
+          const b = await conn.getTokenAccountBalance(stk.opsAccount, "confirmed");
+          const rawUi = Number(b.value.amount) / 10 ** dec;
+          if (rawUi > 0 && b.value.uiAmount) scale = Number(b.value.uiAmount) / rawUi;
+        } catch { /* scaledUiAmount unavailable — advertise unscaled */ }
+        prizeShares = (Number(f.stockBought) / 10 ** dec) * scale;
         console.log(`[snapshot ${label}] bought ${prizeShares} ${stockLabel} (~$${potUsd}) for this draw`);
       } catch (e: any) { console.error("[buy] skipped:", e.message); }
 
       // FIXED 5-minute countdown to the draw — announced the instant the snapshot is taken.
       // Never earlier than the on-chain epoch can settle (guards against a mis-set short countdown).
       drawAt = now() + Math.max(cfg.countdownSec, cfg.epochLenSec + 15);
-      const prize = { stock: stockLabel, shares: prizeShares, usd: potUsd };
+      const prize = { stock: stockLabel, shares: prizeShares, usd: potUsd, buyTx };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "snapshot_taken", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd, prize,
         ...feeLedger(cfg.winnersFile, potUsd), feesLifetimeUsd: lifetimeUsd(accruedSol), lastWinner: null,
@@ -186,7 +196,7 @@ export async function runForever(cfg: Cfg) {
       };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
-        prize: { stock: stockLabel, shares: prizeShares, usd: potUsd },
+        prize: { stock: stockLabel, shares: prizeShares, usd: potUsd, buyTx },
         ...feeLedger(cfg.winnersFile, potUsd), feesLifetimeUsd: lifetimeUsd(accruedSol),
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },
       });

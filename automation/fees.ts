@@ -55,20 +55,35 @@ export function randomBuyTimes(windowSec: number, count: number, rand: () => num
   return t.sort((a, b) => a - b);
 }
 
-/** Swap `solLamports` of SOL into `stockMint` via Jupiter and return the stock received (base units). */
+/** Read an SPL/Token-2022 account's amount in base units; 0 if the account doesn't exist yet. */
+async function readTokenAmount(conn: Connection, account: PublicKey): Promise<bigint> {
+  try {
+    const b = await conn.getTokenAccountBalance(account, "confirmed");
+    return BigInt(b.value.amount);
+  } catch {
+    return 0n; // ATA not created until the first swap lands
+  }
+}
+
+/** Swap `solLamports` of SOL into `stockMint` via Jupiter and return the stock ACTUALLY received
+ * (base units), measured as the balance delta on `opsStockAccount` — NOT the quote's outAmount, which
+ * can differ by up to the slippage tolerance. The advertised prize must equal what the winner will get,
+ * so we never quote-estimate the shares. */
 export async function buyStock(
   conn: Connection,
   ops: Keypair,
   solLamports: number,
   stockMint: string,
+  opsStockAccount: PublicKey,
   slippageBps = 100,
-): Promise<bigint> {
+): Promise<{ received: bigint; sig: string }> {
   const q = (await fetch(
     `${JUP}/quote?inputMint=${WSOL}&outputMint=${stockMint}&amount=${solLamports}` +
       `&slippageBps=${slippageBps}&swapMode=ExactIn`,
   ).then((r) => r.json())) as { outAmount?: string };
   if (!q || !q.outAmount) throw new Error("no Jupiter route for the stock buy");
 
+  const before = await readTokenAmount(conn, opsStockAccount);
   const { swapTransaction } = (await fetch(`${JUP}/swap`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -79,7 +94,10 @@ export async function buyStock(
   tx.sign([ops]);
   const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false });
   await conn.confirmTransaction(sig, "confirmed");
-  return BigInt(q.outAmount);
+
+  const received = (await readTokenAmount(conn, opsStockAccount)) - before;
+  if (received <= 0n) throw new Error("stock swap confirmed but balance delta was 0 — refusing to advertise a phantom prize");
+  return { received, sig }; // ACTUAL shares received (the exact prize) + the buy tx (proof of purchase)
 }
 
 /** Move `amount` (base units) of `stockMint` from the ops stock account into the pot custody. */
@@ -110,10 +128,10 @@ export async function fundHourly(
   opsStockAccount: PublicKey,
   _potCustody: PublicKey,
   tokenProgram: PublicKey,
-): Promise<{ solCollected: number; stockBought: bigint }> {
+): Promise<{ solCollected: number; stockBought: bigint; buyTx: string }> {
   const lamports = await collectCreatorFees(conn, ops);
-  if (lamports <= 0) return { solCollected: 0, stockBought: 0n };
-  const stock = await buyStock(conn, ops, lamports, stockMint.toBase58());
+  if (lamports <= 0) return { solCollected: 0, stockBought: 0n, buyTx: "" };
+  const { received, sig } = await buyStock(conn, ops, lamports, stockMint.toBase58(), opsStockAccount);
   // held in the ops/review wallet (opsStockAccount) — NOT moved to the pot custody.
-  return { solCollected: lamports / LAMPORTS_PER_SOL, stockBought: stock };
+  return { solCollected: lamports / LAMPORTS_PER_SOL, stockBought: received, buyTx: sig };
 }

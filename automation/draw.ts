@@ -67,7 +67,11 @@ export async function loadSwitchboardQueue(conn: Connection): Promise<Queue> {
 }
 
 /** Create + commit a fresh randomness account and bind it to the epoch in ONE tx — request_draw
- * requires the commitment's seed_slot == the current slot, so commit and request must share a slot. */
+ * requires the commitment's seed_slot == the current slot, so commit and request must share a slot.
+ * MUST send with skipPreflight: the seed_slot is set to the execution slot, but a preflight
+ * simulation runs against a bank that skews from the real leader slot, so the same-slot invariant
+ * (seed_slot == clock.slot) fails in simulation even though it holds on-chain. Switchboard's own
+ * randomness examples send these unsimulated for this reason. */
 export async function requestDrawVrf(
   prog: any, queue: Queue, ops: Keypair, refs: JackpotRefs, conn: Connection,
 ): Promise<Randomness> {
@@ -76,8 +80,14 @@ export async function requestDrawVrf(
     .requestDraw()
     .accounts({ caller: ops.publicKey, jackpot: refs.jackpot, randomness: randomness.pubkey })
     .instruction();
-  const sig = await conn.sendTransaction(new Transaction().add(...ccIxs, requestIx), [ops, rndKp]);
-  await conn.confirmTransaction(sig, "confirmed");
+  const bh = await conn.getLatestBlockhash("confirmed");
+  const sig = await conn.sendTransaction(new Transaction().add(...ccIxs, requestIx), [ops, rndKp], { skipPreflight: true });
+  console.error(`  [request_draw sig] ${sig}`);
+  const conf = await conn.confirmTransaction({ signature: sig, ...bh }, "confirmed");
+  if (conf.value.err) {
+    const tx = await conn.getTransaction(sig, { maxSupportedTransactionVersion: 0, commitment: "confirmed" });
+    throw new Error(`request_draw failed on-chain (${sig}): ${JSON.stringify(conf.value.err)}\n${(tx?.meta?.logMessages || []).join("\n")}`);
+  }
   return randomness;
 }
 
