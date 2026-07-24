@@ -114,6 +114,14 @@ export async function runForever(cfg: Cfg) {
       await sleep(Math.max(1000, Math.min(cfg.feePollSec * 1000, (snapAt - now()) * 1000)));
     }
 
+    // No creator fees this cycle → nothing to raffle; skip it cleanly (no snapshot, no 0-prize draw).
+    // Mainnet only — on devnet/local there are no pump fees, so we still draw so the demo + tests run.
+    if (!/devnet|testnet|localhost|127\.0\.0\.1/.test(cfg.rpc) && accruedSol <= 0) {
+      await conn.removeProgramAccountChangeListener(sub);
+      console.log(`[hour ${label}] no creator fees this cycle — skipping the draw`);
+      continue;
+    }
+
     let drawAt = 0, winnerAddr = "", holders = 0, stockLabel = cfg.rotation[0], prizeShares = 0, prizeBaseUnits = "0";
     try {
       // SNAPSHOT: freeze the TWAB into ticket ranges + Merkle root, commit on-chain
@@ -143,8 +151,9 @@ export async function runForever(cfg: Cfg) {
         console.log(`[snapshot ${label}] bought ${prizeShares} ${stockLabel} (~$${potUsd}) for this draw`);
       } catch (e: any) { console.error("[buy] skipped:", e.message); }
 
-      // FIXED 5-minute countdown to the draw — announced the instant the snapshot is taken
-      drawAt = now() + cfg.countdownSec;
+      // FIXED 5-minute countdown to the draw — announced the instant the snapshot is taken.
+      // Never earlier than the on-chain epoch can settle (guards against a mis-set short countdown).
+      drawAt = now() + Math.max(cfg.countdownSec, cfg.epochLenSec + 15);
       const prize = { stock: stockLabel, shares: prizeShares, usd: potUsd };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "snapshot_taken", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd, prize,
