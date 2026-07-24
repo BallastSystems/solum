@@ -79,8 +79,9 @@ async function main() {
         sawSnap = true;
         check("snapshot_taken advertises a prize (a stock is chosen)", !!(st.prize && st.prize.stock));
         check("prize stock is one of the five", ["AAPLx", "NVDAx", "TSLAx", "COINx", "MSTRx"].indexOf(st.prize.stock) >= 0);
-        check("drawAt == snapshot + fixed countdown (5-min in prod; countdownSec here)",
-          Math.abs((Date.parse(st.drawAt) - Date.parse(st.snapshotAt)) / 1000 - countdownSec) <= 2);
+        const expectGap = Math.max(countdownSec, 1 + 15); // run.ts floors drawAt at epochLenSec(=1)+15 so the epoch can settle
+        check("drawAt == snapshot + fixed countdown (5-min in prod; floored so the epoch can settle)",
+          Math.abs((Date.parse(st.drawAt) - Date.parse(st.snapshotAt)) / 1000 - expectGap) <= 2);
         check("holders were sealed in the snapshot", st.holders >= 3);
       }
     }
