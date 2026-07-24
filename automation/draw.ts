@@ -28,6 +28,17 @@ export async function commitEpoch(prog: any, snapshotter: Keypair, refs: Jackpot
     .rpc();
 }
 
+/** Reopen the jackpot for the next epoch (draw-only / hold-and-deliver reset — NO payout). A prior
+ * draw leaves the jackpot in SETTLED; since delivery is off-chain we never call claim_prize, so we
+ * must reset it to OPEN before the next commit. Snapshotter-only. */
+export async function closeEpoch(prog: any, snapshotter: Keypair, refs: JackpotRefs) {
+  await prog.methods
+    .closeEpoch()
+    .accounts({ snapshotter: snapshotter.publicKey, jackpot: refs.jackpot })
+    .signers([snapshotter])
+    .rpc();
+}
+
 /**
  * Settle the draw. `devnet-vrf`: inject fresh CSPRNG randomness (local testing). `switchboard-vrf`:
  * call request_draw then settle_draw against a Switchboard randomness account (production) — wired

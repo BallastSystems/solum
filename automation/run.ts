@@ -17,7 +17,7 @@ import { TOKEN_PROGRAM_ID, getAccount, getMint } from "@solana/spl-token";
 import * as fs from "fs";
 import * as path from "path";
 import { TwabAccumulator, buildSnapshot, winnerOf } from "./twab";
-import { commitEpoch, settleDevnet, requestDrawVrf, settleDrawVrf, loadSwitchboardQueue, winningTicketOf, JackpotRefs } from "./draw";
+import { commitEpoch, closeEpoch, settleDevnet, requestDrawVrf, settleDrawVrf, loadSwitchboardQueue, winningTicketOf, JackpotRefs } from "./draw";
 import { fundHourly } from "./fees";
 import { getAccruedCreatorFees } from "./creator-fees";
 import { writeStatus, appendWinner, iso, hourLabel, feeLedger, WinnerEntry } from "./status";
@@ -119,6 +119,8 @@ export async function runForever(cfg: Cfg) {
       // SNAPSHOT: freeze the TWAB into ticket ranges + Merkle root, commit on-chain
       const snap = buildSnapshot(twab.finalize(now()), cfg.coinDecimals);
       holders = snap.entries.length;
+      // hold-and-deliver never claims on-chain, so a prior draw leaves the jackpot SETTLED — reopen it
+      try { const js: any = await cfg.prog.account.jackpotState.fetch(cfg.refs.jackpot); if (js.phase !== 0) await closeEpoch(cfg.prog, cfg.ops, cfg.refs); } catch { /* first epoch / fetch race */ }
       await commitEpoch(cfg.prog, cfg.ops, cfg.refs, snap);
       fs.mkdirSync(cfg.snapshotDir, { recursive: true });
       fs.writeFileSync(`${cfg.snapshotDir}/epoch-${hourStart}.json`, JSON.stringify({
