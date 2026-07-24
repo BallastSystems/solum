@@ -1,7 +1,7 @@
 # Solum host — deploy kit
 
-An always-on host for the two Solum services. **Zero Magpie linkage**: its own account, its own
-identity, the `github-ballast` SSH remote only. Never the Magpie Railway/GitHub/email.
+An always-on host for the two Solum services. **Fully isolated** — its own account, its own
+identity, the `github-ballast` SSH remote only; never an account, email, or host shared with any other project.
 
 ## What runs here
 - **`solum-bot`** — tracks every $SOLUM holder + the creator fees on `DWtw…6ZX8` in real time, runs
@@ -21,7 +21,7 @@ Oracle specifics vs a plain VPS:
 (Hetzner CX22 ~$5/mo is the paid equivalent if you ever want simpler — the kit works on both.)
 
 ## First-time setup
-1. Create the VPS under a **Solum email** (not Magpie). Add the deploy SSH public key during creation.
+1. Create the VPS under a dedicated **Solum email** (never one shared with another project). Add the deploy SSH public key during creation.
 2. Point DNS: `api.solum.work` **A** → the server IP.
 3. SSH in and run (Oracle user is `ubuntu`; use `sudo`):
    ```

@@ -6,7 +6,7 @@ set -euo pipefail
 
 APP=/opt/solum/app
 DATA=/var/www/solum-data
-REPO="git@github-ballast:BallastSystems/solum.git"   # Solum identity only — never a Magpie remote
+REPO="git@github-ballast:BallastSystems/solum.git"   # Solum identity only — never a remote tied to another project
 
 echo "== packages =="
 apt-get update -y
