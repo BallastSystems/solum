@@ -14,15 +14,35 @@ const JUP = "https://lite-api.jup.ag/swap/v1"; // Jupiter (routability + swap)
 const WSOL = "So11111111111111111111111111111111111111112";
 
 /**
- * Collect accrued pump.fun creator fees to `ops`. pump.fun exposes a creator-fee collection
- * instruction on its program; wire its SDK/IX here on mainnet. Returns lamports collected.
+ * Collect accrued pump.fun creator fees to `ops`. Returns lamports collected.
  *
- * INTEGRATION POINT (mainnet): build + send pump.fun's `collectCoinCreatorFee` for the $SOLUM
- * coin-creator vault, signed by the creator (ops) wallet. On devnet this is a no-op returning 0.
+ * INTEGRATION POINT (mainnet — needs a live smoke test): pump.fun accrues the coin-creator's fees in
+ * a creator-vault PDA and exposes a `collect_coin_creator_fee` instruction (Pump AMM program), signed
+ * by the creator (ops) wallet. Wire it via `@pump-fun/pump-sdk` (`collectCoinCreatorFee({ creator }`)
+ * or the raw IX. This is deliberately GUARDED so it is a hard no-op anywhere but mainnet — pump.fun
+ * has no devnet deployment, so it can only be exercised (and must be smoke-tested) on mainnet.
  */
-export async function collectCreatorFees(_conn: Connection, _ops: Keypair): Promise<number> {
-  // return (await pumpSdk.collectCoinCreatorFee({ creator: ops.publicKey })).lamports;
-  return 0; // devnet: no pump.fun program present
+export async function collectCreatorFees(conn: Connection, _ops: Keypair): Promise<number> {
+  const ep = (conn as any)._rpcEndpoint as string | undefined;
+  const isMainnet = !!ep && !/devnet|testnet|localhost|127\.0\.0\.1/.test(ep);
+  if (!isMainnet) return 0; // devnet/local: no pump.fun program present — nothing to collect
+  // MAINNET: build + send pump.fun's collect_coin_creator_fee for the $SOLUM coin-creator vault.
+  //   const { lamports } = await pumpSdk.collectCoinCreatorFee({ creator: _ops.publicKey });
+  //   return lamports;
+  throw new Error("collectCreatorFees: pump.fun collection not wired yet — add @pump-fun/pump-sdk and smoke-test on mainnet before go-live");
+}
+
+/**
+ * Random buy schedule (pure, testable). Splits the funding window into `count` unpredictable moments
+ * so the bot buys tokenized stock "at random" rather than at a front-runnable fixed time. Returns
+ * sorted second-offsets from the window start. Deterministic only via the injected `rand` (default
+ * Math.random) so it can be unit-tested. See automation/README.md step 2.
+ */
+export function randomBuyTimes(windowSec: number, count: number, rand: () => number = Math.random): number[] {
+  const n = Math.max(1, Math.floor(count));
+  const t: number[] = [];
+  for (let i = 0; i < n; i++) t.push(Math.floor(rand() * windowSec));
+  return t.sort((a, b) => a - b);
 }
 
 /** Swap `solLamports` of SOL into `stockMint` via Jupiter and return the stock received (base units). */
