@@ -471,6 +471,8 @@
     if(st==="claimed")return '<span class="cl-lock"><b data-cd data-at="'+awardBy(w)+'">'+cdown(msLeft(w))+'</b><small>awarded within 24h</small></span>';
     return '<span class="cl-done">Awarded ✓<a href="'+(w.awardTx?txLink(w.awardTx):addrLink(w.addr))+'" target="_blank" rel="noopener">verify ↗</a></span>';}
 
+  // Format an approximate share count cleanly: <1 → 3dp, <100 → 2dp, else rounded.
+  function shFmt(n){n=+n||0;return n>=100?fmt(Math.round(n)):(n>=1?n.toFixed(2):n.toFixed(3));}
   function renderFeat(){
     var w=DATA.slice().sort(function(a,b){return b.epoch-a.epoch;})[0]; if(!w)return;
     var m=STK[w.stock], odds=w.totalTickets?(w.solumHeld/w.totalTickets*100):0, oneIn=odds?Math.round(100/odds):0;
@@ -478,7 +480,7 @@
       '<div class="feat-grid"><div class="feat-l">'+
         '<span class="feat-tag"><span class="d"></span>'+(LIVE?"Latest winner":"Latest winner")+'</span>'+
         '<div class="feat-prize">'+money(w.prizeUsd)+'</div>'+
-        '<div class="feat-shares">≈ <b>'+w.prizeShares+'</b> shares of <b>'+m.n+'</b> ('+w.stock+')</div>'+
+        '<div class="feat-shares">≈ <b>'+shFmt(w.prizeShares)+'</b> shares of <b>'+m.n+'</b> ('+w.stock+')</div>'+
         '<div class="feat-meta">'+
           '<div class="fm"><div class="k">Winner</div><div class="v mono">'+shortA(w.addr)+'</div></div>'+
           '<div class="fm"><div class="k">$SOLUM held</div><div class="v mono">'+fmt(w.solumHeld)+'</div></div>'+
@@ -538,7 +540,7 @@
       '<div class="c-held" data-l="$SOLUM held">'+fmt(w.solumHeld)+'<small>average over the hour</small></div>'+
       '<div class="c-odds" data-l="Win odds"><div class="p">'+odds.toFixed(2)+'%</div><div class="bar"><i style="width:'+bar+'%"></i></div><div class="oneIn">1 in '+fmt(oneIn)+'</div></div>'+
       '<div class="c-prize" data-l="Prize won"><span class="stkchip" style="color:'+m.c+'">'+stkSvg(w.stock)+w.stock+'</span>'+
-        '<span class="amt" style="color:var(--silver)">'+money(w.prizeUsd)+'<small>'+w.prizeShares+' sh</small></span></div>'+
+        '<span class="amt" style="color:var(--silver)">'+money(w.prizeUsd)+'<small>'+shFmt(w.prizeShares)+' sh</small></span></div>'+
       '<div class="c-claim" data-l="Claim">'+claimCell(w)+'</div>'+
       '</div>';
   }

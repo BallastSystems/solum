@@ -1126,7 +1126,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       return null;
     }
     function hideToast(){toast.hidden=true;}
-    function fmtPrize(w){var sh=(w.prizeShares!=null?(+w.prizeShares):null);return (sh!=null?(sh.toFixed(sh<1?4:2)+" "+w.stock):w.stock)+(w.prizeUsd?(" (~$"+Math.round(w.prizeUsd).toLocaleString()+")"):"");}
+    function fmtPrize(w){var sh=+w.prizeShares||0;return (sh>0?(sh.toFixed(sh<1?3:2)+" "+w.stock):w.stock)+(w.prizeUsd?(" (~$"+Math.round(w.prizeUsd).toLocaleString()+")"):"");}
     function showWinner(w){
       curWin=w; toast.hidden=false;
       prizeEl.textContent=fmtPrize(w);
