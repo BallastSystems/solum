@@ -192,8 +192,14 @@
   .stmt{padding:clamp(104px,17vh,200px) 0}
   .stmt p{font-family:var(--display);font-size:clamp(27px,4.4vw,54px);font-weight:500;letter-spacing:-.02em;line-height:1.12;max-width:20ch}
   .stmt em{font-style:normal;color:var(--blue)}
-  .stmt .flow{margin-top:34px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:clamp(14px,1.5vw,17px);color:var(--dim);font-weight:500}
-  .stmt .flow b{color:var(--silver);font-weight:600} .stmt .flow .ar{color:var(--blue)}
+  .fly{margin-top:38px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+  .fly .s{display:inline-flex;align-items:center;padding:11px 20px;border:1px solid var(--line-2);border-radius:12px;
+    background:color-mix(in srgb,var(--panel) 55%,transparent);font-weight:600;font-size:15px;color:var(--silver);white-space:nowrap;letter-spacing:-.01em}
+  .fly .a{color:var(--blue);font-size:17px;font-weight:600;line-height:1}
+  .stmt .fly-note{margin-top:18px;font-family:var(--sans);color:var(--dim);font-size:16px;font-weight:500;max-width:44ch;line-height:1.5}
+  .stmt .fly-note b{color:var(--silver);font-weight:600}
+  @media(max-width:600px){.fly{flex-direction:column;align-items:stretch;gap:8px}
+    .fly .s{justify-content:center} .fly .a{align-self:center;transform:rotate(90deg)}}
 
   .steps{margin-top:clamp(48px,7vw,88px);display:flex;flex-direction:column}
   .strow{display:grid;grid-template-columns:120px 1fr;column-gap:40px;align-items:start;padding:40px 0;border-top:1px solid var(--line)}
@@ -454,8 +460,14 @@
 
 <!-- flywheel -->
 <section class="stmt" id="idea"><div class="shell">
-  <p class="rv">Your trading <em>fuels the pot</em>. The more $SOLUM trades, the more tokenized stock is raffled back to holders.</p>
-  <div class="flow rv" style="--i:1"><b>More volume</b> <span class="ar">→</span> more creator fees <span class="ar">→</span> bigger stock buy <span class="ar">→</span> <b>bigger pot</b> <span class="ar">→</span> more volume</div>
+  <p class="rv">Your trading <em>fuels the pot</em>. The more $SOLUM trades, the more tokenized stock gets raffled back to holders.</p>
+  <div class="fly rv" style="--i:1">
+    <span class="s">More volume</span><span class="a">→</span>
+    <span class="s">More creator fees</span><span class="a">→</span>
+    <span class="s">Bigger stock buy</span><span class="a">→</span>
+    <span class="s">Bigger pot</span>
+  </div>
+  <p class="fly-note rv" style="--i:2">…and a bigger pot brings <b>more volume</b>. The flywheel compounds.</p>
 </div></section>
 
 <!-- from snapshot to winner -->
