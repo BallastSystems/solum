@@ -10,19 +10,25 @@ identity, the `github-ballast` SSH remote only. Never the Magpie Railway/GitHub/
 - **`solum-claim`** — the HTTP endpoint a winner hits on Claim; records the signature-verified claim
   and starts the 24h window. **Never sends funds** — the operator delivers manually.
 
-## Recommended host
-**Hetzner Cloud CX22** (2 vCPU / 4 GB, ~$5/mo, US region *Ashburn* for RPC proximity), Ubuntu 24.04.
-Cheapest robust 24/7 box, fully isolated, full control. (DigitalOcean $6 / Vultr $6 are fine equivalents.)
+## Host — Oracle Cloud "Always Free" (chosen 2026-07-24, $0)
+An **Ampere A1 (ARM64)** VM, Ubuntu 24.04, Always-Free eligible (1 OCPU / 6 GB is ample). $0 forever.
+Node + both services run fine on ARM (the host only runs compiled JS — no on-chain program build here).
+Oracle specifics vs a plain VPS:
+- SSH user is **`ubuntu`** (not root): `ssh ubuntu@<ip>`; run setup with **`sudo bash host-setup.sh`**.
+- **Two firewalls.** Open TCP **80 + 443** in the VCN **Security List** (cloud side) AND on the OS
+  (host-setup.sh handles the OS iptables). SSH 22 is open by default.
+- If "Out of host capacity" on A1, retry (or region-hop), or fall back to the AMD **E2.1.Micro** free shape.
+(Hetzner CX22 ~$5/mo is the paid equivalent if you ever want simpler — the kit works on both.)
 
 ## First-time setup
 1. Create the VPS under a **Solum email** (not Magpie). Add the deploy SSH public key during creation.
 2. Point DNS: `api.solum.work` **A** → the server IP.
-3. SSH in and run:
+3. SSH in and run (Oracle user is `ubuntu`; use `sudo`):
    ```
-   scp deploy/host-setup.sh root@<ip>:/root/ && ssh root@<ip> 'bash /root/host-setup.sh'
+   scp deploy/host-setup.sh ubuntu@<ip>:~/ && ssh ubuntu@<ip> 'sudo bash ~/host-setup.sh'
    ```
-   (requires the `github-ballast` deploy key in the box's `~/.ssh` to clone the repo)
-4. Copy the ops key up (host-only, 600): `scp .wallet/solum-ops.json root@<ip>:/opt/solum/secrets/`
+   (requires the `github-ballast` deploy key on the box to clone the repo)
+4. Copy the ops key up (host-only, 600): `scp .wallet/solum-ops.json ubuntu@<ip>:/tmp/ && ssh ubuntu@<ip> 'sudo mv /tmp/solum-ops.json /opt/solum/secrets/ && sudo chmod 600 /opt/solum/secrets/solum-ops.json'`
 5. `cp deploy/env.example /opt/solum/.env` and set `SOLUM_COIN_MINT` (the $SOLUM CA) at launch.
 6. TLS: `apt install -y certbot python3-certbot-nginx && certbot --nginx -d api.solum.work`
 7. Start the claim service now: `systemctl enable --now solum-claim`

@@ -16,8 +16,18 @@ if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 20 ]; then
   apt-get install -y nodejs
 fi
 
-echo "== firewall =="
-ufw allow OpenSSH; ufw allow 'Nginx Full'; ufw --force enable
+echo "== firewall (open 80/443 — works on Hetzner ufw AND Oracle's default iptables) =="
+if command -v ufw >/dev/null 2>&1; then
+  ufw allow OpenSSH || true; ufw allow 'Nginx Full' || true; ufw --force enable || true
+fi
+# Oracle Cloud Ubuntu images ship a restrictive iptables INPUT chain (a REJECT catch-all). Insert
+# ACCEPT for 80/443 ABOVE it, then persist. (You must ALSO open 80/443 in the VCN Security List.)
+if iptables -C INPUT -j REJECT --reject-with icmp-host-prohibited 2>/dev/null; then
+  iptables -I INPUT -p tcp --dport 80  -j ACCEPT
+  iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+  DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent >/dev/null 2>&1 || true
+  netfilter-persistent save 2>/dev/null || true
+fi
 
 echo "== directories =="
 mkdir -p /opt/solum/secrets /opt/solum/state "$DATA/snapshots"
