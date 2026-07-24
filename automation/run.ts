@@ -17,7 +17,8 @@ import { TOKEN_PROGRAM_ID, getAccount, getMint } from "@solana/spl-token";
 import * as fs from "fs";
 import { TwabAccumulator, buildSnapshot, winnerOf } from "./twab";
 import { commitEpoch, settleDevnet, requestDrawVrf, settleDrawVrf, loadSwitchboardQueue, winningTicketOf, JackpotRefs } from "./draw";
-import { fundHourly, randomBuyTimes } from "./fees";
+import { fundHourly } from "./fees";
+import { getAccruedCreatorFees } from "./creator-fees";
 import { writeStatus, appendWinner, iso, hourLabel, feeLedger, WinnerEntry } from "./status";
 
 // The five tokenized stocks, raffled one per hour on rotation. Each has its own mint + ops token
@@ -48,8 +49,8 @@ type Cfg = {
   epochLenSec: number; // on-chain min elapsed before a draw may settle
   snapMinSec: number;
   snapMaxSec: number; // snapshot fires at a random point in [snapMin, snapMax] of the hour
-  drawGapMinSec: number;
-  drawGapMaxSec: number; // draw fires a random gap after the snapshot
+  countdownSec: number; // FIXED snapshot → draw countdown (5 min = 300s)
+  feePollSec: number; // how often to refresh the live creator-fee pot while collecting
   solPriceUsd: number; // rough, for the displayed pot figure
 };
 
@@ -84,43 +85,26 @@ export async function runForever(cfg: Cfg) {
   while (true) {
     const hourStart = now();
     const label = hourLabel(hourStart);
-    const stockLabel = cfg.rotation[Math.floor(hourStart / 3600) % cfg.rotation.length]; // this hour's stock, on rotation
-    const stk = cfg.stocks[stockLabel]; // its mint + ops account + token program
     const twab = new TwabAccumulator(hourStart);
     await seedInitialBalances(conn, cfg.coinMint, twab, hourStart);
     const sub = trackBalances(conn, cfg.coinMint, twab);
-    let potUsd = 0, hourStockBought = 0n;
+    let potUsd = 0;
 
     const collecting = () => writeStatus(cfg.statusFile, {
-      hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
+      hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, prize: null,
+      ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
     });
 
-    // choose a RANDOM snapshot time this hour — hidden from everyone until it fires
+    // choose a RANDOM, hidden snapshot time; until it fires, just track the creator fees accruing live
     const snapAt = hourStart + rint(cfg.snapMinSec, cfg.snapMaxSec);
     collecting();
-    console.log(`[hour ${label}] snapshot scheduled (hidden) · buying ${stockLabel} at random moments`);
-
-    // Collect creator fees → buy THIS hour's tokenized stock at a few UNPREDICTABLE moments in the
-    // collecting window (so buys can't be front-run), held in the review (ops) wallet for the winner.
-    const buyWindow = Math.max(60, snapAt - hourStart - 30);
-    for (const off of randomBuyTimes(buyWindow, 1 + Math.floor(Math.random() * 3))) {
-      await sleepUntil(hourStart + off);
-      try {
-        if (!stk) throw new Error(`no config for rotated stock ${stockLabel}`);
-        const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
-        if (f.stockBought > 0n) {
-          hourStockBought += f.stockBought; // accumulates the hour's prize (base units)
-          potUsd += Math.round(f.solCollected * cfg.solPriceUsd);
-          console.log(`[fund] +${f.solCollected} SOL → ${f.stockBought} ${stockLabel} (pot ~$${potUsd})`);
-          collecting(); // reflect the growing pot live
-        }
-      } catch (e: any) {
-        console.error("[fund] skipped:", e.message);
-      }
+    console.log(`[hour ${label}] snapshot scheduled (hidden) · tracking creator fees`);
+    while (now() < snapAt) {
+      try { potUsd = Math.round((await getAccruedCreatorFees(conn, cfg.ops.publicKey)) / 1e9 * cfg.solPriceUsd); collecting(); } catch { /* keep last value */ }
+      await sleep(Math.max(1000, Math.min(cfg.feePollSec * 1000, (snapAt - now()) * 1000)));
     }
-    await sleepUntil(snapAt);
 
-    let drawAt = 0, winnerAddr = "", holders = 0;
+    let drawAt = 0, winnerAddr = "", holders = 0, stockLabel = cfg.rotation[0], prizeShares = 0, prizeBaseUnits = "0";
     try {
       // SNAPSHOT: freeze the TWAB into ticket ranges + Merkle root, commit on-chain
       const snap = buildSnapshot(twab.finalize(now()), cfg.coinDecimals);
@@ -132,12 +116,28 @@ export async function runForever(cfg: Cfg) {
         entries: snap.entries.map((e) => ({ owner: e.owner.toBase58(), start: e.start.toString(), tickets: e.tickets.toString() })),
       }, null, 2));
 
-      // now the snapshot is locked, reveal a RANDOM draw time (>= the on-chain min elapsed)
-      drawAt = now() + Math.max(cfg.epochLenSec + 15, rint(cfg.drawGapMinSec, cfg.drawGapMaxSec));
+      // BUY THE PRIZE at the snapshot: ONE stock chosen AT RANDOM, bought with the FULL cycle's
+      // creator fees (claim + Jupiter swap), then held in the dev wallet for manual delivery.
+      stockLabel = cfg.rotation[Math.floor(Math.random() * cfg.rotation.length)];
+      const stk = cfg.stocks[stockLabel];
+      try {
+        if (!stk) throw new Error(`no config for ${stockLabel}`);
+        const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
+        prizeBaseUnits = f.stockBought.toString();
+        if (f.solCollected > 0) potUsd = Math.round(f.solCollected * cfg.solPriceUsd); // reconcile to what was actually spent
+        const dec = (await getMint(conn, stk.mint, undefined, stk.tokenProgram)).decimals;
+        prizeShares = Number(f.stockBought) / 10 ** dec;
+        console.log(`[snapshot ${label}] bought ${prizeShares} ${stockLabel} (~$${potUsd}) for this draw`);
+      } catch (e: any) { console.error("[buy] skipped:", e.message); }
+
+      // FIXED 5-minute countdown to the draw — announced the instant the snapshot is taken
+      drawAt = now() + cfg.countdownSec;
+      const prize = { stock: stockLabel, shares: prizeShares, usd: potUsd };
       writeStatus(cfg.statusFile, {
-        hourLabel: label, phase: "snapshot_taken", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd, ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
+        hourLabel: label, phase: "snapshot_taken", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd, prize,
+        ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
       });
-      console.log(`[snapshot ${label}] taken · ${holders} holders · drawing at ${new Date(drawAt * 1000).toLocaleTimeString()}`);
+      console.log(`[snapshot ${label}] taken · ${holders} holders · ${stockLabel} prize · drawing in ${cfg.countdownSec}s`);
       await sleepUntil(drawAt);
 
       // DRAW: VRF settle fixes the winner on-chain. We do NOT pay from here — the prize is held in
@@ -152,13 +152,7 @@ export async function runForever(cfg: Cfg) {
         await settleDevnet(cfg.prog, cfg.ops, cfg.refs); // local/devnet: injected randomness
       }
       const wt = await winningTicketOf(cfg.prog, cfg.refs);
-      // the prize for this epoch = the stock bought from this hour's fees, held in the review wallet
-      let prizeShares = 0;
-      const prizeBaseUnits = hourStockBought.toString();
-      try {
-        const dec = (await getMint(conn, stk.mint, undefined, stk.tokenProgram)).decimals;
-        prizeShares = Number(hourStockBought) / 10 ** dec;
-      } catch { /* leave prizeShares 0; the site falls back to a price estimate */ }
+      // the prize = the stock already bought at the snapshot (stockLabel / prizeShares / prizeBaseUnits)
       const { entry } = winnerOf(snap, wt); // who the VRF drew — proven on-chain
       winnerAddr = entry.owner.toBase58();
       // The winner can Claim right away; claiming starts a 24h window in which the operator delivers.
@@ -170,11 +164,12 @@ export async function runForever(cfg: Cfg) {
       };
       writeStatus(cfg.statusFile, {
         hourLabel: label, phase: "drawn", snapshotAt: iso(snapAt), drawAt: iso(drawAt), holders, potUsd,
+        prize: { stock: stockLabel, shares: prizeShares, usd: potUsd },
         ...feeLedger(cfg.winnersFile, potUsd),
         lastWinner: { addr: winnerAddr, prizeUsd: potUsd, stock: stockLabel, drawAt: iso(drawAt) },
       });
       appendWinner(cfg.winnersFile, winRow); // publishes winners.json for the site's winners register
-      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${stockLabel} · claimable now, deliver within 24h`);
+      console.log(`[draw ${label}] ticket ${wt} · winner ${winnerAddr} won ~$${potUsd} ${stockLabel} · claimable now, deliver after the 24h`);
     } catch (e: any) {
       console.error("[draw] failed:", e.message);
     } finally {
@@ -221,8 +216,8 @@ if (require.main === module) {
     epochLenSec: Number(process.env.SOLUM_EPOCH_LEN || 60),
     snapMinSec: Number(process.env.SOLUM_SNAP_MIN || 8 * 60),
     snapMaxSec: Number(process.env.SOLUM_SNAP_MAX || 50 * 60),
-    drawGapMinSec: Number(process.env.SOLUM_DRAW_GAP_MIN || 3 * 60),
-    drawGapMaxSec: Number(process.env.SOLUM_DRAW_GAP_MAX || 9 * 60),
+    countdownSec: Number(process.env.SOLUM_COUNTDOWN || 5 * 60),
+    feePollSec: Number(process.env.SOLUM_FEE_POLL || 20),
     solPriceUsd: Number(process.env.SOLUM_SOL_PRICE || 150),
   }).catch((e) => { console.error(e); process.exit(1); });
 }
