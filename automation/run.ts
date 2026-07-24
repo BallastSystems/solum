@@ -17,7 +17,7 @@ import { TOKEN_PROGRAM_ID, getAccount, getMint } from "@solana/spl-token";
 import * as fs from "fs";
 import { TwabAccumulator, buildSnapshot, winnerOf } from "./twab";
 import { commitEpoch, settleDevnet, winningTicketOf, JackpotRefs } from "./draw";
-import { fundHourly } from "./fees";
+import { fundHourly, randomBuyTimes } from "./fees";
 import { writeStatus, appendWinner, iso, hourLabel, feeLedger, WinnerEntry } from "./status";
 
 // The five tokenized stocks, raffled one per hour on rotation. Each has its own mint + ops token
@@ -89,23 +89,33 @@ export async function runForever(cfg: Cfg) {
     const sub = trackBalances(conn, cfg.coinMint, twab);
     let potUsd = 0, hourStockBought = 0n;
 
-    // collect creator fees → buy THIS hour's tokenized stock, held in the review (ops) wallet
-    try {
-      if (!stk) throw new Error(`no config for rotated stock ${stockLabel}`);
-      const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
-      hourStockBought = f.stockBought; // exact prize for this hour's winner (base units)
-      potUsd = Math.round(f.solCollected * cfg.solPriceUsd);
-      console.log(`[fund] +${f.solCollected} SOL → ${f.stockBought} stock (~$${potUsd})`);
-    } catch (e: any) {
-      console.error("[fund] skipped:", e.message);
-    }
+    const collecting = () => writeStatus(cfg.statusFile, {
+      hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
+    });
 
     // choose a RANDOM snapshot time this hour — hidden from everyone until it fires
     const snapAt = hourStart + rint(cfg.snapMinSec, cfg.snapMaxSec);
-    writeStatus(cfg.statusFile, {
-      hourLabel: label, phase: "collecting", snapshotAt: null, drawAt: null, holders: 0, potUsd, ...feeLedger(cfg.winnersFile, potUsd), lastWinner: null,
-    });
-    console.log(`[hour ${label}] snapshot scheduled (hidden) · fees funding pot`);
+    collecting();
+    console.log(`[hour ${label}] snapshot scheduled (hidden) · buying ${stockLabel} at random moments`);
+
+    // Collect creator fees → buy THIS hour's tokenized stock at a few UNPREDICTABLE moments in the
+    // collecting window (so buys can't be front-run), held in the review (ops) wallet for the winner.
+    const buyWindow = Math.max(60, snapAt - hourStart - 30);
+    for (const off of randomBuyTimes(buyWindow, 1 + Math.floor(Math.random() * 3))) {
+      await sleepUntil(hourStart + off);
+      try {
+        if (!stk) throw new Error(`no config for rotated stock ${stockLabel}`);
+        const f = await fundHourly(conn, cfg.ops, stk.mint, stk.opsAccount, cfg.refs.potCustody, stk.tokenProgram);
+        if (f.stockBought > 0n) {
+          hourStockBought += f.stockBought; // accumulates the hour's prize (base units)
+          potUsd += Math.round(f.solCollected * cfg.solPriceUsd);
+          console.log(`[fund] +${f.solCollected} SOL → ${f.stockBought} ${stockLabel} (pot ~$${potUsd})`);
+          collecting(); // reflect the growing pot live
+        }
+      } catch (e: any) {
+        console.error("[fund] skipped:", e.message);
+      }
+    }
     await sleepUntil(snapAt);
 
     let drawAt = 0, winnerAddr = "", holders = 0;

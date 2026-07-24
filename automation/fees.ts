@@ -6,30 +6,40 @@
 // live mainnet/pump.fun/Jupiter, so they're marked; step 3 is a plain SPL transfer.
 
 import {
-  Connection, Keypair, PublicKey, VersionedTransaction, LAMPORTS_PER_SOL,
+  Connection, Keypair, PublicKey, Transaction, VersionedTransaction, LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { transferChecked, getMint } from "@solana/spl-token";
+import { OnlinePumpSdk } from "@pump-fun/pump-sdk";
 
 const JUP = "https://lite-api.jup.ag/swap/v1"; // Jupiter (routability + swap)
 const WSOL = "So11111111111111111111111111111111111111112";
 
 /**
- * Collect accrued pump.fun creator fees to `ops`. Returns lamports collected.
+ * Collect accrued pump.fun creator fees to `ops` (the $SOLUM coin creator). Returns lamports collected.
  *
- * INTEGRATION POINT (mainnet — needs a live smoke test): pump.fun accrues the coin-creator's fees in
- * a creator-vault PDA and exposes a `collect_coin_creator_fee` instruction (Pump AMM program), signed
- * by the creator (ops) wallet. Wire it via `@pump-fun/pump-sdk` (`collectCoinCreatorFee({ creator }`)
- * or the raw IX. This is deliberately GUARDED so it is a hard no-op anywhere but mainnet — pump.fun
- * has no devnet deployment, so it can only be exercised (and must be smoke-tested) on mainnet.
+ * Uses @pump-fun/pump-sdk: reads the creator vault balance across both fee programs, and if there is
+ * anything to collect, builds + sends pump.fun's `collect_coin_creator_fee`, signed by the creator.
+ * GUARDED to mainnet only — pump.fun has no devnet, so this is a no-op off mainnet. NEEDS A MAINNET
+ * SMOKE TEST before go-live (fee-sharing-migrated coins may require the V2 collect path; see below).
  */
-export async function collectCreatorFees(conn: Connection, _ops: Keypair): Promise<number> {
+export async function collectCreatorFees(conn: Connection, ops: Keypair): Promise<number> {
   const ep = (conn as any)._rpcEndpoint as string | undefined;
   const isMainnet = !!ep && !/devnet|testnet|localhost|127\.0\.0\.1/.test(ep);
   if (!isMainnet) return 0; // devnet/local: no pump.fun program present — nothing to collect
-  // MAINNET: build + send pump.fun's collect_coin_creator_fee for the $SOLUM coin-creator vault.
-  //   const { lamports } = await pumpSdk.collectCoinCreatorFee({ creator: _ops.publicKey });
-  //   return lamports;
-  throw new Error("collectCreatorFees: pump.fun collection not wired yet — add @pump-fun/pump-sdk and smoke-test on mainnet before go-live");
+
+  const sdk = new OnlinePumpSdk(conn);
+  const accrued = await sdk.getCreatorVaultBalanceBothPrograms(ops.publicKey); // BN, lamports
+  const lamports = Number(accrued.toString());
+  if (lamports <= 0) return 0;
+
+  // Standard coin-creator collection. If the coin migrated to a fee-sharing config, swap this for
+  // collectCoinCreatorFeeV2Instructions(coinCreator, quoteMint, quoteTokenProgram, feePayer).
+  const ixs = await sdk.collectCoinCreatorFeeInstructions(ops.publicKey, ops.publicKey);
+  if (!ixs.length) return 0;
+  const tx = new Transaction().add(...ixs);
+  const sig = await conn.sendTransaction(tx, [ops], { skipPreflight: false });
+  await conn.confirmTransaction(sig, "confirmed");
+  return lamports; // swept to the ops (creator) wallet as SOL
 }
 
 /**
