@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>document.documentElement.setAttribute("data-theme","dark");</script>
+<script>document.documentElement.setAttribute("data-theme","dark");var SOLUM_API="https://api.solum.work";</script>
 <title>Solum — hold $SOLUM, win tokenized stock</title>
 <meta name="description" content="Hold the coin, win the stock. Every hour, $SOLUM raffles tokenized Apple, NVIDIA, Tesla, Coinbase & Strategy to holders — funded by trading fees, drawn on-chain, zero risk to your bag.">
 <meta property="og:title" content="Solum — hold $SOLUM, win tokenized stock">
@@ -88,6 +88,8 @@
   .nav-fee .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:bp 2s infinite}
   @media (max-width:900px){.nav-r a.n{display:none}.nav-r a.n.nav-win{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line-2);color:var(--silver);font-weight:600;font-size:14px}.nav-r a.n.nav-win:hover{border-color:var(--blue);color:var(--silver)}}
   @media (max-width:520px){.nav-fee{display:none}.nav-r{gap:12px}}
+  /* $SOLUM stays reachable on mobile as a clean pill (plain nav links hide < 900px) */
+  @media (max-width:900px){.nav-r a.n.nav-tok{display:inline-flex;align-items:center;height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--line-2);color:var(--silver);font-weight:650;font-size:14px}.nav-r a.n.nav-tok:hover{border-color:var(--blue);color:var(--silver)}}
   .nav-cta{font:inherit;font-size:13px;font-weight:650;color:#fff;background:var(--blue);border:none;cursor:pointer;
     padding:8px 15px;border-radius:100px;letter-spacing:.01em;transition:background .15s,transform .12s,box-shadow .15s;
     box-shadow:0 8px 22px -10px var(--blue-glow)}
@@ -438,6 +440,7 @@
   <span class="wm"><svg><use href="#sol"/></svg>Solum</span>
   <span class="nav-r">
     <span class="nav-fee"><span class="d"></span>Next draw <b id="navFee">$0</b></span>
+    <a class="n nav-tok" id="navSolum" href="#">$SOLUM</a>
     <a class="n" href="#draw-flow">How it works</a>
     <a class="n" href="#fair">Fair by design</a>
     <a class="n nav-win" href="/winners/">Winners</a>
@@ -725,7 +728,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function fmt(ts){var d=new Date(ts),h=d.getHours(),mm=d.getMinutes(),ap=h>=12?"PM":"AM";h=h%12||12;return h+":"+(mm<10?"0":"")+mm+" "+ap;}
     function cd(ms){ms=Math.max(0,ms);var s=Math.floor(ms/1000),mn=Math.floor(s/60);s%=60;return (mn<10?"0":"")+mn+":"+(s<10?"0":"")+s;}
     var real=null;
-    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
+    function poll(){try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
     poll(); setInterval(poll,8000);
     var S=document.getElementById("dsSnap"),D=document.getElementById("dsDraw"),W=document.getElementById("dsWin");
     var sV=document.getElementById("dsSnapV"),dV=document.getElementById("dsDrawV"),wV=document.getElementById("dsWinV"),hV=document.getElementById("dsHour");
@@ -772,7 +775,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function stockOf(l){for(var i=0;i<stocks.length;i++)if(stocks[i][0]===l)return stocks[i];return stocks[0];}
     var CD=document.getElementById("ldCd"),POT=document.getElementById("ldPot"),HOLD=document.getElementById("ldHold"),ST=document.getElementById("ldStock"),STAT=document.getElementById("ldStatus");
     var real=null, revealed=false;
-    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
+    function poll(){try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
     poll(); setInterval(poll,8000);
     function setStock(s){ST.innerHTML='<svg viewBox="0 0 24 24" style="color:'+s[3]+'"><use href="#'+s[2]+'"/></svg>'+s[0]+' · '+s[1];}
     function tick(){
@@ -821,7 +824,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       }).join("");
     }
     paint([]); // clean empty state until real winners publish — never fabricated
-    try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    try{fetch(SOLUM_API+"/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
       if(j&&j.length){ paint(j.slice(0,10).map(function(w){ var ts=Date.parse(w.drawAt);
         return {time:tlabel(ts), addr:w.addr.slice(0,4)+"…"+w.addr.slice(-4), stock:w.stock, prize:w.prizeUsd,
           verify:w.payoutTx?("https://explorer.solana.com/tx/"+w.payoutTx):PROG}; })); }
@@ -872,7 +875,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
           '<a class="stk-ct" href="'+EXPL+s[4]+'" target="_blank" rel="noopener">'+short+' ↗</a></div>';
       }).join("");
     }
-    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){active=(j&&j.prize&&j.prize.stock)?j.prize.stock:null;paint();}).catch(function(){});}catch(e){}}
+    function poll(){try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){active=(j&&j.prize&&j.prize.stock)?j.prize.stock:null;paint();}).catch(function(){});}catch(e){}}
     paint(); poll(); setInterval(poll,15000);
   })();
 
@@ -912,8 +915,8 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     var realWin=null,realSt=null,started=false;
     function startOnce(){if(started||RM)return;started=true;cycle();} // begin only once we know the real winner
     function poll(){
-      try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(a){if(a&&a.length)realWin=a[0];startOnce();}).catch(startOnce);}catch(e){startOnce();}
-      try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)realSt=j;}).catch(function(){});}catch(e){}
+      try{fetch(SOLUM_API+"/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(a){if(a&&a.length)realWin=a[0];startOnce();}).catch(startOnce);}catch(e){startOnce();}
+      try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)realSt=j;}).catch(function(){});}catch(e){}
     }
     poll(); setInterval(poll,10000);
     setTimeout(startOnce,3000); // only if winners.json never resolves (offline) — the fetch above wins on any real connection
@@ -1043,7 +1046,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     var rt;addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){size();draw();},160);});
     if(document.readyState==="complete")start();else addEventListener("load",start);
     // go live from status.json (published by the draw bot) — reconcile exactly to on-chain fees
-    try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
       if(j&&(j.feesLifetimeUsd!=null||j.prizesAwardedUsd!=null||j.potUsd!=null)){
         var pot=+(j.potUsd||0),given=(j.prizesAwardedUsd!=null?+j.prizesAwardedUsd:((+(j.feesLifetimeUsd||0))-pot));
         var life=(j.feesLifetimeUsd!=null?+j.feesLifetimeUsd:given+pot); // REAL all-time creator fees (tracked on the dev wallet)
@@ -1059,7 +1062,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   // (positive pubkey match). Non-winners and disconnected wallets see nothing personal — never broadcast.
   // Claim flow matches the claim service: winner signs "Solum claim | epoch N | <ISO>" → POST /claim.
   (function(){
-    var SOLUM_CLAIM_API="https://claim.solum.work/claim"; // stood up at launch; inert pre-launch (no winners)
+    var SOLUM_CLAIM_API=SOLUM_API+"/claim"; // stood up at launch; inert pre-launch (no winners)
     var btn=document.getElementById("wConnect"),toast=document.getElementById("winToast");
     if(!btn||!toast) return;
     var prizeEl=document.getElementById("wtPrize"),subEl=document.getElementById("wtSub"),
@@ -1089,7 +1092,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     // ONLY show for an EXACT pubkey match; a wallet with no win sees nothing personal.
     function checkWinner(){
       if(!pk){hideToast();return;}
-      fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():[];}).then(function(a){
+      fetch(SOLUM_API+"/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():[];}).then(function(a){
         if(!Array.isArray(a)){hideToast();return;}
         var mine=a.filter(function(w){return w.addr===pk && !w.awarded;})
                   .sort(function(x,y){return Date.parse(y.drawAt)-Date.parse(x.drawAt);});
@@ -1148,7 +1151,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       navigator.clipboard.writeText(WALLET).then(function(){copyBtn.textContent="copied";copyBtn.classList.add("done");
         setTimeout(function(){copyBtn.textContent="copy";copyBtn.classList.remove("done");},1400);}).catch(function(){});
     });
-    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    function poll(){try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
       var p=j&&j.prize;
       if(p&&p.stock&&p.shares){
         var sh=+p.shares; buyEl.textContent=(sh<1?sh.toFixed(4):sh.toFixed(2))+" "+p.stock+(p.usd?(" · ~$"+Math.round(p.usd).toLocaleString()):"");
