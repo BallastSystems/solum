@@ -96,9 +96,15 @@
   .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
     background:linear-gradient(90deg,var(--ink) 3%,color-mix(in srgb,var(--ink) 50%,transparent) 44%,transparent 74%),linear-gradient(0deg,var(--ink) 1%,transparent 24%)}
   .hero-in{position:relative;z-index:2;width:100%;padding:112px 0 76px}
-  .hero-grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);grid-template-areas:"head body" "machine machine";column-gap:clamp(36px,5vw,72px);row-gap:clamp(30px,4.4vw,54px);align-items:end}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);grid-template-areas:"head body" "machine machine";column-gap:clamp(36px,5vw,72px);row-gap:clamp(30px,4.4vw,54px);align-items:start}
   .hero-head{grid-area:head;max-width:600px;min-width:0}
-  .hero-body{grid-area:body;max-width:560px;min-width:0;align-self:end;padding-bottom:5px}
+  .hero-body{grid-area:body;max-width:520px;min-width:0;align-self:start}
+  /* compact raffle card when it sits in the hero (top-right, beside the fee box) */
+  .hero-raffle{padding:22px 24px !important;border-radius:20px}
+  .hero-raffle .ld-top{margin-bottom:18px;font-size:14px}
+  .hero-raffle .ld-grid{gap:16px}
+  .hero-raffle .ld-big{font-size:clamp(24px,3vw,36px)}
+  .hero-raffle .ld-status{font-size:12.5px;margin-top:16px;padding-top:14px}
   @media(max-width:900px){.hero-grid{grid-template-columns:1fr;grid-template-areas:"head" "body" "machine";row-gap:30px;align-items:start}.hero{min-height:auto;align-items:flex-start}.hero-in{padding:92px 0 56px}.hero-body{align-self:start;padding-bottom:0}}
   @media(max-width:520px){.hero-in{padding:80px 0 44px}}
   /* live draw machine — the full-width centerpiece */
@@ -409,14 +415,23 @@
         <div class="lf-rate"><b id="feeBig">$0</b> in creator fees, all-time</div>
       </div>
       <h1>Hold $SOLUM.<br>Win <em>tokenized stock.</em></h1>
-    </div>
-    <div class="hero-body">
       <p class="h-sub rv" style="--i:1">Every hour, $SOLUM's creator fees buy tokenized Apple, NVIDIA, Tesla, Coinbase &amp; Strategy — then <b>raffle it to holders</b>. The more you hold, the better your odds.</p>
       <div class="h-act rv" style="--i:2">
         <a class="btn" href="#draw-flow">How it works</a>
         <a class="lk" href="#fair">See how it's fair <span class="c">›</span></a>
       </div>
-      <div class="partner rv" style="--i:3;margin-top:26px">
+    </div>
+    <div class="hero-body">
+      <div class="livedraw hero-raffle rv" id="liveDraw">
+        <div class="ld-top"><span class="ld-live"><span class="d"></span>Live</span> This hour's raffle <span class="ld-stock" id="ldStock"></span></div>
+        <div class="ld-grid">
+          <div><div class="ld-lab">Next draw in</div><div class="ld-big" id="ldCd">--:--</div></div>
+          <div><div class="ld-lab">Prize pot</div><div class="ld-big ld-pot" id="ldPot">$0</div></div>
+          <div><div class="ld-lab">Holders entered</div><div class="ld-big" id="ldHold">0</div></div>
+        </div>
+        <div class="ld-status" id="ldStatus">Collecting fees · snapshot at a random moment · winner drawn by VRF</div>
+      </div>
+      <div class="partner rv" style="--i:3;margin-top:18px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="14.5" r="4"/><path d="M12 5.5v2M5.8 9.3l1.2 1.2M18.2 9.3l-1.2 1.2M3.5 15h1.6M18.9 15h1.6M4.5 18.5h15"/></svg>
         Tokenized stocks in partnership with <b>Sunrise Financial</b> · <a href="https://sunrise.xyz" target="_blank" rel="noopener">sunrise.xyz&nbsp;↗</a>
       </div>
@@ -439,21 +454,6 @@
 
 <div class="tick" aria-hidden="true"><div class="tick-t" id="tick"></div></div>
 
-<!-- live raffle centerpiece -->
-<section class="livewrap" id="live"><div class="shell">
-  <div class="livedraw rv" id="liveDraw">
-    <div class="ld-top">
-      <span class="ld-live"><span class="d"></span>Live</span> This hour's raffle
-      <span class="ld-stock" id="ldStock"></span>
-    </div>
-    <div class="ld-grid">
-      <div><div class="ld-lab">Next draw in</div><div class="ld-big" id="ldCd">--:--</div></div>
-      <div><div class="ld-lab">Prize pot</div><div class="ld-big ld-pot" id="ldPot">$0</div></div>
-      <div><div class="ld-lab">Holders entered</div><div class="ld-big" id="ldHold">0</div></div>
-    </div>
-    <div class="ld-status" id="ldStatus">Collecting fees · snapshot at a random moment this hour · winner drawn by VRF</div>
-  </div>
-</div></section>
 
 <!-- flywheel -->
 <section class="stmt" id="idea"><div class="shell">
@@ -863,6 +863,28 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function h32(s){var x=0;for(var i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))>>>0;return x;}
     // compact $SOLUM holdings: whales hold 20–40M, most hold thousands — 40M → "40M", 24.3M, 482K, 8K
     function fmtHold(h){ if(h>=1e6)return (h/1e6).toFixed(1).replace(/\.0$/,"")+"M"; return Math.round(h/1e3)+"K"; }
+    function stockOf(l){for(var i=0;i<stocks.length;i++)if(stocks[i][0]===l)return stocks[i];return stocks[0];}
+    function winPct(rw){return rw.totalTickets?(rw.solumHeld/rw.totalTickets*100):0;}
+    function pctStr(p){return (p<0.01?"<0.01":p<0.1?p.toFixed(2):p.toFixed(1))+"%";}
+    // the REAL latest winner (winners.json, the persisted source of truth) + live status. Once the bot
+    // publishes, the reel ALWAYS lands on the real winner — never a random row. No feed = illustrative demo.
+    var realWin=null,realSt=null,started=false;
+    function startOnce(){if(started||RM)return;started=true;cycle();} // begin only once we know the real winner
+    function poll(){
+      try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(a){if(a&&a.length)realWin=a[0];startOnce();}).catch(startOnce);}catch(e){startOnce();}
+      try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)realSt=j;}).catch(function(){});}catch(e){}
+    }
+    poll(); setInterval(poll,10000);
+    setTimeout(startOnce,3000); // only if winners.json never resolves (offline) — the fetch above wins on any real connection
+    // the winning row, built from the REAL winner so the reel lands exactly on them (address + held + odds)
+    function winnerCard(rw){var sh=rw.addr.slice(0,4)+"…"+rw.addr.slice(-4),x=h32(rw.addr),h1=x%360,h2=(x>>9)%360,
+      held=rw.solumHeld||0,pctS=pctStr(winPct(rw)),bar=Math.max(3,Math.min(100,winPct(rw)*24));
+      return '<div class="rm-row" data-sh="'+sh+'" data-pct="'+pctS+'">'
+        +'<span class="av" style="background:linear-gradient(135deg,hsl('+h1+',64%,58%),hsl('+h2+',56%,44%))"></span>'
+        +'<span class="ad">'+sh+'</span>'
+        +'<span class="hd">'+fmtHold(held)+'<i>$SOLUM</i></span>'
+        +'<span class="pct"><span class="pb"><span class="pf" style="width:'+bar.toFixed(0)+'%"></span></span>'+pctS+'</span>'
+        +'</div>';}
     // one candidate row: short wallet · time-averaged $SOLUM held · win chance (= held / supply)
     function card(){var a=b58(44),sh=a.slice(0,4)+"…"+a.slice(-4),x=h32(a),h1=x%360,h2=(x>>9)%360,
       hold=Math.round(1000+Math.pow(Math.random(),2.7)*39000000),pct=hold/POOL*100,
@@ -881,10 +903,11 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function cycle(){
       timers.forEach(clearTimeout);timers=[];
       rm.classList.remove("won");
-      var pot=400+Math.floor(Math.random()*2600);potEl.textContent="$"+pot.toLocaleString();
-      var holders=6200+Math.floor(Math.random()*6400);if(countEl)countEl.textContent=holders.toLocaleString();
-      var st=stocks[(Math.random()*5)|0];logo.innerHTML='<use href="#'+st[1]+'"/>';logo.style.color=st[2];nameEl.textContent=st[0];
-      var N=140,winIdx=118,rows="";for(var i=0;i<N;i++)rows+=card();
+      var rw=realWin; // LOCK the real winner for this whole spin, so the landing row + reveal always agree
+      var pot=rw?Math.round(rw.prizeUsd||0):(400+Math.floor(Math.random()*2600));potEl.textContent="$"+pot.toLocaleString();
+      var holders=(realSt&&realSt.holders)||(rw&&rw.holders)||(6200+Math.floor(Math.random()*6400));if(countEl)countEl.textContent=holders.toLocaleString();
+      var st=rw?stockOf(rw.stock):stocks[(Math.random()*5)|0];logo.innerHTML='<use href="#'+st[1]+'"/>';logo.style.color=st[2];nameEl.textContent=st[0];
+      var N=140,winIdx=118,rows="";for(var i=0;i<N;i++)rows+=(i===winIdx&&rw)?winnerCard(rw):card(); // land on the REAL winner
       reel.innerHTML=rows;
       reel.style.transition="none";reel.style.transform="translateY(0)";reel.classList.add("spin");void reel.offsetHeight;
       phase("Snapshot sealed · "+holders.toLocaleString()+" holders locked in");
@@ -904,7 +927,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       timers.push(setTimeout(cycle,31200));
     }
     if(RM){reel.innerHTML=card().replace("rm-row","rm-row win");foot.innerHTML='<span class="tp">🏆</span> a holder wins every hour';potEl.textContent="$1,240";}
-    else cycle();
+    // non-RM: the spin begins via startOnce() — after winners.json loads (real winner) or the 1.2s demo fallback
   })();
 
   // --- hero canvas: first-light over rising strata ---
