@@ -86,17 +86,22 @@
   .nav-ic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--dim);transition:color .2s}
   .nav-ic svg{width:17px;height:17px;fill:currentColor} .nav-ic:hover{color:var(--silver)}
   .nav-fee .d{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:bp 2s infinite}
-  @media (max-width:900px){.nav-r a.n{display:none}.nav-r a.n.nav-win{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line-2);color:var(--silver);font-weight:600;font-size:14px}.nav-r a.n.nav-win:hover{border-color:var(--blue);color:var(--silver)}}
-  @media (max-width:520px){.nav-fee{display:none}.nav-r{gap:12px}}
-  /* $SOLUM stays reachable on mobile as a clean pill (plain nav links hide < 900px) */
-  @media (max-width:900px){.nav-r a.n.nav-tok{display:inline-flex;align-items:center;height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--line-2);color:var(--silver);font-weight:650;font-size:14px}.nav-r a.n.nav-tok:hover{border-color:var(--blue);color:var(--silver)}}
+  /* mobile: keep $SOLUM + Winners as plain text links (never buttons); hide the section links + social icons */
+  @media (max-width:900px){
+    .nav-r a.n{display:none}
+    .nav-r a.n.nav-win,.nav-r a.n.nav-tok{display:inline;color:var(--dim);font-weight:500;font-size:15px;border:none;padding:0;height:auto;background:none}
+    .nav-r a.n.nav-win:hover,.nav-r a.n.nav-tok:hover{color:var(--silver)}
+    .nav-r{gap:20px}
+  }
+  @media (max-width:640px){.nav-ic{display:none}.nav-r{gap:17px}}
+  @media (max-width:520px){.nav-fee{display:none}.nav-r{gap:15px}}
   .nav-cta{font:inherit;font-size:13px;font-weight:650;color:#fff;background:var(--blue);border:none;cursor:pointer;
     padding:8px 15px;border-radius:100px;letter-spacing:.01em;transition:background .15s,transform .12s,box-shadow .15s;
     box-shadow:0 8px 22px -10px var(--blue-glow)}
   .nav-cta:hover{background:var(--blue-hi);transform:translateY(-1px)}
   .nav-cta:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px}
   .nav-cta.on{background:transparent;color:var(--silver);border:1px solid var(--line-2);box-shadow:none;font-variant-numeric:tabular-nums}
-  @media (max-width:400px){.nav-cta{padding:7px 12px;font-size:12px}}
+  @media (max-width:520px){.nav-cta{padding:7px 13px;font-size:12.5px}}
   /* winner-only toast — fixed, dismissible; only ever displayed for the exact winning wallet */
   .win-toast{position:fixed;top:70px;right:16px;left:16px;z-index:60;display:flex;justify-content:center;pointer-events:none;animation:wtIn .5s cubic-bezier(.2,.7,.2,1)}
   .win-toast[hidden]{display:none}
@@ -133,20 +138,24 @@
   .hero-raffle .ld-big{font-size:clamp(24px,3vw,36px)}
   .hero-raffle .ld-status{font-size:12.5px;margin-top:16px;padding-top:14px}
   @media(max-width:620px){.hero-raffle{padding:18px 18px !important}.hero-raffle .ld-grid{grid-template-columns:repeat(3,1fr);gap:10px}.hero-raffle .ld-big{font-size:19px}.hero-raffle .ld-lab{font-size:9px;letter-spacing:.04em}.hero-raffle .ld-top{margin-bottom:14px}}
-  /* on-chain proof strip — public fee/prize wallet + this hour's verified stock purchase */
-  .proof{margin-top:16px;background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:13px 16px;display:grid;gap:10px}
-  .pf-row{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
-  .pf-lab{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700;flex:none;min-width:118px}
-  .pf-val{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;color:var(--silver);text-decoration:none;display:inline-flex;align-items:baseline;gap:5px}
+  /* on-chain proof strip — fee/prize wallet + this hour's stock purchase (clean two-row table) */
+  .proof{margin-top:16px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .pf-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px}
+  .pf-row+.pf-row{border-top:1px solid var(--line)}
+  .pf-lab{font-size:11px;letter-spacing:.02em;color:var(--dim);font-weight:600;white-space:nowrap;flex:none}
+  .pf-right{display:flex;align-items:center;gap:9px;min-width:0}
+  .pf-val{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;color:var(--silver);text-decoration:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   a.pf-val:hover{color:var(--blue-hi)}
-  .pf-addr{word-break:break-all}
-  .pf-ic{color:var(--faint);font-size:10px;flex:none}
-  .pf-copy{margin-left:auto;font:inherit;font-size:10.5px;color:var(--dim);background:none;border:1px solid var(--line-2);border-radius:100px;padding:3px 11px;cursor:pointer;transition:color .15s,border-color .15s;flex:none}
+  .pf-buy{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pf-buy.set{color:var(--silver);font-variant-numeric:tabular-nums}
+  .pf-ic{color:var(--faint);font-size:10px}
+  .pf-copy{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;color:var(--dim);background:none;border:1px solid var(--line-2);border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s;flex:none;padding:0}
+  .pf-copy svg{width:13px;height:13px}
   .pf-copy:hover{color:var(--silver);border-color:var(--dim)}
   .pf-copy.done{color:var(--grn);border-color:var(--grn)}
-  .pf-proof{margin-left:auto;font-size:12px;color:var(--blue);font-weight:600;text-decoration:none;flex:none}
+  .pf-proof{font-size:12px;color:var(--blue);font-weight:600;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
   .pf-proof:hover{color:var(--blue-hi)}
-  @media(max-width:620px){.pf-lab{min-width:100%;margin-bottom:-4px}}
+  @media(max-width:520px){.pf-row{padding:11px 13px}.pf-val{font-size:12px}.pf-lab{font-size:10.5px}}
   @media(max-width:900px){.hero-grid{grid-template-columns:1fr;grid-template-areas:"head" "body" "machine";row-gap:30px;align-items:start}.hero{min-height:auto;align-items:flex-start}.hero-in{padding:92px 0 56px}.hero-body{align-self:start;padding-bottom:0}}
   @media(max-width:520px){.hero-in{padding:80px 0 44px}}
   /* live draw machine — the full-width centerpiece */
@@ -446,7 +455,7 @@
     <a class="n nav-win" href="/winners/">Winners</a>
     <a class="nav-ic" href="https://github.com/BallastSystems" target="_blank" rel="noopener" aria-label="Solum on GitHub"><svg><use href="#gh"/></svg></a>
     <a class="nav-ic" href="https://x.com/SolumHQ" target="_blank" rel="noopener" aria-label="Solum on X"><svg><use href="#x"/></svg></a>
-    <button class="nav-cta" id="wConnect" type="button">Connect wallet</button>
+    <button class="nav-cta" id="wConnect" type="button">Connect</button>
   </span>
 </div></nav>
 
@@ -491,13 +500,19 @@
       <div class="proof rv" style="--i:3" id="proofPanel">
         <div class="pf-row">
           <span class="pf-lab">Fee &amp; prize wallet</span>
-          <a class="pf-val pf-addr" href="https://explorer.solana.com/address/DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8" target="_blank" rel="noopener">DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8<span class="pf-ic">↗</span></a>
-          <button class="pf-copy" id="pfCopy" type="button" aria-label="Copy the full wallet address">copy</button>
+          <span class="pf-right">
+            <a class="pf-val" href="https://explorer.solana.com/address/DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8" target="_blank" rel="noopener">DWtwwot…hJ6ZX8<span class="pf-ic">↗</span></a>
+            <button class="pf-copy" id="pfCopy" type="button" aria-label="Copy the full wallet address" title="Copy address">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            </button>
+          </span>
         </div>
         <div class="pf-row">
           <span class="pf-lab">This hour's stock</span>
-          <span class="pf-val" id="pfBuy">shown the moment the hour's stock is bought</span>
-          <a class="pf-proof" id="pfProof" href="https://explorer.solana.com/address/DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8" target="_blank" rel="noopener" hidden>proof&nbsp;↗</a>
+          <span class="pf-right">
+            <span class="pf-buy" id="pfBuy">awaiting the first snapshot</span>
+            <a class="pf-proof" id="pfProof" href="https://explorer.solana.com/address/DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8" target="_blank" rel="noopener" hidden>proof<span class="pf-ic">↗</span></a>
+          </span>
         </div>
       </div>
       <div class="partner rv" style="--i:3;margin-top:18px">
@@ -744,7 +759,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       }
       var now=Date.now(), snapAt=Date.parse(real.snapshotAt), drawAt=real.drawAt?Date.parse(real.drawAt):snapAt+5*60000;
       var holders=(typeof real.holders==="number")?real.holders:0, prize=real.prize, win=real.lastWinner;
-      if(hV)hV.textContent=real.hour?("#"+real.hour):"—";
+      if(hV)hV.textContent=real.hourLabel||"—";
       var pzTxt=prize&&prize.stock?(" · prize: "+(prize.shares?(+prize.shares).toFixed(2)+" ":"")+prize.stock):"";
       if(now<snapAt){
         S.classList.add("active");
@@ -1100,7 +1115,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       }).catch(function(){hideToast();});
     }
     function setConnected(addr){pk=addr;btn.textContent=shorten(addr);btn.classList.add("on");checkWinner();}
-    function setDisconnected(){pk=null;provider=null;btn.textContent="Connect wallet";btn.classList.remove("on");hideToast();}
+    function setDisconnected(){pk=null;provider=null;btn.textContent="Connect";btn.classList.remove("on");hideToast();}
     function connect(){
       var p=getProvider();
       if(!p){window.open("https://phantom.app/","_blank","noopener");return;}
@@ -1148,15 +1163,16 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     var buyEl=document.getElementById("pfBuy"), proofEl=document.getElementById("pfProof"), copyBtn=document.getElementById("pfCopy");
     if(copyBtn)copyBtn.addEventListener("click",function(){
       if(!navigator.clipboard)return;
-      navigator.clipboard.writeText(WALLET).then(function(){copyBtn.textContent="copied";copyBtn.classList.add("done");
-        setTimeout(function(){copyBtn.textContent="copy";copyBtn.classList.remove("done");},1400);}).catch(function(){});
+      navigator.clipboard.writeText(WALLET).then(function(){copyBtn.classList.add("done");
+        setTimeout(function(){copyBtn.classList.remove("done");},1400);}).catch(function(){});
     });
     function poll(){try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
       var p=j&&j.prize;
       if(p&&p.stock&&p.shares){
         var sh=+p.shares; buyEl.textContent=(sh<1?sh.toFixed(4):sh.toFixed(2))+" "+p.stock+(p.usd?(" · ~$"+Math.round(p.usd).toLocaleString()):"");
+        buyEl.classList.add("set");
         proofEl.href=p.buyTx?(EXP+"tx/"+p.buyTx):(EXP+"address/"+WALLET); proofEl.hidden=false; // buy tx if published, else the wallet's holdings
-      } else { buyEl.textContent="shown the moment the hour's stock is bought"; proofEl.hidden=true; }
+      } else { buyEl.textContent="awaiting the first snapshot"; buyEl.classList.remove("set"); proofEl.hidden=true; }
     }).catch(function(){});}catch(e){}}
     poll(); setInterval(poll,10000);
   })();
