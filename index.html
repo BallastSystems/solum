@@ -309,6 +309,7 @@
   /* recent winners */
   .winners{border-top:1px solid var(--line);margin-top:clamp(40px,5vw,60px)}
   .wrow2{display:flex;align-items:center;gap:14px;padding:15px 2px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .wrow2.wempty{justify-content:center;color:var(--dim);font-size:13.5px;padding:26px 2px;border-bottom:none}
   .wrow2 .wt{min-width:56px;color:var(--faint);font-size:13px;font-variant-numeric:tabular-nums}
   .wrow2 .wa{font-family:var(--code);font-size:13px;color:var(--silver)} .wrow2 .wa:hover{color:var(--blue)}
   .wrow2 .wnew{font-size:10px;color:var(--grn);border:1px solid color-mix(in srgb,var(--grn) 40%,transparent);border-radius:100px;padding:2px 8px;text-transform:uppercase;letter-spacing:.06em}
@@ -411,7 +412,7 @@
   <div class="hero-in"><div class="shell hero-grid">
     <div class="hero-head">
       <div class="live-fee rv">
-        <div class="lf-top"><span class="d"></span>Allotted to the next draw · live<span class="lf-dev">devnet</span></div>
+        <div class="lf-top"><span class="d"></span>Allotted to the next draw · live</div>
         <div class="num" id="feeAllot">$0</div>
         <div class="lf-rate"><b id="feeBig">$0</b> in creator fees, all-time</div>
       </div>
@@ -441,7 +442,7 @@
       <div class="rm rv" id="raffleMachine">
         <div class="rm-head">
           <span class="rm-live"><span class="d"></span>Live draw</span>
-          <span class="rm-count"><b id="rmCount">8,412</b> holders in the pool</span>
+          <span class="rm-count"><b id="rmCount">—</b> holders in the pool</span>
           <span class="rm-prize"><span class="pl">Prize</span><svg id="rmLogo" viewBox="0 0 24 24"><use href="#lg-apple"/></svg><b id="rmPot">$0</b><span class="st" id="rmStock">AAPLx</span></span>
         </div>
         <div class="rm-cols"><span></span><span>Holder</span><span class="ar">$SOLUM held</span><span class="ar">Win chance</span></div>
@@ -488,7 +489,7 @@
     <p class="s-sub rv" style="--i:1">Each hour buys and raffles a different one. Every purchase is on-chain — check any contract.</p>
   </div>
   <div class="stocks rv" id="stockList"></div>
-  <p class="cap rv">Devnet · illustrative — live Sunrise mints &amp; purchase proofs at launch.</p>
+  <p class="cap rv">Live mainnet tokenized-stock contracts — purchase proofs appear as draws run.</p>
 </div></section>
 
 <!-- live pot -->
@@ -522,7 +523,7 @@
       <canvas id="chart" aria-label="Simulation of the prize pot growing as creator fees buy tokenized stock"></canvas>
       <div class="tape"><div class="th">Fees → stock</div><div id="tape"></div></div>
     </div>
-    <div class="pnl-leg"><span><i style="background:var(--blue)"></i>The next-draw pot only grows until it's drawn — then it resets to zero and the all-time total climbs by exactly that amount</span><span style="margin-left:auto;color:var(--faint)">Devnet · illustrative — live figures at launch</span></div>
+    <div class="pnl-leg"><span><i style="background:var(--blue)"></i>The next-draw pot only grows until it's drawn — then it resets to zero and the all-time total climbs by exactly that amount</span><span style="margin-left:auto;color:var(--faint)">Live figures once $SOLUM launches</span></div>
   </div>
 </div></section>
 
@@ -570,7 +571,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     <div class="sp"><div class="v" data-count="0"></div><div class="k">Ways to rig a draw</div></div>
     <div class="sp"><div class="v" style="font-size:clamp(28px,3.6vw,42px)">OtterSec</div><div class="k">Audit in progress</div></div>
   </div>
-  <p class="cap rv">Open-source · devnet · pre-audit. Audit tracked at <b>github.com/BallastSystems/solum-audit</b>.</p>
+  <p class="cap rv">Open-source · pre-audit. Audit tracked at <b>github.com/BallastSystems/solum-audit</b>.</p>
 </div></section>
 
 <!-- close -->
@@ -589,9 +590,9 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
   <a href="https://github.com/BallastSystems/solum" target="_blank" rel="noopener">GitHub</a>
   <a href="https://sunrise.xyz" target="_blank" rel="noopener">Sunrise Financial</a>
   <a href="https://github.com/BallastSystems/solum-audit" target="_blank" rel="noopener">Audit</a>
-  <span class="disc">DEVNET · PRE-AUDIT · ILLUSTRATIVE · NOT INVESTMENT ADVICE</span>
+  <span class="disc">PRE-AUDIT · NOT INVESTMENT ADVICE</span>
 </div>
-<div class="shell legal">Solum is an experimental, on-chain raffle funded by $SOLUM's creator fees. Prizes are <b>tokenized stocks</b> (e.g. AAPLx) issued by Sunrise Financial — <b>not</b> real equities, and not offered, sold, or guaranteed by Solum. Nothing here is investment, legal, or tax advice, and no outcome is guaranteed. Participation may be restricted or unavailable in certain jurisdictions — it is your responsibility to comply with the laws that apply to you. Currently running on devnet, pre-audit.</div>
+<div class="shell legal">Solum is an experimental, on-chain raffle funded by $SOLUM's creator fees. Prizes are <b>tokenized stocks</b> (e.g. AAPLx) issued by Sunrise Financial — <b>not</b> real equities, and not offered, sold, or guaranteed by Solum. Nothing here is investment, legal, or tax advice, and no outcome is guaranteed. Participation may be restricted or unavailable in certain jurisdictions — it is your responsibility to comply with the laws that apply to you. Pre-audit.</div>
 </footer>
 
 <!-- Staged geo-restriction. OFF by default; flip SOLUM_RESTRICT for mainnet once counsel confirms the list. -->
@@ -653,30 +654,30 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     document.querySelectorAll(".rv").forEach(function(el){io.observe(el);});}
   else{document.querySelectorAll(".rv").forEach(function(el){el.classList.add("in");});}
 
-  // ---- this hour's draw: random snapshot time + random draw time, VRF-fair. Self-contained demo;
-  // reads status.json (published by the draw bot) to go live. Snapshot time stays hidden until taken. ----
+  // ---- this hour's draw: REAL data only (status.json, published by the bot). No live data yet = a
+  // clean pre-launch idle state; nothing is fabricated. Snapshot time stays hidden until actually taken. ----
   (function(){
     var el=document.getElementById("drawStatus"); if(!el) return;
-    var HOUR=3600000, stocks=["AAPLx","NVDAx","TSLAx","COINx","MSTRx"];
-    function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-    function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
     function fmt(ts){var d=new Date(ts),h=d.getHours(),mm=d.getMinutes(),ap=h>=12?"PM":"AM";h=h%12||12;return h+":"+(mm<10?"0":"")+mm+" "+ap;}
-    function lbl(ts){var d=new Date(ts),h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12||12;return h+" "+ap;}
     function cd(ms){ms=Math.max(0,ms);var s=Math.floor(ms/1000),mn=Math.floor(s/60);s%=60;return (mn<10?"0":"")+mn+":"+(s<10?"0":"")+s;}
     var real=null;
-    try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}
+    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
+    poll(); setInterval(poll,8000);
     var S=document.getElementById("dsSnap"),D=document.getElementById("dsDraw"),W=document.getElementById("dsWin");
     var sV=document.getElementById("dsSnapV"),dV=document.getElementById("dsDrawV"),wV=document.getElementById("dsWinV"),hV=document.getElementById("dsHour");
     function render(){
-      var now=Date.now(), hs=Math.floor(now/HOUR)*HOUR, rng=m32(Math.floor(now/HOUR));
-      var snapAt=hs+(8+Math.floor(rng()*44))*60000, drawAt=snapAt+5*60000;
-      var wStock=stocks[(rng()*5)|0], wPrize=180+Math.floor(rng()*900), wAddr=b58(rng,44), holders=800+Math.floor(rng()*2200), prize=null;
-      if(real){ if(real.snapshotAt)snapAt=Date.parse(real.snapshotAt); if(real.drawAt)drawAt=Date.parse(real.drawAt);
-        if(typeof real.holders==="number")holders=real.holders; prize=real.prize;
-        if(real.lastWinner){wAddr=real.lastWinner.addr;wPrize=real.lastWinner.prizeUsd;wStock=real.lastWinner.stock;} }
-      hV.textContent="#"+(Math.floor(hs/HOUR)-Math.floor(Date.UTC(2026,6,19)/HOUR));
       [S,D,W].forEach(function(x){x.classList.remove("active","done");});
-      var shortAddr=wAddr.slice(0,4)+"…"+wAddr.slice(-4);
+      if(!real||!real.snapshotAt){ // pre-launch / no snapshot yet: honest idle state, no invented numbers
+        S.classList.add("active");
+        if(hV)hV.textContent="—";
+        sV.textContent="opens when $SOLUM launches — taken at a hidden moment each hour";
+        dV.textContent="a fixed 5-minute countdown after the snapshot";
+        wV.textContent="—";
+        return;
+      }
+      var now=Date.now(), snapAt=Date.parse(real.snapshotAt), drawAt=real.drawAt?Date.parse(real.drawAt):snapAt+5*60000;
+      var holders=(typeof real.holders==="number")?real.holders:0, prize=real.prize, win=real.lastWinner;
+      if(hV)hV.textContent=real.hour?("#"+real.hour):"—";
       var pzTxt=prize&&prize.stock?(" · prize: "+(prize.shares?(+prize.shares).toFixed(2)+" ":"")+prize.stock):"";
       if(now<snapAt){
         S.classList.add("active");
@@ -692,73 +693,62 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
         S.classList.add("done"); D.classList.add("done"); W.classList.add("done");
         sV.textContent="✓ sealed · time kept hidden";
         dV.textContent="✓ "+fmt(drawAt);
-        wV.textContent=shortAddr+" · won $"+wPrize.toLocaleString()+" "+wStock;
+        wV.textContent=win?(win.addr.slice(0,4)+"…"+win.addr.slice(-4)+" · won "+(win.prizeUsd!=null?("$"+(+win.prizeUsd).toLocaleString()+" "):"")+(win.stock||"")):"drawn on-chain";
       }
     }
     render(); setInterval(render,1000);
   })();
 
-  // ---- live raffle centerpiece: ticking countdown, growing pot, rotating stock, winner reveal ----
+  // ---- live raffle centerpiece: REAL status.json only. Pre-launch shows a clean idle state — no
+  // fabricated pot, holders, or winner. ----
   (function(){
     var wrap=document.getElementById("liveDraw"); if(!wrap) return;
-    var HOUR=3600000;
     var stocks=[["AAPLx","Apple","lg-apple","#E6EAF2"],["NVDAx","NVIDIA","lg-nvidia","#76B900"],["TSLAx","Tesla","lg-tesla","#E82127"],["COINx","Coinbase","lg-coinbase","#0052FF"],["MSTRx","MicroStrategy","lg-mstr","#F0512B"]];
-    function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-    function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
     function cd(ms){ms=Math.max(0,ms);var s=Math.floor(ms/1000),m=Math.floor(s/60);s%=60;return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;}
     function stockOf(l){for(var i=0;i<stocks.length;i++)if(stocks[i][0]===l)return stocks[i];return stocks[0];}
     var CD=document.getElementById("ldCd"),POT=document.getElementById("ldPot"),HOLD=document.getElementById("ldHold"),ST=document.getElementById("ldStock"),STAT=document.getElementById("ldStatus");
-    var hr=-1, snapAt=0, drawAt=0, holders=0, potBase=0, potGrow=0, win=null, st=stocks[0], revealed=false;
-    // reads status.json (published by the draw bot): real pot, 5-minute countdown, advertised prize, winner
-    var real=null; function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
+    var real=null, revealed=false;
+    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)real=j;}).catch(function(){});}catch(e){}}
     poll(); setInterval(poll,8000);
-    function seed(){
-      var h=Math.floor(Date.now()/HOUR); if(h===hr) return; hr=h; revealed=false;
-      var rng=m32(h);
-      snapAt=h*HOUR+(8+Math.floor(rng()*44))*60000; drawAt=snapAt+5*60000; // fixed 5-min countdown after the snapshot
-      holders=800+Math.floor(rng()*2200); potBase=400+Math.floor(rng()*2400); potGrow=potBase*(0.15+rng()*0.4);
-      var a=b58(rng,44); win={addr:a.slice(0,4)+"…"+a.slice(-4),prize:180+Math.floor(rng()*900),stock:stocks[h%stocks.length][0]};
-      st=stocks[h%stocks.length];
-      wrap.classList.remove("reveal"); STAT.classList.remove("won");
-    }
     function setStock(s){ST.innerHTML='<svg viewBox="0 0 24 24" style="color:'+s[3]+'"><use href="#'+s[2]+'"/></svg>'+s[0]+' · '+s[1];}
     function tick(){
-      seed(); var now=Date.now(), frac=(now-Math.floor(now/HOUR)*HOUR)/HOUR;
-      var sAt=snapAt, dAt=drawAt, hold=holders, pot=Math.round(potBase+potGrow*frac), phase=null, prize=null, lastWin=win;
-      if(real){ if(real.snapshotAt)sAt=Date.parse(real.snapshotAt); if(real.drawAt)dAt=Date.parse(real.drawAt);
-        if(typeof real.potUsd==="number")pot=real.potUsd; if(real.holders)hold=real.holders;
-        phase=real.phase; prize=real.prize; if(real.lastWinner)lastWin={addr:real.lastWinner.addr.slice(0,4)+"…"+real.lastWinner.addr.slice(-4),prize:real.lastWinner.prizeUsd,stock:real.lastWinner.stock}; }
-      POT.textContent="$"+pot.toLocaleString();
-      HOLD.textContent=hold.toLocaleString();
-      setStock(prize&&prize.stock?stockOf(prize.stock):st); // the bought prize once the snapshot's taken
+      if(!real||!real.snapshotAt){ // pre-launch idle — nothing invented
+        CD.textContent="—"; POT.textContent="$0"; HOLD.textContent="0"; setStock(stocks[0]);
+        STAT.classList.remove("won");
+        STAT.innerHTML="Live hourly draws begin when <b>$SOLUM</b> launches · winner drawn on-chain by Switchboard VRF";
+        return;
+      }
+      var now=Date.now(), sAt=Date.parse(real.snapshotAt), dAt=real.drawAt?Date.parse(real.drawAt):sAt+5*60000;
+      var hold=real.holders||0, pot=(typeof real.potUsd==="number")?real.potUsd:0, phase=real.phase, prize=real.prize, lastWin=real.lastWinner;
+      POT.textContent="$"+pot.toLocaleString(); HOLD.textContent=hold.toLocaleString();
+      setStock(prize&&prize.stock?stockOf(prize.stock):stocks[0]); // the bought prize once the snapshot's taken
       var drawn=(phase==="drawn")||(dAt>0&&now>=dAt);
       if(!drawn&&now<sAt){
-        CD.textContent="—";
-        STAT.classList.remove("won");
+        CD.textContent="—"; STAT.classList.remove("won");
         STAT.innerHTML="Collecting fees · snapshot at a random moment this hour · winner drawn by VRF";
       } else if(!drawn){
-        CD.textContent=cd(dAt-now); // fixed 5-minute countdown, announced the instant the snapshot lands
-        STAT.classList.remove("won");
+        CD.textContent=cd(dAt-now); STAT.classList.remove("won");
         var pz=prize&&prize.stock?("bought <b>"+(prize.shares?(+prize.shares).toFixed(2)+" ":"")+prize.stock+"</b> (~$"+Math.round(prize.usd||pot).toLocaleString()+") · "):"";
         STAT.innerHTML="<b>Snapshot taken</b> · "+pz+hold.toLocaleString()+" holders locked in · drawing in "+cd(dAt-now);
       } else {
         CD.textContent="00:00"; STAT.classList.add("won");
-        STAT.innerHTML="🏆 <b>"+lastWin.addr+"</b> won <b>$"+(lastWin.prize||0).toLocaleString()+"</b> of "+(lastWin.stock||st[0]);
+        var wa=lastWin?(lastWin.addr.slice(0,4)+"…"+lastWin.addr.slice(-4)):"—";
+        STAT.innerHTML="🏆 <b>"+wa+"</b> won <b>$"+((lastWin&&lastWin.prizeUsd)||0).toLocaleString()+"</b> of "+((lastWin&&lastWin.stock)||"");
         if(!revealed){ revealed=true; wrap.classList.add("reveal"); }
       }
     }
     tick(); setInterval(tick,1000);
   })();
 
-  // ---- recent winners feed: self-contained demo; reads winners.json (published by the bot) to go live ----
+  // ---- recent winners feed: reads winners.json (published by the bot). Empty until the first REAL
+  // draw — no fabricated winners. Verify links point to mainnet. ----
   (function(){
     var host=document.getElementById("winnersList"); if(!host) return;
-    var HOUR=3600000, stocks=["AAPLx","NVDAx","TSLAx","COINx","MSTRx"], EXPL="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet";
-    function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-    function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
+    var PROG="https://explorer.solana.com/address/4YCL5cQvVSiVbpN2QVbk82aLuNBqiNt2KbGdqkUKMojY";
     function tlabel(ts){var d=new Date(ts),h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12||12;return h+" "+ap;}
     function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
     function paint(rows){
+      if(!rows||!rows.length){ host.innerHTML='<div class="wrow2 wempty">No draws yet — the first raffle runs when $SOLUM launches.</div>'; return; }
       host.innerHTML=rows.map(function(w,i){
         return '<div class="wrow2"><span class="wt">'+esc(w.time)+'</span>'+
           '<span class="wa">'+esc(w.addr)+'</span>'+(i===0?'<span class="wnew">latest</span>':'')+
@@ -766,15 +756,11 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
           '<a class="wv" href="'+esc(w.verify)+'" target="_blank" rel="noopener">verify ↗</a></div>';
       }).join("");
     }
-    var nowH=Math.floor(Date.now()/HOUR), demo=[];
-    for(var k=1;k<=8;k++){ var h=nowH-k, rng=m32(h*2654435761);
-      var a=b58(rng,44);
-      demo.push({time:tlabel(h*HOUR), addr:a.slice(0,4)+"…"+a.slice(-4), stock:stocks[(rng()*5)|0], prize:180+Math.floor(rng()*900), verify:EXPL}); }
-    paint(demo);
+    paint([]); // clean empty state until real winners publish — never fabricated
     try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
       if(j&&j.length){ paint(j.slice(0,10).map(function(w){ var ts=Date.parse(w.drawAt);
         return {time:tlabel(ts), addr:w.addr.slice(0,4)+"…"+w.addr.slice(-4), stock:w.stock, prize:w.prizeUsd,
-          verify:w.payoutTx?("https://explorer.solana.com/tx/"+w.payoutTx+"?cluster=devnet"):EXPL}; })); }
+          verify:w.payoutTx?("https://explorer.solana.com/tx/"+w.payoutTx):PROG}; })); }
     }).catch(function(){});}catch(e){}
   })();
 
@@ -799,59 +785,49 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     var one=st.map(function(s){return '<span class="tk-i"><svg class="tk-lg" viewBox="0 0 24 24" style="color:'+s[4]+'"><use href="#'+s[3]+'"/></svg><span class="sym">'+s[0]+'</span><span class="nm">'+s[1]+'</span><span class="dl">'+s[2]+'</span></span>';}).join("");
     document.getElementById("tick").innerHTML=one+one;})();
 
-  // ---- five stocks on rotation: contract per stock + the hour's active one, proof on-chain ----
+  // ---- five tokenized stocks in the prize pool: REAL mainnet contract per stock. The active one is
+  // whichever THIS cycle's snapshot bought at random (from status.json) — not a fixed rotation. ----
   (function(){
     var host=document.getElementById("stockList"); if(!host) return;
-    var PROG="A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU", EXPL="https://explorer.solana.com/address/";
-    function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-    function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
-    var S=[["AAPLx","Apple","lg-apple","#E6EAF2"],["NVDAx","NVIDIA","lg-nvidia","#76B900"],["TSLAx","Tesla","lg-tesla","#E82127"],["COINx","Coinbase","lg-coinbase","#0052FF"],["MSTRx","MicroStrategy","lg-mstr","#F0512B"]];
-    S.forEach(function(s,i){ s[4]=b58(m32(1009+i*131),44); }); // stable per-stock contract (devnet placeholder)
+    var PROG="4YCL5cQvVSiVbpN2QVbk82aLuNBqiNt2KbGdqkUKMojY", EXPL="https://explorer.solana.com/address/";
+    var S=[
+      ["AAPLx","Apple","lg-apple","#E6EAF2","XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp"],
+      ["NVDAx","NVIDIA","lg-nvidia","#76B900","Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh"],
+      ["TSLAx","Tesla","lg-tesla","#E82127","XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB"],
+      ["COINx","Coinbase","lg-coinbase","#0052FF","Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu"],
+      ["MSTRx","MicroStrategy","lg-mstr","#F0512B","XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ"]
+    ];
+    var active=null;
     function paint(){
-      var cur=Math.floor(Date.now()/3600000)%S.length;
-      host.innerHTML=S.map(function(s,i){
-        var short=s[4].slice(0,4)+"…"+s[4].slice(-4);
-        return '<div class="stk-row'+(i===cur?' now':'')+'">'+
+      host.innerHTML=S.map(function(s){
+        var short=s[4].slice(0,4)+"…"+s[4].slice(-4), isNow=(active===s[0]);
+        return '<div class="stk-row'+(isNow?' now':'')+'">'+
           '<svg class="stk-lg2" viewBox="0 0 24 24" style="color:'+s[3]+'"><use href="#'+s[2]+'"/></svg>'+
           '<span class="stk-sym">'+s[0]+'</span><span class="stk-nm">'+s[1]+'</span>'+
-          (i===cur?'<span class="stk-now">this hour</span><a class="stk-proof" href="'+EXPL+PROG+'?cluster=devnet" target="_blank" rel="noopener">bought · proof ↗</a>':'')+
-          '<a class="stk-ct" href="'+EXPL+s[4]+'?cluster=devnet" target="_blank" rel="noopener">'+short+' ↗</a></div>';
+          (isNow?'<span class="stk-now">this draw</span><a class="stk-proof" href="'+EXPL+PROG+'" target="_blank" rel="noopener">program ↗</a>':'')+
+          '<a class="stk-ct" href="'+EXPL+s[4]+'" target="_blank" rel="noopener">'+short+' ↗</a></div>';
       }).join("");
     }
-    paint(); setInterval(paint,60000);
+    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){active=(j&&j.prize&&j.prize.stock)?j.prize.stock:null;paint();}).catch(function(){});}catch(e){}}
+    paint(); poll(); setInterval(poll,15000);
   })();
 
-  // --- creator-fee ledger: ONE shared, live-ticking, reconciled source ---
-  // total lifetime creator fees = raffled-to-holders (all-time, stocks awarded out) + allotted-to-the-next-draw.
-  // Every surface (hero total, nav, hero "allotted", #pot ledger) reads SOLUM_FEES, so they can never disagree.
-  // Illustrative on devnet; snaps to status.json (real on-chain fees) the moment the bot publishes it.
-  var SOLUM_FEE_RATE=1800, SOLUM_FEE_BASE=8000, SOLUM_LAUNCH=Date.UTC(2026,6,23);
-  function solumHourFrac(){var d=new Date();return (d.getMinutes()*60+d.getSeconds())/3600;}
-  var SOLUM_FEES={live:false,hr:Math.floor(Date.now()/3.6e6)};
-  SOLUM_FEES.lifetime=SOLUM_FEE_BASE+Math.max(0,(Date.now()-SOLUM_LAUNCH)/3.6e6)*SOLUM_FEE_RATE;
-  SOLUM_FEES.pot=SOLUM_FEE_RATE*solumHourFrac();
-  SOLUM_FEES.fees24=SOLUM_FEE_RATE*24;
-  SOLUM_FEES.given=SOLUM_FEES.lifetime-SOLUM_FEES.pot;
+  // --- creator-fee ledger: REAL data only — nothing is fabricated ---
+  // The draw bot publishes status.json from the dev wallet: potUsd = THIS cycle's creator rewards
+  // (buys the stock; resets to $0 the moment a snapshot is taken) and feesLifetimeUsd = all-time fees
+  // earned (only climbs). Until $SOLUM launches and the bot publishes, every figure reads $0.
+  var SOLUM_FEES={live:false, lifetime:0, pot:0, given:0, fees24:0};
   function solumPaintFees(){
     var f=SOLUM_FEES, life=money(Math.round(f.lifetime)), pot=money(Math.round(f.pot));
     var big=document.getElementById("feeBig"),navf=document.getElementById("navFee"),allot=document.getElementById("feeAllot"),
         eGiven=document.getElementById("s-given"),ePot=document.getElementById("s-pot"),eFees=document.getElementById("s-fees");
-    if(allot)allot.textContent=pot; if(navf)navf.textContent=pot; // next-draw pot leads
-    if(big)big.textContent=life; // all-time creator fees, secondary
+    if(allot)allot.textContent=pot; if(navf)navf.textContent=pot; // this cycle's rewards → next-draw pot
+    if(big)big.textContent=life; // all-time creator fees
     if(eGiven)eGiven.textContent=money(Math.round(f.given));
     if(ePot)ePot.textContent=fmtK(f.pot);
     if(eFees)eFees.textContent=fmtK(f.fees24);
   }
-  solumPaintFees();
-  if(!RM)setInterval(function(){
-    if(SOLUM_FEES.live){solumPaintFees();return;} // live status.json drives it instead
-    var h=Math.floor(Date.now()/3.6e6);
-    if(h!==SOLUM_FEES.hr){SOLUM_FEES.hr=h;SOLUM_FEES.pot=0;} // a draw fired → pot resets to 0, all-time climbs by it
-    var fee=SOLUM_FEE_RATE/3600*0.9*(0.3+Math.random()*2.2); // creator fees arriving, jittered like real trades
-    SOLUM_FEES.lifetime+=fee; SOLUM_FEES.pot+=fee; SOLUM_FEES.given=SOLUM_FEES.lifetime-SOLUM_FEES.pot;
-    SOLUM_FEES.fees24=Math.max(SOLUM_FEE_RATE*20, SOLUM_FEES.fees24+fee-SOLUM_FEE_RATE/3600*0.9);
-    solumPaintFees();
-  },900);
+  solumPaintFees(); // stays at $0 until the real status.json feed below sets SOLUM_FEES.live
 
   // ---- hero live-draw machine: a reel of holder cards spins, decelerates, lands on the winner ----
   (function(){
@@ -868,7 +844,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function winPct(rw){return rw.totalTickets?(rw.solumHeld/rw.totalTickets*100):0;}
     function pctStr(p){return (p<0.01?"<0.01":p<0.1?p.toFixed(2):p.toFixed(1))+"%";}
     // the REAL latest winner (winners.json, the persisted source of truth) + live status. Once the bot
-    // publishes, the reel ALWAYS lands on the real winner — never a random row. No feed = illustrative demo.
+    // publishes, the reel ALWAYS lands on the real winner — never a random row. No feed = labeled preview.
     var realWin=null,realSt=null,started=false;
     function startOnce(){if(started||RM)return;started=true;cycle();} // begin only once we know the real winner
     function poll(){
@@ -904,31 +880,34 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function cycle(){
       timers.forEach(clearTimeout);timers=[];
       rm.classList.remove("won");
-      var rw=realWin; // LOCK the real winner for this whole spin, so the landing row + reveal always agree
-      var pot=rw?Math.round(rw.prizeUsd||0):(400+Math.floor(Math.random()*2600));potEl.textContent="$"+pot.toLocaleString();
-      var holders=(realSt&&realSt.holders)||(rw&&rw.holders)||(6200+Math.floor(Math.random()*6400));if(countEl)countEl.textContent=holders.toLocaleString();
-      var st=rw?stockOf(rw.stock):stocks[(Math.random()*5)|0];logo.innerHTML='<use href="#'+st[1]+'"/>';logo.style.color=st[2];nameEl.textContent=st[0];
+      var rw=realWin, live=!!rw; // LOCK the real winner for this spin. No real winner yet = a labeled PREVIEW.
+      // Pre-launch: NO fabricated pot / holder count / winner — those show as "—" and the reveal is a preview.
+      var pot=live?Math.round(rw.prizeUsd||0):null; potEl.textContent=pot!=null?("$"+pot.toLocaleString()):"—";
+      var holders=(realSt&&realSt.holders)||(rw&&rw.holders)||null; if(countEl)countEl.textContent=holders!=null?holders.toLocaleString():"—";
+      var st=live?stockOf(rw.stock):stocks[(Math.random()*5)|0];logo.innerHTML='<use href="#'+st[1]+'"/>';logo.style.color=st[2];nameEl.textContent=st[0];
       var N=140,winIdx=118,rows="";for(var i=0;i<N;i++)rows+=(i===winIdx&&rw)?winnerCard(rw):card(); // land on the REAL winner
       reel.innerHTML=rows;
       reel.style.transition="none";reel.style.transform="translateY(0)";reel.classList.add("spin");void reel.offsetHeight;
-      phase("Snapshot sealed · "+holders.toLocaleString()+" holders locked in");
+      phase(live?("Snapshot sealed · "+holders.toLocaleString()+" holders locked in"):"Preview — how each hourly draw looks");
       requestAnimationFrame(function(){
         reel.style.transition="transform 26s cubic-bezier(.22,.55,.15,1)";
         reel.style.transform="translateY("+(CENTER-winIdx*ROWH)+"px)";
       });
-      timers.push(setTimeout(function(){phase("Drawing on-chain…");},2600));
-      timers.push(setTimeout(function(){phase("Awaiting Switchboard VRF randomness…");},12000));
+      timers.push(setTimeout(function(){phase(live?"Drawing on-chain…":"Preview · drawn on-chain by Switchboard VRF");},2600));
+      timers.push(setTimeout(function(){phase(live?"Awaiting Switchboard VRF randomness…":"Preview · live draws begin at launch");},12000));
       timers.push(setTimeout(function(){reel.classList.remove("spin");},18500)); // sharpen as the reel slows
-      timers.push(setTimeout(function(){phase("Locking in the winner…");},22500));
+      timers.push(setTimeout(function(){phase(live?"Locking in the winner…":"Preview · live at launch");},22500));
       timers.push(setTimeout(function(){
         rm.classList.add("won");reel.classList.remove("spin");var w=reel.children[winIdx];
         if(w){w.classList.add("win");
-          foot.innerHTML='<span class="tp">🏆</span> <b>'+w.dataset.sh+'</b> won $'+pot.toLocaleString()+' '+st[0]+' <span class="wc">· '+w.dataset.pct+' win chance</span>';}
+          foot.innerHTML=live
+            ? ('<span class="tp">🏆</span> <b>'+w.dataset.sh+'</b> won $'+pot.toLocaleString()+' '+st[0]+' <span class="wc">· '+w.dataset.pct+' win chance</span>')
+            : ('<span class="ph">Preview · real draws begin when $SOLUM launches</span>');}
       },26200));
       timers.push(setTimeout(cycle,31200));
     }
-    if(RM){reel.innerHTML=card().replace("rm-row","rm-row win");foot.innerHTML='<span class="tp">🏆</span> a holder wins every hour';potEl.textContent="$1,240";}
-    // non-RM: the spin begins via startOnce() — after winners.json loads (real winner) or the 1.2s demo fallback
+    if(RM){reel.innerHTML=card().replace("rm-row","rm-row win");foot.innerHTML='<span class="ph">Preview · live draws begin at launch</span>';potEl.textContent="—";}
+    // non-RM: the spin begins via startOnce() — after winners.json loads (real winner) or the pre-launch preview
   })();
 
   // --- hero canvas: first-light over rising strata ---
