@@ -592,10 +592,20 @@
     }).catch(function(){toast("Wallet connection cancelled.");});
   }
 
-  // go live off the published record if present
-  try{fetch("https://api.solum.work/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
-    if(j&&j.length){DATA=j.map(norm).filter(function(w){return w&&w.stock&&STK[w.stock];});LIVE=true;renderAll();}
-  }).catch(function(){});}catch(e){}
+  // go live off the published record — POLL so the page updates itself the moment a new winner lands
+  // (only re-renders when the winner set actually changes, so it never disturbs scroll/filter/countdowns).
+  var _lastSig="";
+  function loadWinners(){
+    try{fetch("https://api.solum.work/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+      if(j&&j.length){
+        var sig=j.length+"|"+(j[0]&&((j[0].drawAt||"")+j[0].addr));
+        if(sig===_lastSig)return; // unchanged — leave the view alone
+        _lastSig=sig;
+        DATA=j.map(norm).filter(function(w){return w&&w.stock&&STK[w.stock];});LIVE=true;renderAll();
+      }
+    }).catch(function(){});}catch(e){}
+  }
+  loadWinners(); setInterval(loadWinners,15000);
 })();
 </script>
 </body>
