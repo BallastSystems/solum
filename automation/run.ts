@@ -16,7 +16,7 @@ import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, getAccount, getMint } from "@solana/spl-token";
 import * as fs from "fs";
 import { TwabAccumulator, buildSnapshot, winnerOf } from "./twab";
-import { commitEpoch, settleDevnet, winningTicketOf, JackpotRefs } from "./draw";
+import { commitEpoch, settleDevnet, requestDrawVrf, settleDrawVrf, loadSwitchboardQueue, winningTicketOf, JackpotRefs } from "./draw";
 import { fundHourly, randomBuyTimes } from "./fees";
 import { writeStatus, appendWinner, iso, hourLabel, feeLedger, WinnerEntry } from "./status";
 
@@ -36,6 +36,7 @@ type Cfg = {
   rpc: string;
   coinMint: PublicKey; // $SOLUM
   coinDecimals: number;
+  vrf: "devnet" | "switchboard"; // randomness source: injected (local/devnet) vs Switchboard On-Demand
   stocks: Record<string, StockCfg>; // label → config for every rotated stock
   rotation: string[]; // hourly order, e.g. ["AAPLx","NVDAx",...]
   ops: Keypair; // creator + snapshotter + payer
@@ -78,6 +79,7 @@ async function seedInitialBalances(conn: Connection, coinMint: PublicKey, twab: 
 
 export async function runForever(cfg: Cfg) {
   const conn = new Connection(cfg.rpc, "confirmed");
+  let sbQueue: any = null; // cached Switchboard queue (loaded once, on the switchboard path)
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const hourStart = now();
@@ -141,7 +143,14 @@ export async function runForever(cfg: Cfg) {
       // DRAW: VRF settle fixes the winner on-chain. We do NOT pay from here — the prize is held in
       // the review (ops) wallet for a 24h quality-control period, then sent to the winner when they
       // claim. So this records a *pending claim*; a separate release step fulfils it after the hold.
-      await settleDevnet(cfg.prog, cfg.ops, cfg.refs); // switchboard-vrf: request_draw + settle_draw
+      if (cfg.vrf === "switchboard") {
+        // production: commit + bind a Switchboard On-Demand randomness account, then reveal + settle
+        sbQueue = sbQueue || (await loadSwitchboardQueue(conn));
+        const rnd = await requestDrawVrf(cfg.prog, sbQueue, cfg.ops, cfg.refs, conn);
+        await settleDrawVrf(cfg.prog, rnd, cfg.ops, cfg.refs, conn);
+      } else {
+        await settleDevnet(cfg.prog, cfg.ops, cfg.refs); // local/devnet: injected randomness
+      }
       const wt = await winningTicketOf(cfg.prog, cfg.refs);
       // the prize for this epoch = the stock bought from this hour's fees, held in the review wallet
       let prizeShares = 0;
@@ -202,7 +211,9 @@ if (require.main === module) {
   if (rotation.length === 0) throw new Error("no rotated stocks configured (set SOLUM_STOCKS or SOLUM_STOCK_MINT)");
   const firstStock = stocks[rotation[0]];
   runForever({
-    rpc, coinMint, coinDecimals: Number(process.env.SOLUM_COIN_DECIMALS || 6), stocks, rotation, ops, prog,
+    rpc, coinMint, coinDecimals: Number(process.env.SOLUM_COIN_DECIMALS || 6),
+    vrf: process.env.SOLUM_VRF === "switchboard" ? "switchboard" : "devnet",
+    stocks, rotation, ops, prog,
     refs: { jackpot, jackpotAuthority, prizeMint: firstStock.mint, potCustody: new PublicKey(process.env.SOLUM_POT_CUSTODY!), prizeTokenProgram: firstStock.tokenProgram },
     statusFile: process.env.SOLUM_STATUS_FILE || "public/status.json",
     winnersFile: process.env.SOLUM_WINNERS_FILE || "public/winners.json",
