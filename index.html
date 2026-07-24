@@ -131,6 +131,20 @@
   .hero-raffle .ld-big{font-size:clamp(24px,3vw,36px)}
   .hero-raffle .ld-status{font-size:12.5px;margin-top:16px;padding-top:14px}
   @media(max-width:620px){.hero-raffle{padding:18px 18px !important}.hero-raffle .ld-grid{grid-template-columns:repeat(3,1fr);gap:10px}.hero-raffle .ld-big{font-size:19px}.hero-raffle .ld-lab{font-size:9px;letter-spacing:.04em}.hero-raffle .ld-top{margin-bottom:14px}}
+  /* on-chain proof strip — public fee/prize wallet + this hour's verified stock purchase */
+  .proof{margin-top:16px;background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:13px 16px;display:grid;gap:10px}
+  .pf-row{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
+  .pf-lab{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700;flex:none;min-width:118px}
+  .pf-val{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;color:var(--silver);text-decoration:none;display:inline-flex;align-items:baseline;gap:5px}
+  a.pf-val:hover{color:var(--blue-hi)}
+  .pf-addr{word-break:break-all}
+  .pf-ic{color:var(--faint);font-size:10px;flex:none}
+  .pf-copy{margin-left:auto;font:inherit;font-size:10.5px;color:var(--dim);background:none;border:1px solid var(--line-2);border-radius:100px;padding:3px 11px;cursor:pointer;transition:color .15s,border-color .15s;flex:none}
+  .pf-copy:hover{color:var(--silver);border-color:var(--dim)}
+  .pf-copy.done{color:var(--grn);border-color:var(--grn)}
+  .pf-proof{margin-left:auto;font-size:12px;color:var(--blue);font-weight:600;text-decoration:none;flex:none}
+  .pf-proof:hover{color:var(--blue-hi)}
+  @media(max-width:620px){.pf-lab{min-width:100%;margin-bottom:-4px}}
   @media(max-width:900px){.hero-grid{grid-template-columns:1fr;grid-template-areas:"head" "body" "machine";row-gap:30px;align-items:start}.hero{min-height:auto;align-items:flex-start}.hero-in{padding:92px 0 56px}.hero-body{align-self:start;padding-bottom:0}}
   @media(max-width:520px){.hero-in{padding:80px 0 44px}}
   /* live draw machine — the full-width centerpiece */
@@ -470,6 +484,18 @@
           <div><div class="ld-lab">Holders entered</div><div class="ld-big" id="ldHold">0</div></div>
         </div>
         <div class="ld-status" id="ldStatus">Collecting fees · snapshot at a random moment · winner drawn by VRF</div>
+      </div>
+      <div class="proof rv" style="--i:3" id="proofPanel">
+        <div class="pf-row">
+          <span class="pf-lab">Fee &amp; prize wallet</span>
+          <a class="pf-val pf-addr" href="https://explorer.solana.com/address/DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8" target="_blank" rel="noopener">DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8<span class="pf-ic">↗</span></a>
+          <button class="pf-copy" id="pfCopy" type="button" aria-label="Copy the full wallet address">copy</button>
+        </div>
+        <div class="pf-row">
+          <span class="pf-lab">This hour's stock</span>
+          <span class="pf-val" id="pfBuy">shown the moment the hour's stock is bought</span>
+          <a class="pf-proof" id="pfProof" href="https://explorer.solana.com/address/DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8" target="_blank" rel="noopener" hidden>proof&nbsp;↗</a>
+        </div>
       </div>
       <div class="partner rv" style="--i:3;margin-top:18px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="14.5" r="4"/><path d="M12 5.5v2M5.8 9.3l1.2 1.2M18.2 9.3l-1.2 1.2M3.5 15h1.6M18.9 15h1.6M4.5 18.5h15"/></svg>
@@ -1110,6 +1136,26 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     // eager reconnect if the wallet already trusts this site (a returning winner sees their banner)
     (function(){var p=getProvider();if(p&&p.connect){Promise.resolve(p.connect({onlyIfTrusted:true})).then(function(res){var key=(res&&res.publicKey)||p.publicKey;if(key){provider=p;setConnected(key.toString());}}).catch(function(){});}})();
     setInterval(function(){if(pk)checkWinner();},15000); // a draw could land while the winner is on the page
+  })();
+
+  // on-chain proof strip: public fee/prize wallet + this hour's stock purchase (from status.json)
+  (function(){
+    var panel=document.getElementById("proofPanel"); if(!panel) return;
+    var WALLET="DWtwwotUi9v7ziFKLNwTpzGdPVZXPFQaRAGijZhJ6ZX8", EXP="https://explorer.solana.com/";
+    var buyEl=document.getElementById("pfBuy"), proofEl=document.getElementById("pfProof"), copyBtn=document.getElementById("pfCopy");
+    if(copyBtn)copyBtn.addEventListener("click",function(){
+      if(!navigator.clipboard)return;
+      navigator.clipboard.writeText(WALLET).then(function(){copyBtn.textContent="copied";copyBtn.classList.add("done");
+        setTimeout(function(){copyBtn.textContent="copy";copyBtn.classList.remove("done");},1400);}).catch(function(){});
+    });
+    function poll(){try{fetch("status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+      var p=j&&j.prize;
+      if(p&&p.stock&&p.shares){
+        var sh=+p.shares; buyEl.textContent=(sh<1?sh.toFixed(4):sh.toFixed(2))+" "+p.stock+(p.usd?(" · ~$"+Math.round(p.usd).toLocaleString()):"");
+        proofEl.href=p.buyTx?(EXP+"tx/"+p.buyTx):(EXP+"address/"+WALLET); proofEl.hidden=false; // buy tx if published, else the wallet's holdings
+      } else { buyEl.textContent="shown the moment the hour's stock is bought"; proofEl.hidden=true; }
+    }).catch(function(){});}catch(e){}}
+    poll(); setInterval(poll,10000);
   })();
 </script>
 </body>
