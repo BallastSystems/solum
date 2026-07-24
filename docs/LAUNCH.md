@@ -1,53 +1,55 @@
 # Solum mainnet launch — turnkey runbook
 
-Everything below is built, tested on devnet (41 tests), and merged to `main`. The launch is blocked
-only on four inputs that must exist first; once they do, the sequence runs end to end with a controlled
-test draw *before* going public.
+Everything below is built, tested on devnet (41 tests), and merged to `main`. **Order of operations:
+stand up and PROVE the entire rig on mainnet FIRST; launch the $SOLUM token LAST.** Expectations spike
+the moment the token is live, so nothing is left unverified for launch day — by then it's just "init the
+real jackpot with the mint and flip it on."
 
-## You provide (4 inputs — only these gate the launch)
+## Two phases
 
-1. **$SOLUM launched on pump.fun** → the **mint address** (`SOLUM_COIN_MINT`). Nothing downstream exists
-   without this.
-2. **Solum-side host** (a server/VM under the Solum identity — NOT the Magpie Railway account). This runs
-   the bot + the claim service + serves `status.json`/`winners.json`.
+- **Phase A — advance setup (before the token):** deploy the program, prove the live Switchboard oracle
+  against a THROWAWAY test jackpot (its own PDA — a test coin, separate from the real one), stand up the
+  host + bot + claim service + payout console, wire the dev wallet + the 5 stock mints. Everything green.
+- **Phase B — launch day (final step):** you launch $SOLUM → send the mint → I init the REAL jackpot with
+  it, point the bot at it, run one full real cycle, flip the DEVNET label, open to the public.
+
+## Phase A — you provide NOW (to set everything up before the token)
+
+1. **A funded mainnet deploy wallet (~5–6 SOL)** + its keypair path/secret. Real SOL — program rent + the
+   test-draw accounts.
+2. **The Solum-side host** (server/VM under the Solum identity — NOT the Magpie Railway account). Runs the
+   bot + claim service + serves `status.json`/`winners.json`.
 3. **Dev/creator wallet key** = `ALUM6Y7rfVBDRB1P1xuoTkSECnVF6uRmP4E53B2DEt5Q`, delivered as a host secret
-   (env `SOLUM_OPS_KEY=/secure/ops.json` or Railway secret) — **never** pasted in chat/committed. This
-   wallet collects creator fees + buys the stock; it also deploys unless you use a separate deploy wallet.
-4. **~5 SOL** on the mainnet deploy wallet (program rent + fees).
+   (`SOLUM_OPS_KEY=/secure/ops.json` or a Railway secret) — **never** pasted in chat/committed.
+4. **The 5 Sunrise xStock mainnet mints** (AAPLx / NVDAx / TSLAx / COINx / MSTRx) as `SOLUM_STOCKS` (JSON:
+   label → {mint, opsAccount, tokenProgram}; ops account = the dev wallet's ATA, auto-created on first buy).
 
-## The 5 tokenized-stock mints
+## Phase A — I run (autonomous)
 
-The prizes are Sunrise xStocks (real Token-2022 mints). Provide the mainnet mints for AAPLx / NVDAx /
-TSLAx / COINx / MSTRx as `SOLUM_STOCKS` (JSON: label → {mint, opsAccount, tokenProgram}). The ops account
-per stock is the dev wallet's ATA (auto-created on first buy).
-
-## I run (autonomous, in order — no further input needed)
-
-1. **Build + deploy the program (production features).**
+1. **Deploy the production program to mainnet** (builds `pyth-oracle switchboard-vrf` via
+   `cargo build-sbf --tools-version v1.50` + the pinned Cargo.lock):
    ```
    SOLUM_WALLET=/secure/deploy.json SOLUM_RPC=https://api.mainnet-beta.solana.com \
    SOLUM_CONFIRM=I_HAVE_AUDIT_AND_LEGAL ./scripts/deploy-mainnet.sh
    ```
-   (Builds with `pyth-oracle switchboard-vrf` via `cargo build-sbf --tools-version v1.50` + the pinned
-   Cargo.lock; deploys; prints the program id.)
+2. **Prove the live Switchboard oracle** — init a **throwaway test jackpot** (its own PDA, a test coin,
+   fully separate from the real one), create the Switchboard queue reference + randomness account, and run
+   a real `request_draw → reveal → settle_draw`. This verifies the one path devnet couldn't. Test jackpot
+   is then discarded.
+3. **Stand up the host:** deploy the **bot (configured, NOT started** — it waits for the real mint), the
+   **claim service** (`claim-server`, TLS + CORS = solum.work), and the **payout console** (`ops-dashboard.html`).
+4. **Wire the dev wallet + 5 stock mints;** dry-run a Jupiter buy-quote to confirm routing.
+5. **Stage the site cutover** — feeds ready, DEVNET label still on.
+   → **End of Phase A: everything deployed, the live oracle proven, nothing left but the token.**
 
-2. **Initialize the jackpot** against the real $SOLUM mint + the 5 stock mints (mainnet init, one tx).
+## Phase B — launch day (final step, you trigger)
 
-3. **Switchboard On-Demand:** create the queue reference + randomness account, then **run ONE controlled
-   test draw** (`request_draw → reveal → settle_draw`) to prove the live oracle end to end. This is the
-   one path devnet couldn't verify — it is verified here, before any public round.
-
-4. **Start the bot** (`SOLUM_VRF=switchboard`, `SOLUM_COUNTDOWN=300`) — fee tracking → hidden random
-   snapshot → buy 1 random stock with the cycle's fees → 5-min countdown → VRF draw → winner recorded
-   (claim-pending). Watch one full real cycle publish clean `status.json`/`winners.json`.
-
-5. **Claim service + payout console:** start `claim-server` (behind TLS, CORS = solum.work), point the
-   site's `CLAIM_ENDPOINT` at it; you review + deliver from `ops-dashboard.html`.
-
-6. **Site cutover:** flip the DEVNET label off, confirm the live feed drives the fee ledger / 5-min
-   countdown / advertised prize / real-winner reel.
-
-7. **Open to the public** only after steps 3 + 4 pass.
+6. You launch **$SOLUM** on pump.fun → send the **mint address**.
+7. I **init the REAL jackpot** with the $SOLUM mint + the 5 stock mints, point the bot at it
+   (`SOLUM_COIN_MINT`), and **start it** (`SOLUM_VRF=switchboard`, `SOLUM_COUNTDOWN=300`).
+8. Watch one full real cycle publish clean `status.json`/`winners.json`; confirm the site's live feed
+   (fee ledger, 5-min countdown, advertised prize, real-winner reel).
+9. **Flip the DEVNET label off → open to the public.**
 
 ## Config (env) — filled once inputs arrive
 
