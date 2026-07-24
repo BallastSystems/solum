@@ -376,9 +376,9 @@
     MSTRx:{n:"Strategy",lg:"lg-mstr",c:"#F0512B",px:1720}
   };
   var ORDER=["AAPLx","NVDAx","TSLAx","COINx","MSTRx"];
-  var EXPL_ADDR="https://explorer.solana.com/address/A8LrxCF86mcBzUZSFd55g6xD96T1xzmkHwPQTCQKcBcU?cluster=devnet";
-  var txLink=function(sig){return "https://explorer.solana.com/tx/"+sig+"?cluster=devnet";};
-  var addrLink=function(a){return "https://explorer.solana.com/address/"+a+"?cluster=devnet";};
+  var EXPL_ADDR="https://explorer.solana.com/address/4YCL5cQvVSiVbpN2QVbk82aLuNBqiNt2KbGdqkUKMojY";
+  var txLink=function(sig){return "https://explorer.solana.com/tx/"+sig+"";};
+  var addrLink=function(a){return "https://explorer.solana.com/address/"+a+"";};
 
   function m32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
   function b58(rng,n){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",s="";for(var i=0;i<n;i++)s+=A[(rng()*A.length)|0];return s;}
@@ -430,7 +430,7 @@
       claimed:!!w.claimed,claimedAt:w.claimedAt||null,awarded:!!w.awarded,awardTx:w.awardTx||w.claimTx||null};
   }
 
-  var DATA=demo(), LIVE=false;
+  var DATA=[], LIVE=false;
 
   // ---- aggregates ----
   function aggregate(){
@@ -476,7 +476,7 @@
     var m=STK[w.stock], odds=w.totalTickets?(w.solumHeld/w.totalTickets*100):0, oneIn=odds?Math.round(100/odds):0;
     document.getElementById("feat").innerHTML=
       '<div class="feat-grid"><div class="feat-l">'+
-        '<span class="feat-tag"><span class="d"></span>'+(LIVE?"Latest winner":"Latest winner · sample")+'</span>'+
+        '<span class="feat-tag"><span class="d"></span>'+(LIVE?"Latest winner":"Latest winner")+'</span>'+
         '<div class="feat-prize">'+money(w.prizeUsd)+'</div>'+
         '<div class="feat-shares">≈ <b>'+w.prizeShares+'</b> shares of <b>'+m.n+'</b> ('+w.stock+')</div>'+
         '<div class="feat-meta">'+
@@ -561,7 +561,7 @@
   function tick(){Array.prototype.forEach.call(document.querySelectorAll("[data-cd]"),function(el){el.textContent=cdown((+el.getAttribute("data-at"))-Date.now());});}
   setInterval(tick,1000);
   // Set this to the fulfillment service URL to make claiming live. Empty = preview (verify only).
-  var CLAIM_ENDPOINT="";
+  var CLAIM_ENDPOINT="https://api.solum.work";
   function b58enc(bytes){var A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",d=[0],i,j;
     if(!bytes.length)return"";
     for(i=0;i<bytes.length;i++){var c=bytes[i];for(j=0;j<d.length;j++){c+=d[j]*256;d[j]=c%58;c=(c/58)|0;}while(c>0){d.push(c%58);c=(c/58)|0;}}
@@ -591,7 +591,7 @@
   }
 
   // go live off the published record if present
-  try{fetch("winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+  try{fetch("https://api.solum.work/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
     if(j&&j.length){DATA=j.map(norm).filter(function(w){return w&&w.stock&&STK[w.stock];});LIVE=true;renderAll();}
   }).catch(function(){});}catch(e){}
 })();

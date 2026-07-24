@@ -935,14 +935,38 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function pctStr(p){return (p<0.01?"<0.01":p<0.1?p.toFixed(2):p.toFixed(1))+"%";}
     // the REAL latest winner (winners.json, the persisted source of truth) + live status. Once the bot
     // publishes, the reel ALWAYS lands on the real winner — never a random row. No feed = labeled preview.
-    var realWin=null,realSt=null,started=false;
-    function startOnce(){if(started||RM)return;started=true;cycle();} // begin only once we know the real winner
-    function poll(){
-      try{fetch(SOLUM_API+"/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(a){if(a&&a.length)realWin=a[0];startOnce();}).catch(startOnce);}catch(e){startOnce();}
-      try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j)realSt=j;}).catch(function(){});}catch(e){}
+    var realWin=null,realSt=null,lastEpoch=null,spinning=false;
+    // The reel is STILL between draws (shows the last winner, or an idle line). It spins ONLY when a NEW
+    // draw lands — one spin that reveals + awards the winner, then it settles and stays put.
+    function renderStatic(){
+      if(spinning)return;
+      timers.forEach(clearTimeout);timers=[];
+      reel.classList.remove("spin");reel.style.transition="none";
+      if(realWin){
+        var st=stockOf(realWin.stock);logo.innerHTML='<use href="#'+st[1]+'"/>';logo.style.color=st[2];nameEl.textContent=st[0];
+        potEl.textContent="$"+Math.round(realWin.prizeUsd||0).toLocaleString();
+        if(countEl)countEl.textContent=(((realSt&&realSt.holders)||realWin.holders||0)).toLocaleString();
+        reel.style.transform="translateY("+CENTER+"px)";reel.innerHTML=winnerCard(realWin);
+        var w=reel.children[0];if(w)w.classList.add("win");rm.classList.add("won");
+        var sh=realWin.addr.slice(0,4)+"…"+realWin.addr.slice(-4);
+        foot.innerHTML='<span class="tp">🏆</span> <b>'+sh+'</b> won $'+Math.round(realWin.prizeUsd||0).toLocaleString()+' '+st[0]+' <span class="wc">· last draw</span>';
+      } else {
+        rm.classList.remove("won");potEl.textContent=(realSt&&realSt.potUsd!=null)?("$"+Math.round(realSt.potUsd).toLocaleString()):"—";
+        if(countEl)countEl.textContent=((realSt&&realSt.holders)||"—");
+        reel.style.transform="translateY("+CENTER+"px)";reel.innerHTML=card();
+        foot.innerHTML='<span class="ph">'+((realSt&&realSt.phase==="snapshot_taken")?"Snapshot sealed · drawing soon…":"Winner is drawn at the hourly snapshot")+'</span>';
+      }
     }
-    poll(); setInterval(poll,10000);
-    setTimeout(startOnce,3000); // only if winners.json never resolves (offline) — the fetch above wins on any real connection
+    function poll(){
+      try{fetch(SOLUM_API+"/winners.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(a){
+        var w=(a&&a.length)?a[0]:null;
+        if(w&&lastEpoch!==null&&w.epoch!==lastEpoch&&!RM){ lastEpoch=w.epoch;realWin=w;cycle(); } // NEW draw → one spin
+        else { if(w)realWin=w; if(lastEpoch===null)lastEpoch=(w?w.epoch:-1); renderStatic(); }        // first load / no change → static
+      }).catch(function(){if(lastEpoch===null){lastEpoch=-1;renderStatic();}});}catch(e){}
+      try{fetch(SOLUM_API+"/status.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j){realSt=j;renderStatic();}}).catch(function(){});}catch(e){}
+    }
+    poll(); setInterval(poll,8000);
+    setTimeout(function(){if(lastEpoch===null){lastEpoch=-1;renderStatic();}},3000); // offline fallback → idle state
     // the winning row, built from the REAL winner so the reel lands exactly on them (address + held + odds)
     function winnerCard(rw){var sh=rw.addr.slice(0,4)+"…"+rw.addr.slice(-4),x=h32(rw.addr),h1=x%360,h2=(x>>9)%360,
       held=rw.solumHeld||0,pctS=pctStr(winPct(rw)),bar=Math.max(3,Math.min(100,winPct(rw)*24));
@@ -969,6 +993,7 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
     function phase(t){foot.innerHTML='<span class="ph">'+t+'</span>';}
     function cycle(){
       timers.forEach(clearTimeout);timers=[];
+      spinning=true; // moving now — the ONE spin that reveals + awards this draw's winner
       rm.classList.remove("won");
       var rw=realWin, live=!!rw; // LOCK the real winner for this spin. No real winner yet = a labeled PREVIEW.
       // Pre-launch: NO fabricated pot / holder count / winner — those show as "—" and the reveal is a preview.
@@ -990,14 +1015,11 @@ jackpot.winning_ticket = <span class="fnx">winning_ticket</span>(&amp;value, tot
       timers.push(setTimeout(function(){
         rm.classList.add("won");reel.classList.remove("spin");var w=reel.children[winIdx];
         if(w){w.classList.add("win");
-          foot.innerHTML=live
-            ? ('<span class="tp">🏆</span> <b>'+w.dataset.sh+'</b> won $'+pot.toLocaleString()+' '+st[0]+' <span class="wc">· '+w.dataset.pct+' win chance</span>')
-            : ('<span class="ph">Preview · real draws begin when $SOLUM launches</span>');}
+          foot.innerHTML='<span class="tp">🏆</span> <b>'+w.dataset.sh+'</b> won $'+pot.toLocaleString()+' '+st[0]+' <span class="wc">· '+w.dataset.pct+' win chance</span>';}
+        spinning=false; // spin done — the reel now rests on the winner until the NEXT draw
       },26200));
-      timers.push(setTimeout(cycle,31200));
     }
-    if(RM){reel.innerHTML=card().replace("rm-row","rm-row win");foot.innerHTML='<span class="ph">Preview · live draws begin at launch</span>';potEl.textContent="—";}
-    // non-RM: the spin begins via startOnce() — after winners.json loads (real winner) or the pre-launch preview
+    // reduced-motion: never spins — the poll's renderStatic() shows the last winner / idle state.
   })();
 
   // --- hero canvas: first-light over rising strata ---
